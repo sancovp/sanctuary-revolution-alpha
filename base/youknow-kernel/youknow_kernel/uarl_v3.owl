@@ -1,0 +1,636 @@
+<?xml version="1.0"?>
+<rdf:RDF xmlns="http://sanctuary.ai/uarl#"
+     xml:base="http://sanctuary.ai/uarl"
+     xmlns:owl="http://www.w3.org/2002/07/owl#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:xml="http://www.w3.org/XML/1998/namespace"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:uarl="http://sanctuary.ai/uarl#">
+    
+    <owl:Ontology rdf:about="http://sanctuary.ai/uarl">
+        <rdfs:label>UARL v3 - Universal Axiomatic Reality Language</rdfs:label>
+        <rdfs:comment>
+UARL is not an ontology of content. It is:
+1. A schema for interaction between an LLM and a reasoner
+2. A pattern that any valid ontology claim must replicate (pattern_of_is_a)
+3. An error-correction system that types failures with explanation
+4. A meta-constructive framework for building the ontology of your own cognition
+
+Primary output: You getting better at ontology engineering
+Side-effect: Domain ontologies that survived validation
+
+SOUP = error pattern archive (traceable, actionable)
+ONT = what survived reification (is_a(Reality))
+        </rdfs:comment>
+        <owl:versionInfo>3.0.0 - The Correct Understanding</owl:versionInfo>
+    </owl:Ontology>
+    
+    <!-- ============================================== -->
+    <!-- THE TWO LAYERS -->
+    <!-- ============================================== -->
+    
+    <!-- SOUP: Error pattern archive - your meta-cognition trace -->
+    <owl:Class rdf:about="#Soup">
+        <rdfs:label>SOUP</rdfs:label>
+        <rdfs:comment>
+Error pattern archive. NOT junk - traceable patterns of how you were wrong.
+"You keep making THIS kind of mistake - here's the pattern - address it."
+This is your meta-cognition trace. The learning happens here.
+        </rdfs:comment>
+    </owl:Class>
+    
+    <!-- ONT: Validated Reality - side-effect of good process -->
+    <owl:Class rdf:about="#Ont">
+        <rdfs:label>ONT</rdfs:label>
+        <rdfs:comment>
+Validated Reality. What survived the reification check.
+This is a SIDE-EFFECT of applying the pattern correctly.
+The primary output is you getting better at ontology engineering.
+        </rdfs:comment>
+    </owl:Class>
+    
+    <!-- ============================================== -->
+    <!-- TRUTH TYPING (not accept/reject) -->
+    <!-- ============================================== -->
+
+    <owl:Class rdf:about="#Entity">
+        <rdfs:label>Entity</rdfs:label>
+        <rdfs:comment>Base ontological thing in UARL. Foundation anchor for typed claims.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Metaphor">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Metaphor</rdfs:label>
+        <rdfs:comment>Ground class for metaphor-level pattern instantiation.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#PartialIsomorphicPattern">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>PartialIsomorphicPattern</rdfs:label>
+        <rdfs:comment>Partial isomorphic pattern fragment carried by a claim.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#ClaimAboutSelf">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>ClaimAboutSelf</rdfs:label>
+        <rdfs:comment>A claim node about what a PIOEntity is.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#PIOEntity">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:subClassOf rdf:resource="#Hallucination"/>
+        <rdfs:subClassOf rdf:resource="#Reality"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#instantiates"/>
+                <owl:someValuesFrom rdf:resource="#Metaphor"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasPartialIsomorphicPattern"/>
+                <owl:someValuesFrom rdf:resource="#PartialIsomorphicPattern"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasSelfClaim"/>
+                <owl:someValuesFrom rdf:resource="#ClaimAboutSelf"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:label>PIOEntity</rdfs:label>
+        <rdfs:comment>
+PIOEntity is a hallucination-in-reality claim form:
+it instantiates Metaphor and carries partial isomorphic patterns as claims about itself.
+        </rdfs:comment>
+    </owl:Class>
+    
+    <owl:Class rdf:about="#Reality">
+        <rdfs:subClassOf rdf:resource="#Ont"/>
+        <rdfs:label>Reality</rdfs:label>
+        <rdfs:comment>Claims that completed the derivation chain. is_a(Reality).</rdfs:comment>
+    </owl:Class>
+    
+    <owl:Class rdf:about="#Hallucination">
+        <rdfs:subClassOf rdf:resource="#Soup"/>
+        <rdfs:label>Hallucination</rdfs:label>
+        <rdfs:comment>
+Claims that didn't complete the derivation chain. is_a(Hallucination).
+NOT rejected - accepted and typed with explanation of what's missing.
+Still embodies something real. Part of the error pattern archive.
+        </rdfs:comment>
+    </owl:Class>
+    
+    <!-- ============================================== -->
+    <!-- THE CHAIN -->
+    <!-- ============================================== -->
+    
+    <!-- EMBODIES: Entry point with BRIDGE STRUCTURE -->
+    <owl:ObjectProperty rdf:about="#embodies">
+        <rdfs:label>embodies</rdfs:label>
+        <rdfs:comment>
+ENTRY POINT with BRIDGE STRUCTURE.
+
+Structure: "A with B embodies C wrt D"
+- A = your intuition (what you're thinking about)
+- B = what you're comparing it to
+- C = where the pattern maps to
+- D = the BRIDGE PATTERN (what the claim is actually about)
+
+Example: "Patchy with Dog embodies Pirate wrt Eyepatch"
+- This is really about EYEPATCH-PATTERN (patchiness)
+- Dog and Pirate are vehicles carrying the pattern
+- The bridge D is what you're trying to discover
+
+Even hallucinations embody something real - every claim enters SOUP.
+The bridge structure forces explicit pattern identification.
+        </rdfs:comment>
+    </owl:ObjectProperty>
+    
+    <!-- EMBODIMENT BRIDGE COMPONENTS -->
+    <owl:Class rdf:about="#EmbodimentClaim">
+        <rdfs:label>Embodiment Claim</rdfs:label>
+        <rdfs:comment>A structured claim: A with B embodies C wrt D. All four components required.</rdfs:comment>
+        
+        <!-- RESTRICTION: Must have intuition (A) -->
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#intuition"/>
+                <owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        
+        <!-- RESTRICTION: Must have compareFrom (B) -->
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#compareFrom"/>
+                <owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        
+        <!-- RESTRICTION: Must have mapsTo (C) -->
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#mapsTo"/>
+                <owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        
+        <!-- RESTRICTION: Must have analogicalPattern (D) - the actual pattern -->
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#analogicalPattern"/>
+                <owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+    <owl:ObjectProperty rdf:about="#intuition">
+        <rdfs:label>intuition (A)</rdfs:label>
+        <rdfs:comment>The thing you're thinking about (A in the bridge)</rdfs:comment>
+        <rdfs:domain rdf:resource="#EmbodimentClaim"/>
+    </owl:ObjectProperty>
+    
+    <owl:ObjectProperty rdf:about="#compareFrom">
+        <rdfs:label>compare_from (B)</rdfs:label>
+        <rdfs:comment>What you're comparing your intuition from (B in the bridge)</rdfs:comment>
+        <rdfs:domain rdf:resource="#EmbodimentClaim"/>
+    </owl:ObjectProperty>
+    
+    <owl:ObjectProperty rdf:about="#mapsTo">
+        <rdfs:label>maps_to (C)</rdfs:label>
+        <rdfs:comment>Where the pattern maps to (C in the bridge)</rdfs:comment>
+        <rdfs:domain rdf:resource="#EmbodimentClaim"/>
+    </owl:ObjectProperty>
+    
+    <owl:ObjectProperty rdf:about="#analogicalPattern">
+        <rdfs:label>analogical_pattern (D)</rdfs:label>
+        <rdfs:comment>THE ACTUAL PATTERN being discovered via analogy (D in the bridge). This is what the claim is really about - the analogical relationship.</rdfs:comment>
+        <rdfs:domain rdf:resource="#EmbodimentClaim"/>
+    </owl:ObjectProperty>
+    
+    <!-- MANIFESTS: Building a PATTERN LATTICE -->
+    <owl:ObjectProperty rdf:about="#manifests">
+        <rdfs:label>manifests</rdfs:label>
+        <rdfs:comment>
+BUILDING A PATTERN LATTICE: Multi-dimensional, not one-shot.
+
+Manifests is iterative - you keep discovering more dimensions:
+
+Dimension 1: "asymmetric-ocular-coverage" (specific)
+  - eyepatch covers one eye
+  - patchy fur covers one eye region
+
+Dimension N: "region-differentiation-wrt-geometry" (abstract)
+  - patchiness in general = regions differ from each other
+  - any surface can be patchy
+
+You trace the pattern UP to abstract form AND DOWN to specific instances.
+Result is a LATTICE, not a single match:
+
+  abstract-pattern
+    └── mid-level-pattern
+          └── specific-instance-1
+          └── specific-instance-2
+
+Pragmatic convergence: stop when "it no longer matters" (Zeno resolution).
+        </rdfs:comment>
+    </owl:ObjectProperty>
+    
+    <!-- PATTERN LATTICE STRUCTURE -->
+    <owl:Class rdf:about="#PatternLattice">
+        <rdfs:label>Pattern Lattice</rdfs:label>
+        <rdfs:comment>The multi-dimensional structure built during manifests. Abstract patterns subsume specific ones.</rdfs:comment>
+        
+        <!-- RESTRICTION: Must have abstraction level -->
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#abstractionLevel"/>
+                <owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+    <!-- VALIDATED LATTICE: A PatternLattice that can be promoted to Reality -->
+    <owl:Class rdf:about="#ValidatedLattice">
+        <rdfs:subClassOf rdf:resource="#PatternLattice"/>
+        <rdfs:label>Validated Lattice</rdfs:label>
+        <rdfs:comment>A PatternLattice that has been validated as instantiating pattern_of_is_a. Can be promoted to Reality.</rdfs:comment>
+        
+        <!-- RESTRICTION: Must instantiate pattern_of_is_a -->
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#instantiates"/>
+                <owl:someValuesFrom rdf:resource="#PatternOfIsA"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        
+        <!-- RESTRICTION: Must have at least one subsumes relationship (non-trivial lattice) -->
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#subsumes"/>
+                <owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+    <!-- GROUNDED LATTICE: A ValidatedLattice whose root connects to Reality -->
+    <owl:Class rdf:about="#GroundedLattice">
+        <rdfs:subClassOf rdf:resource="#ValidatedLattice"/>
+        <rdfs:label>Grounded Lattice</rdfs:label>
+        <rdfs:comment>A ValidatedLattice whose abstract root is grounded in Reality. Ready to program.</rdfs:comment>
+        
+        <!-- RESTRICTION: Root must be part_of Reality -->
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#partOf"/>
+                <owl:someValuesFrom rdf:resource="#Reality"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+    <owl:ObjectProperty rdf:about="#subsumes">
+        <rdfs:label>subsumes</rdfs:label>
+        <rdfs:comment>Abstract pattern subsumes specific pattern in the lattice.</rdfs:comment>
+        <rdfs:domain rdf:resource="#PatternLattice"/>
+        <rdfs:range rdf:resource="#PatternLattice"/>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#TransitiveProperty"/>
+    </owl:ObjectProperty>
+    
+    <owl:DatatypeProperty rdf:about="#abstractionLevel">
+        <rdfs:label>abstraction_level</rdfs:label>
+        <rdfs:comment>How abstract is this pattern? Higher = more general, lower = more specific.</rdfs:comment>
+        <rdfs:domain rdf:resource="#PatternLattice"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#integer"/>
+    </owl:DatatypeProperty>
+    
+    <!-- INSTANTIATES: Standard ontology relation (not redefined) -->
+    <owl:ObjectProperty rdf:about="#instantiates">
+        <rdfs:label>instantiates</rdfs:label>
+        <rdfs:comment>
+Standard ontology relation: X is an instance of class Y.
+
+In the UARL chain, this is YOUR CLAIM:
+"This Manifestation instantiates pattern_of_is_a"
+
+When something instantiates pattern_of_is_a, that instantiation IS what reifies it.
+        </rdfs:comment>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasPartialIsomorphicPattern">
+        <rdfs:label>has_partial_isomorphic_pattern</rdfs:label>
+        <rdfs:comment>Links a PIOEntity to partial isomorphic pattern fragments it currently carries.</rdfs:comment>
+        <rdfs:domain rdf:resource="#PIOEntity"/>
+        <rdfs:range rdf:resource="#PartialIsomorphicPattern"/>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasSelfClaim">
+        <rdfs:label>has_self_claim</rdfs:label>
+        <rdfs:comment>Links a PIOEntity to explicit claims about what it is.</rdfs:comment>
+        <rdfs:domain rdf:resource="#PIOEntity"/>
+        <rdfs:range rdf:resource="#ClaimAboutSelf"/>
+    </owl:ObjectProperty>
+
+    <owl:DatatypeProperty rdf:about="#patternFragment">
+        <rdfs:label>pattern_fragment</rdfs:label>
+        <rdfs:comment>Human-readable fragment describing a partial isomorphic pattern.</rdfs:comment>
+        <rdfs:domain rdf:resource="#PartialIsomorphicPattern"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:about="#claimText">
+        <rdfs:label>claim_text</rdfs:label>
+        <rdfs:comment>Human-readable statement text for a ClaimAboutSelf node.</rdfs:comment>
+        <rdfs:domain rdf:resource="#ClaimAboutSelf"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    </owl:DatatypeProperty>
+    
+    <!-- PROGRAMS: Entry to Reality -->
+    <owl:ObjectProperty rdf:about="#programs">
+        <rdfs:label>programs</rdfs:label>
+        <rdfs:comment>
+ONTOLOGY ENTRY: The proof that this thing CAN exist.
+
+Higher-order instantiates - bridges ontology-addition to Reality.
+Only happens after valid instantiation of pattern_of_is_a.
+The structure programs into the ontology as is_a(Reality).
+        </rdfs:comment>
+        <rdfs:domain rdf:resource="#PatternOfIsA"/>
+        <rdfs:range rdf:resource="#Reality"/>
+    </owl:ObjectProperty>
+
+    <!-- ============================================== -->
+    <!-- COMPRESSION + BOUNDEDNESS + SES -->
+    <!-- ============================================== -->
+
+    <owl:Class rdf:about="#MinimumSufficientCompression">
+        <rdfs:label>Minimum Sufficient Compression (MSC)</rdfs:label>
+        <rdfs:comment>
+Proof artifact that the entity/subgraph is minimally and sufficiently compressed.
+Strong compression requires MSC + full justifies coverage.
+        </rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#DerivationJustification">
+        <rdfs:label>Derivation Justification</rdfs:label>
+        <rdfs:comment>
+Typed justification edge in the derivation chain.
+PatternOfIsA is strongly compressed only when required derivation relations are justified.
+        </rdfs:comment>
+    </owl:Class>
+
+    <owl:ObjectProperty rdf:about="#hasMSC">
+        <rdfs:label>has_msc</rdfs:label>
+        <rdfs:comment>Links a pattern candidate to its MSC proof artifact.</rdfs:comment>
+        <rdfs:domain rdf:resource="#PatternOfIsA"/>
+        <rdfs:range rdf:resource="#MinimumSufficientCompression"/>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#justifies">
+        <rdfs:label>justifies</rdfs:label>
+        <rdfs:comment>Links PatternOfIsA to derivation-chain justification edges.</rdfs:comment>
+        <rdfs:domain rdf:resource="#PatternOfIsA"/>
+        <rdfs:range rdf:resource="#DerivationJustification"/>
+    </owl:ObjectProperty>
+
+    <owl:DatatypeProperty rdf:about="#justifiesEdge">
+        <rdfs:label>justifies_edge</rdfs:label>
+        <rdfs:comment>Canonical edge token that this justification covers.</rdfs:comment>
+        <rdfs:domain rdf:resource="#DerivationJustification"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:about="#catOfCatBounded">
+        <rdfs:label>cat_of_cat_bounded</rdfs:label>
+        <rdfs:comment>Whether the CatOfCat superclass chain is explicitly declared bounded.</rdfs:comment>
+        <rdfs:domain rdf:resource="#PatternOfIsA"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#boolean"/>
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:about="#sesTypedDepth">
+        <rdfs:label>ses_typed_depth</rdfs:label>
+        <rdfs:comment>SES typed-depth (constructor arg recursive typedness depth).</rdfs:comment>
+        <rdfs:domain rdf:resource="#PatternOfIsA"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#integer"/>
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:about="#compressionMode">
+        <rdfs:label>compression_mode</rdfs:label>
+        <rdfs:comment>Compression mode classification: strong or weak.</rdfs:comment>
+        <rdfs:domain rdf:resource="#PatternOfIsA"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    </owl:DatatypeProperty>
+    
+    <!-- ============================================== -->
+    <!-- THE PATTERN OF IS_A (self-reifying) -->
+    <!-- ============================================== -->
+    
+    <owl:Class rdf:about="#PatternOfIsA">
+        <rdfs:label>pattern_of_is_a</rdfs:label>
+        <rdfs:comment>
+The meta-pattern. THE BOOTSTRAP.
+
+is_a, part_of, and instantiates are simultaneously entailed by any one existing.
+They all co-arise from the fact that anything exists at all.
+
+pattern_of_is_a traces HOW they bootstrap from symbolicity.
+
+KEY PROPERTY: pattern_of_is_a is SELF-REIFYING.
+When something instantiates pattern_of_is_a, that instantiation IS what reifies it.
+- From your side: "I claim X instantiates pattern_of_is_a"
+- From reality's side: "X has been reified"
+- Result: reasoner validates → structure programs into Reality
+
+In this implementation, promotion-grade PatternOfIsA is typed by:
+1) hasMSC
+2) full justifies coverage
+3) catOfCatBounded=true
+4) sesTypedDepth maximized threshold
+5) programs -> Reality
+        </rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#StrongCompressionPattern">
+        <rdfs:subClassOf rdf:resource="#PatternOfIsA"/>
+        <rdfs:label>Strong Compression Pattern</rdfs:label>
+        <rdfs:comment>
+PatternOfIsA satisfying strong compression, bounded chain, and high SES depth.
+        </rdfs:comment>
+
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasMSC"/>
+                <owl:someValuesFrom rdf:resource="#MinimumSufficientCompression"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#justifies"/>
+                <owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#catOfCatBounded"/>
+                <owl:hasValue rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:hasValue>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#sesTypedDepth"/>
+                <owl:someValuesFrom>
+                    <rdfs:Datatype>
+                        <owl:onDatatype rdf:resource="http://www.w3.org/2001/XMLSchema#integer"/>
+                        <owl:withRestrictions rdf:parseType="Collection">
+                            <rdf:Description>
+                                <xsd:minInclusive rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">6</xsd:minInclusive>
+                            </rdf:Description>
+                        </owl:withRestrictions>
+                    </rdfs:Datatype>
+                </owl:someValuesFrom>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#programs"/>
+                <owl:someValuesFrom rdf:resource="#Reality"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#WeakCompressionPattern">
+        <rdfs:subClassOf rdf:resource="#PatternOfIsA"/>
+        <rdfs:label>Weak Compression Pattern</rdfs:label>
+        <rdfs:comment>
+PatternOfIsA candidate that is still missing MSC, justification coverage, boundedness, or SES depth.
+        </rdfs:comment>
+    </owl:Class>
+    
+    <owl:NamedIndividual rdf:about="#THE_PatternOfIsA">
+        <rdf:type rdf:resource="#PatternOfIsA"/>
+        <rdfs:label>THE pattern_of_is_a</rdfs:label>
+        <rdfs:comment>
+The canonical instance. What the reasoner checks instantiation against.
+
+If your Manifestation instantiates this: it programs into Reality.
+If not: typed as Hallucination with explanation.
+        </rdfs:comment>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="#THE_Metaphor">
+        <rdf:type rdf:resource="#Metaphor"/>
+        <rdfs:label>THE Metaphor</rdfs:label>
+        <rdfs:comment>Canonical metaphor anchor instantiated by PIOEntity claims.</rdfs:comment>
+    </owl:NamedIndividual>
+    
+    <!-- ============================================== -->
+    <!-- THE CO-ARISING PRIMITIVES -->
+    <!-- ============================================== -->
+    
+    <owl:ObjectProperty rdf:about="#isA">
+        <rdfs:label>is_a</rdfs:label>
+        <rdfs:comment>
+One of the three co-arising primitives.
+Any one implies the others. They all bootstrap together.
+        </rdfs:comment>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#TransitiveProperty"/>
+    </owl:ObjectProperty>
+    
+    <owl:ObjectProperty rdf:about="#partOf">
+        <rdfs:label>part_of</rdfs:label>
+        <rdfs:comment>
+One of the three co-arising primitives.
+Any one implies the others. They all bootstrap together.
+        </rdfs:comment>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#TransitiveProperty"/>
+    </owl:ObjectProperty>
+    
+    <!-- instantiates already defined above -->
+    
+    <!-- ============================================== -->
+    <!-- EXPLAINABILITY -->
+    <!-- ============================================== -->
+    
+    <owl:DatatypeProperty rdf:about="#errorPattern">
+        <rdfs:label>error_pattern</rdfs:label>
+        <rdfs:comment>What pattern of mistake does this Hallucination represent?</rdfs:comment>
+        <rdfs:domain rdf:resource="#Hallucination"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    </owl:DatatypeProperty>
+    
+    <owl:DatatypeProperty rdf:about="#whatsMissing">
+        <rdfs:label>whats_missing</rdfs:label>
+        <rdfs:comment>What would need to be added for this to become Reality?</rdfs:comment>
+        <rdfs:domain rdf:resource="#Hallucination"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    </owl:DatatypeProperty>
+    
+    <owl:DatatypeProperty rdf:about="#traceableFrom">
+        <rdfs:label>traceable_from</rdfs:label>
+        <rdfs:comment>Which other Hallucinations share this error pattern? For pattern analysis.</rdfs:comment>
+        <rdfs:domain rdf:resource="#Hallucination"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    </owl:DatatypeProperty>
+
+    <!-- ============================================== -->
+    <!-- EVOLUTION TRACKING -->
+    <!-- ============================================== -->
+
+    <owl:Class rdf:about="#Requires_Evolution">
+        <rdfs:subClassOf rdf:resource="#Soup"/>
+        <rdfs:label>Requires_Evolution</rdfs:label>
+        <rdfs:comment>
+Index concept for tracking SOUP items that need evolution.
+Concepts link here via REQUIRES_EVOLUTION relationship.
+When linked: concept is SOUP (incomplete chain).
+When not linked: concept is ONT (complete chain).
+The relationship IS the layer - no separate property needed.
+        </rdfs:comment>
+    </owl:Class>
+
+    <owl:ObjectProperty rdf:about="#requiresEvolution">
+        <rdfs:label>requires_evolution</rdfs:label>
+        <rdfs:comment>
+Links a SOUP concept to Requires_Evolution index.
+Relationship has 'reason' property explaining what's missing.
+When new concepts are added, check if any REQUIRES_EVOLUTION.reason
+mentions the new concept - if so, re-validate and potentially promote.
+        </rdfs:comment>
+        <rdfs:range rdf:resource="#Requires_Evolution"/>
+    </owl:ObjectProperty>
+
+    <owl:DatatypeProperty rdf:about="#reason">
+        <rdfs:label>reason</rdfs:label>
+        <rdfs:comment>Human-readable reason for why a SOUP concept requires evolution.</rdfs:comment>
+        <rdfs:domain rdf:resource="#Requires_Evolution"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    </owl:DatatypeProperty>
+
+    <!-- ============================================== -->
+    <!-- IJEGU INTEGRATION -->
+    <!-- ============================================== -->
+    
+    <owl:Class rdf:about="#ImplicitJustice">
+        <rdfs:subClassOf rdf:resource="#Reality"/>
+        <rdfs:label>Implicit Justice (IJ)</rdfs:label>
+        <rdfs:comment>Operating within bounds. Maximum benefit configuration.</rdfs:comment>
+    </owl:Class>
+    
+    <owl:Class rdf:about="#EmergentGood">
+        <rdfs:subClassOf rdf:resource="#Reality"/>
+        <rdfs:label>Emergent Good (EG)</rdfs:label>
+        <rdfs:comment>Recognizing and aligning with Implicit Justice.</rdfs:comment>
+    </owl:Class>
+    
+    <owl:Class rdf:about="#Utopia">
+        <rdfs:subClassOf rdf:resource="#Reality"/>
+        <rdfs:label>Utopia (U)</rdfs:label>
+        <rdfs:comment>Infinite game of continual optimization.</rdfs:comment>
+    </owl:Class>
+    
+</rdf:RDF>
