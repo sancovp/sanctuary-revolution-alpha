@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "observatory-sdna"
+version = "0.2.0"
+description = "Observatory research system on SDNA substrate (MiniMax/Heaven)"
+requires-python = ">=3.11"
+dependencies = [
+    "sdna",
+    "heaven-framework",
+]
+
+[project.optional-dependencies]
+test = ["pytest", "pytest-asyncio"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
