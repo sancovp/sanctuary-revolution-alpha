@@ -1,0 +1,26 @@
+[project]
+name = "summarizer-mcp"
+version = "0.1.1"
+description = "Summarizer MCP - Typed tool wrappers for hierarchical summarization of conversations"
+authors = [{name = "Isaac Wostrel-Rubin"}]
+license = {file = "LICENSE"}
+requires-python = ">=3.11"
+
+dependencies = [
+    "carton-mcp>=0.1.67",
+    "mcp>=1.0.0",
+]
+
+[project.scripts]
+summarizer-mcp = "summarizer_mcp.server:main"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["summarizer_mcp"]
+
+[tool.mcp]
+name = "summarizer"
+description = "Typed summarization tools for hierarchical conversation summarization"
