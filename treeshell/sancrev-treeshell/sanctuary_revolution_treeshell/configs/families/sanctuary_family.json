@@ -1,0 +1,94 @@
+{
+  "family_root": "sanctuary",
+  "parent": "sancrev",
+  "domain": "sanctuary",
+  "description": "Sanctuary MCP - Journal, sanctuary degree assessment, system state declaration",
+  "nodes": {
+    "sanctuary": {
+      "type": "Menu",
+      "prompt": "SANCTUARY",
+      "description": "Sanctuary - Journal entries, 6-dimension scoring, system state",
+      "signature": "sanctuary() -> sanctuary_operations",
+      "options": {
+        "1": "sanctuary_journal",
+        "2": "sanctuary_assess",
+        "3": "sanctuary_history",
+        "4": "sanctuary_state"
+      }
+    },
+    "sanctuary_journal": {
+      "type": "Callable",
+      "prompt": "Journal Entry",
+      "description": "Create a journal entry (opening/closing) with 6-dimension sanctuary scores. Saves as CartON concept.",
+      "signature": "sanctuary_journal(entry_text: str, entry_type: str, engagement: int, emotion: int, mechanics: int, progression: int, immersion: int, agency: int, user_explicitly_authorized: bool = false) -> str",
+      "import_path": "strata.treeshell_functions",
+      "import_object": "execute_action",
+      "function_name": "execute_action",
+      "is_async": true,
+      "args_schema": {
+        "server_name": "str",
+        "action_name": "str",
+        "body_schema": "Optional"
+      },
+      "default_args": {
+        "server_name": "sanctuary",
+        "action_name": "journal_entry"
+      }
+    },
+    "sanctuary_assess": {
+      "type": "Callable",
+      "prompt": "Assess Sanctuary Degree",
+      "description": "Calculate composite sanctuary degree from 6 dimensions: Engagement, Emotion, Mechanics, Progression, Immersion, Agency (each 1-10)",
+      "signature": "sanctuary_assess(engagement: int, emotion: int, mechanics: int, progression: int, immersion: int, agency: int) -> str",
+      "import_path": "strata.treeshell_functions",
+      "import_object": "execute_action",
+      "function_name": "execute_action",
+      "is_async": true,
+      "args_schema": {
+        "server_name": "str",
+        "action_name": "str",
+        "body_schema": "Optional"
+      },
+      "default_args": {
+        "server_name": "sanctuary",
+        "action_name": "assess_sanctuary_degree"
+      }
+    },
+    "sanctuary_history": {
+      "type": "Callable",
+      "prompt": "View History",
+      "description": "View sanctuary degree history and trends (placeholder - to be implemented)",
+      "signature": "sanctuary_history() -> str",
+      "import_path": "strata.treeshell_functions",
+      "import_object": "execute_action",
+      "function_name": "execute_action",
+      "is_async": true,
+      "args_schema": {
+        "server_name": "str",
+        "action_name": "str"
+      },
+      "default_args": {
+        "server_name": "sanctuary",
+        "action_name": "view_sanctuary_history"
+      }
+    },
+    "sanctuary_state": {
+      "type": "Callable",
+      "prompt": "Declare System State",
+      "description": "Declare current system state: Wasteland or Sanctuary (placeholder - to be implemented)",
+      "signature": "sanctuary_state() -> str",
+      "import_path": "strata.treeshell_functions",
+      "import_object": "execute_action",
+      "function_name": "execute_action",
+      "is_async": true,
+      "args_schema": {
+        "server_name": "str",
+        "action_name": "str"
+      },
+      "default_args": {
+        "server_name": "sanctuary",
+        "action_name": "declare_system_state"
+      }
+    }
+  }
+}

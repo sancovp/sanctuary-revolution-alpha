@@ -1,0 +1,28 @@
+{
+  "family_root": "agent_management_equipment_utils",
+  "parent": "agent_management_equipment",
+  "domain": "agent_management",
+  "description": "Reset config and utility functions",
+  "nodes": {
+    "agent_management_equipment_utils": {
+      "id": "agent_management_equipment_utils",
+      "title": "\ud83d\udd04 Reset & Utils",
+      "description": "Reset config and utility functions",
+      "type": "Menu",
+      "options": {
+        "1": "reset"
+      }
+    },
+    "reset": {
+      "id": "agent_management_equipment_utils_reset",
+      "title": "Reset Dynamic Config",
+      "description": "Clear current dynamic configuration",
+      "type": "Callable",
+      "callable": {
+        "function_name": "reset_dynamic_config",
+        "import_path": "heaven_tree_repl.agent_config_management",
+        "import_object": "reset_dynamic_config"
+      }
+    }
+  }
+}

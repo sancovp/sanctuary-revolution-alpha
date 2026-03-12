@@ -1,0 +1,9 @@
+{
+  "name": "autopoiesis",
+  "description": "Autopoiesis Plugin - Self-maintaining promise loops for honest AI work",
+  "version": "0.1.4",
+  "author": {
+    "name": "Isaac Wostrel-Rubin",
+    "email": "isaac@sanctuary.systems"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "family_root": "cf_home",
+  "parent": null,
+  "domain": "home",
+  "description": "Crystal Forest - HOME zone. Auto-displays HUD on jump.",
+  "nodes": {
+    "cf_home": {
+      "type": "Menu",
+      "prompt": "Crystal Forest — HOME",
+      "description": [
+        {
+          "type": "reference",
+          "content": "dynamic_call={\"path\": \"sanctuary_revolution_treeshell.crystal_forest\", \"func\": \"cf_home_sync\"}"
+        }
+      ],
+      "signature": "cf_home() -> home_hud",
+      "import_path": "sanctuary_revolution_treeshell.crystal_forest",
+      "import_object": "cf_home",
+      "is_async": true,
+      "options": {
+        "Orient (check project status)": "execute_action.exec {\"server_name\": \"starlog\", \"action_name\": \"orient\"}",
+        "Plot Course (set project)": "execute_action.exec {\"server_name\": \"starship\", \"action_name\": \"plot_course\"}",
+        "Game Status": "jump game_status",
+        "Browse Skills": "jump browse_skills",
+        "Discover GNOSYS Servers": "jump discover_server_actions"
+      }
+    }
+  }
+}

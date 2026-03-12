@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sanctum-builder"
+version = "0.1.0"
+description = "SANCTUM mini-game builder - wraps life_architecture_app with Sanctuary vocabulary"
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2.0",
+    "sanctuary-system",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+where = ["."]

@@ -1,0 +1,15 @@
+flowchart TD
+    subgraph manual[Manual Context Engineering]
+        A1[Session ends] --> A2[You: Paste context OR<br/>command LLM to read files]
+        A2 --> A3[New session continues]
+    end
+    subgraph starship[Auto Context Engineering]
+        B1[Session ends] --> B2[LLM auto-retrieves via tools<br/>*depends on LLM tracking well*]
+        B2 --> B3[New session continues]
+    end
+    subgraph note1[Note: Manual = You trigger it, not automatically done by LLM]
+    end
+    subgraph note2[Note: STARSHIP = LLM guided to retrieve automatically but manual intervention possible and sometimes necessary]
+    end
+    style A2 fill:#ffcccc
+    style B2 fill:#ffeb99

@@ -1,0 +1,15 @@
+{
+  "tasks": [
+    {"id": "T1", "name": "Copy tree_transform package to sanctuary-revolution", "status": "mvp", "goal": "Goal 5"},
+    {"id": "T2", "name": "Create ses.py with SESLayer, SESResolver, llm_suggest passthrough", "status": "mvp", "goal": "Goal 2, Goal 3"},
+    {"id": "T3", "name": "Add Property/Attribute/UniversalPattern to models or separate module", "status": "mvp", "goal": "Goal 1"},
+    {"id": "T4", "name": "Add CategoryStructure perception to YOUKNOW", "status": "mvp", "goal": "Goal 1"},
+    {"id": "T5", "name": "Implement validate_pattern_of_isa with SES", "status": "mvp", "goal": "Goal 2"},
+    {"id": "T6", "name": "Add certainty tracking and wasteland warnings", "status": "mvp", "goal": "Goal 4"},
+    {"id": "T7", "name": "Update __init__.py exports", "status": "mvp", "goal": "Goal 5"},
+    {"id": "T8", "name": "Test imports and basic validation flow", "status": "mvp", "goal": "Goal 5"},
+    {"id": "T9", "name": "Update CONTINUITY.md with session results", "status": "mvp", "goal": "Goal 5"}
+  ],
+  "state_enum": ["ready", "wip", "mvp", "blocked"],
+  "completed": "2026-01-11T00:20:00"
+}

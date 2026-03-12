@@ -1,0 +1,6 @@
+{
+    "name": "behavioral-assertions",
+    "domain": "compoctopus",
+    "subdomain": "testing",
+    "description": "How to write behavioral assertions that prove agents work by running them with real LLM calls"
+}

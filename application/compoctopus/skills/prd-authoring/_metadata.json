@@ -1,0 +1,6 @@
+{
+    "name": "prd-authoring",
+    "domain": "compoctopus",
+    "subdomain": "prd",
+    "description": "How to write typed PRDs for the Compoctopus pipeline — fields, formats, patterns, common mistakes"
+}

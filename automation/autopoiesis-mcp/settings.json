@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/autopoiesis_stop_hook.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/brainhook.py"
+          }
+        ]
+      }
+    ]
+  },
+  "mcpServers": {
+    "autopoiesis": {
+      "command": "autopoiesis-mcp",
+      "args": []
+    }
+  }
+}

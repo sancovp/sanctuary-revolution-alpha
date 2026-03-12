@@ -1,0 +1,85 @@
+{
+  "game_config": {
+    "title": "Sanctuary Revolution",
+    "subtitle": "The Waking Dreamer",
+    "version": "0.2.0",
+    "default_zone": "home"
+  },
+  "zones": {
+    "home": {
+      "name": "HOME",
+      "description": "Crystal Forest HOME — dashboard, global views, day/night cycling",
+      "zone_tree": ["home"],
+      "is_hub": true,
+      "theme": {
+        "colors": {
+          "primary": "#4ade80",
+          "secondary": "#22d3ee",
+          "accent": "#a855f7"
+        },
+        "emojis": {
+          "hub": "🌲",
+          "navigation": "🔮",
+          "action": "✨"
+        }
+      }
+    },
+    "starport_launch": {
+      "name": "Starport Launch",
+      "description": "Launch Bay — configure missions, plot course, select flights, launch into STARSHIP",
+      "zone_tree": ["missions"],
+      "theme": {
+        "colors": {
+          "primary": "#f97316",
+          "secondary": "#eab308",
+          "accent": "#ef4444"
+        },
+        "emojis": {
+          "hub": "🚀",
+          "navigation": "🛫",
+          "action": "⚡"
+        }
+      }
+    },
+    "planetside": {
+      "name": "Planetside",
+      "description": "Active work zone — you're on the planet (repo), working in a starlog session",
+      "zone_tree": ["planetside"],
+      "theme": {
+        "colors": {
+          "primary": "#22c55e",
+          "secondary": "#14b8a6",
+          "accent": "#0ea5e9"
+        },
+        "emojis": {
+          "hub": "🌍",
+          "navigation": "🛠️",
+          "action": "📝"
+        }
+      }
+    },
+    "starport_landing": {
+      "name": "Starport Landing",
+      "description": "Landing Pad — end starlogs, report progress, review mission status",
+      "zone_tree": ["landing"],
+      "theme": {
+        "colors": {
+          "primary": "#06b6d4",
+          "secondary": "#8b5cf6",
+          "accent": "#10b981"
+        },
+        "emojis": {
+          "hub": "🛬",
+          "navigation": "📋",
+          "action": "✅"
+        }
+      }
+    }
+  },
+  "zone_transitions": {
+    "home": ["starport_launch"],
+    "starport_launch": ["planetside"],
+    "planetside": ["starport_landing"],
+    "starport_landing": ["home", "starport_launch"]
+  }
+}

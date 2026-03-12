@@ -1,0 +1,36 @@
+[project]
+name = "carton-mcp"
+version = "0.1.67"
+description = "CartOn - Cartographic knowledge graph mapping for concept networks"
+authors = [{name = "HEAVEN System"}]
+readme = "README.md"
+requires-python = ">=3.11"
+
+dependencies = [
+    "mcp>=1.0.0",
+    "heaven-framework>=0.1.14",
+    "neo4j>=5.0.0",
+    "GitPython>=3.1.0",
+    "langchain-core>=0.1.0",
+    "langchain-text-splitters>=0.0.1",
+    "langchain-community>=0.0.20",
+    "langchain-chroma>=0.1.0",
+    "langchain-openai>=0.0.5",
+    "tiktoken>=0.5.0",
+    "chromadb>=0.4.0",
+]
+
+[project.scripts]
+carton-mcp = "carton_mcp.server_fastmcp:main"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["carton_mcp"]
+package-dir = {"carton_mcp" = "."}
+
+[tool.mcp]
+name = "carton"
+description = "CartOn - Map your knowledge graph with Zettelkasten concepts and Neo4j storage"

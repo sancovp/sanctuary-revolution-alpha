@@ -1,0 +1,136 @@
+{
+  "family_root": "gnosys",
+  "parent": null,
+  "domain": "gnosys",
+  "description": "GNOSYS MCP Router - Manage and execute MCP server actions",
+  "nodes": {
+    "gnosys": {
+      "type": "Menu",
+      "prompt": "GNOSYS",
+      "description": "GNOSYS MCP Router - Manage and execute MCP server actions",
+      "signature": "gnosys() -> mcp_operations",
+      "options": {
+        "1": "discover_server_actions",
+        "2": "execute_action",
+        "3": "get_action_details",
+        "4": "handle_auth_failure",
+        "5": "manage_servers",
+        "6": "search_documentation",
+        "7": "search_mcp_catalog"
+      }
+    },
+    "discover_server_actions": {
+      "type": "Callable",
+      "prompt": "Discover Server Actions",
+      "description": "**PREFERRED STARTING POINT**: Discover available actions from servers based on user query.",
+      "signature": "discover_server_actions(user_query: str, server_names: List[str] = None) -> Dict[str, Any]",
+      "import_path": "strata.treeshell_functions",
+      "import_object": "discover_server_actions",
+      "function_name": "discover_server_actions",
+      "is_async": true,
+      "args_schema": {
+        "user_query": "str",
+        "server_names": "List"
+      }
+    },
+    "execute_action": {
+      "type": "Callable",
+      "prompt": "Execute Action",
+      "description": "Execute a specific action with the provided parameters.",
+      "signature": "execute_action(server_name: str, action_name: str, path_params: Optional[str] = None, query_params: Optional[str] = None, body_schema: Optional[str] = '{}') -> Dict[str, Any]",
+      "import_path": "strata.treeshell_functions",
+      "import_object": "execute_action",
+      "function_name": "execute_action",
+      "is_async": true,
+      "args_schema": {
+        "server_name": "str",
+        "action_name": "str",
+        "path_params": "Optional",
+        "query_params": "Optional",
+        "body_schema": "Optional"
+      }
+    },
+    "get_action_details": {
+      "type": "Callable",
+      "prompt": "Get Action Details",
+      "description": "Get detailed information about a specific action.",
+      "signature": "get_action_details(server_name: str, action_name: str) -> Dict[str, Any]",
+      "import_path": "strata.treeshell_functions",
+      "import_object": "get_action_details",
+      "function_name": "get_action_details",
+      "is_async": true,
+      "args_schema": {
+        "server_name": "str",
+        "action_name": "str"
+      }
+    },
+    "handle_auth_failure": {
+      "type": "Callable",
+      "prompt": "Handle Auth Failure",
+      "description": "Handle authentication failures that occur when executing actions.",
+      "signature": "handle_auth_failure(server_name: str, intention: str, auth_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]",
+      "import_path": "strata.treeshell_functions",
+      "import_object": "handle_auth_failure",
+      "function_name": "handle_auth_failure",
+      "is_async": true,
+      "args_schema": {
+        "server_name": "str",
+        "intention": "str",
+        "auth_data": "Optional"
+      }
+    },
+    "manage_servers": {
+      "type": "Callable",
+      "prompt": "Manage Servers",
+      "description": "Manage MCP server connections and Sets.",
+      "signature": "manage_servers(list_configured_mcps: bool = False, list_sets: bool = False, connect: Optional[str] = None, connect_set: Optional[str] = None, connect_set_exclusive: bool = False, search_sets: Optional[str] = None, upsert_set: Optional[Dict[str, Any]] = None, delete_set: Optional[str] = None, disconnect: Optional[str] = None, disconnect_set: Optional[str] = None, disconnect_all: bool = False, populate_catalog: bool = False) -> str",
+      "import_path": "strata.treeshell_functions",
+      "import_object": "manage_servers",
+      "function_name": "manage_servers",
+      "is_async": true,
+      "args_schema": {
+        "list_configured_mcps": "bool",
+        "list_sets": "bool",
+        "connect": "Optional",
+        "connect_set": "Optional",
+        "connect_set_exclusive": "bool",
+        "search_sets": "Optional",
+        "upsert_set": "Optional",
+        "delete_set": "Optional",
+        "disconnect": "Optional",
+        "disconnect_set": "Optional",
+        "disconnect_all": "bool",
+        "populate_catalog": "bool"
+      }
+    },
+    "search_documentation": {
+      "type": "Callable",
+      "prompt": "Search Documentation",
+      "description": "Search for server action documentations by keyword matching.",
+      "signature": "search_documentation(query: str, server_name: str, max_results: int = 10) -> List[Dict[str, Any]]",
+      "import_path": "strata.treeshell_functions",
+      "import_object": "search_documentation",
+      "function_name": "search_documentation",
+      "is_async": true,
+      "args_schema": {
+        "query": "str",
+        "server_name": "str",
+        "max_results": "int"
+      }
+    },
+    "search_mcp_catalog": {
+      "type": "Callable",
+      "prompt": "Search MCP Catalog",
+      "description": "Search for tools in the offline catalog and discover Sets/Collections.",
+      "signature": "search_mcp_catalog(query: str, max_results: int = 20) -> Dict[str, Any]",
+      "import_path": "strata.treeshell_functions",
+      "import_object": "search_mcp_catalog",
+      "function_name": "search_mcp_catalog",
+      "is_async": true,
+      "args_schema": {
+        "query": "str",
+        "max_results": "int"
+      }
+    }
+  }
+}

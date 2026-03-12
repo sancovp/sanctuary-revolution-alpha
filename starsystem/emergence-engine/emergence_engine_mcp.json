@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "emergence-engine": {
+      "type": "stdio",
+      "command": "emergence-engine-mcp",
+      "args": []
+    }
+  }
+}

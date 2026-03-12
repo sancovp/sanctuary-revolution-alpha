@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "seed-mcp"
+version = "0.1.1"
+description = "SEED MCP - Unified System Identity and Publishing Platform for Compound Intelligence"
+license = {text = "GNOSYS Personal Builder License (GPBL) v1.0"}
+authors = [{name = "Isaac", email = "isaac@sancovp.com"}]
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "fastmcp>=2.0.0",
+    "pydantic>=2.0.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.23.0",
+    "requests>=2.31.0"
+]
+
+[project.scripts]
+seed-mcp-server = "seed_mcp.seed_mcp:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio", 
+    "mcp-use"
+]
+
+[project.urls]
+Homepage = "https://github.com/sancovp/seed-mcp"
+Repository = "https://github.com/sancovp/seed-mcp"

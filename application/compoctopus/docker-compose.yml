@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  # Brain — runs OctoHead CLI, writes .🪸 and .🤖 flags
+  # You interact with this one.
+  brain:
+    image: ghcr.io/sancovp/compoctopus:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: compoctopus_brain
+    environment:
+      - HEAVEN_DATA_DIR=/tmp/heaven_data
+      - COMPOCTOPUS_QUEUE=/shared/prd_queue
+      - COMPOCTOPUS_AUTO_QUEUE=/shared/auto_queue
+    volumes:
+      - shared_queue:/shared
+      - heaven_data:/tmp/heaven_data
+    command: >
+      bash -c "source /home/GOD/system_config.sh &&
+               python run_octohead.py"
+    stdin_open: true
+    tty: true
+
+  # Sandbox — runs build daemon + auto daemon
+  # Disposable. Processes .🪸 and .🤖 files.
+  sandbox:
+    image: ghcr.io/sancovp/compoctopus:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: compoctopus_sandbox
+    environment:
+      - HEAVEN_DATA_DIR=/tmp/heaven_data
+      - COMPOCTOPUS_QUEUE=/shared/prd_queue
+      - COMPOCTOPUS_AUTO_QUEUE=/shared/auto_queue
+      - COMPOCTOPUS_DAEMON_QUEUE=/shared/prd_queue
+    volumes:
+      - shared_queue:/shared
+      - heaven_data:/tmp/heaven_data
+    command: >
+      bash -c "source /home/GOD/system_config.sh &&
+               python -m compoctopus.daemon --queue /shared/prd_queue &
+               python -m compoctopus.auto_daemon"
+    restart: unless-stopped
+
+volumes:
+  shared_queue:
+    driver: local
+  heaven_data:
+    driver: local

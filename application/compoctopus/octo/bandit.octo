@@ -1,0 +1,249 @@
+"""Bandit — Select/Construct decision agent for Compoctopus.
+
+The Bandit is the head of the Compoctopus. It implements the Select/Construct
+decision: given a task, either reuse a known-good "golden chain" (Select) or
+build a new pipeline via the OctoCoder (Construct).
+
+## State Machine
+    LOOKUP → SELECT|CONSTRUCT → RECORD → DONE
+
+- LOOKUP: Check golden_chains dict for a matching config
+- SELECT: Match found — load and return the golden chain
+- CONSTRUCT: No match — invoke construction pipeline
+- RECORD: Store the outcome (success/fail, config used)
+- DONE: Return result
+
+## Transitions
+    LOOKUP → SELECT     (match found)
+    LOOKUP → CONSTRUCT  (no match)
+    SELECT → RECORD     (chain loaded)
+    CONSTRUCT → RECORD  (pipeline complete)
+    RECORD → DONE       (outcome stored)
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from compoctopus.agent import CompoctopusAgent
+from compoctopus.base import CompilerArm
+from compoctopus.chain_ontology import Chain, EvalChain
+from compoctopus.context import CompilationContext
+from compoctopus.types import (
+    ArmKind,
+    GeometricAlignmentReport,
+    MermaidSpec,
+    PromptSection,
+    SystemPrompt,
+    TaskSpec,
+    ToolManifest,
+)
+
+
+# =============================================================================
+# Dataclasses — Bandit's type algebra
+# =============================================================================
+
+@dataclass
+class GoldenChain:
+    """A successful agent configuration that can be reused."""
+    name: str
+    task_pattern: str  # regex or keyword pattern matching task descriptions
+    config: Dict[str, Any]  # the agent config that worked
+    success_count: int = 0
+    last_used: Optional[str] = None  # ISO timestamp
+
+
+@dataclass
+class BanditOutcome:
+    """Record of a Bandit's execution outcome."""
+    task_description: str
+    strategy: str  # "select" or "construct"
+    config_used: Dict[str, Any]
+    success: bool
+    timestamp: str
+
+
+# =============================================================================
+# Bandit — Select/Construct decision agent
+# =============================================================================
+
+class Bandit(CompoctopusAgent):
+    """The head of Compoctopus. Decides between Select and Construct.
+
+    The Bandit maintains a cache of successful agent configurations
+    (golden_chains). When given a task:
+
+    1. LOOKUP: Search for a matching golden chain
+    2. If match found → SELECT: Return the cached config
+    3. If no match → CONSTRUCT: Return a default construction config
+    4. RECORD: Store the outcome for learning
+    5. DONE: Return the result
+
+    Fields:
+        golden_chains: Dict[str, GoldenChain] — cached success configs
+        outcomes: List[BanditOutcome] — recorded execution history
+    """
+
+    def __init__(
+        self,
+        golden_chains: Optional[Dict[str, GoldenChain]] = None,
+        outcomes: Optional[List[BanditOutcome]] = None,
+    ) -> None:
+        """Initialize the Bandit with empty state."""
+        #>> STUB
+        #| self.golden_chains = golden_chains if golden_chains is not None else {}
+        #| self.outcomes = outcomes if outcomes is not None else []
+        #<< STUB
+
+    def lookup(self, task_description: str) -> Optional[GoldenChain]:
+        """Search golden_chains for a matching pattern.
+
+        Args:
+            task_description: The task to match against.
+
+        Returns:
+            The best matching GoldenChain, or None if no match.
+        """
+        #>> STUB
+        #| best_match = None
+        #| for chain in self.golden_chains.values():
+        #|     if chain.task_pattern in task_description:
+        #|         if best_match is None or chain.success_count > best_match.success_count:
+        #|             best_match = chain
+        #| return best_match
+        #<< STUB
+
+    def select(self, chain: GoldenChain) -> Dict[str, Any]:
+        """Select a golden chain for execution.
+
+        Args:
+            chain: The GoldenChain to select.
+
+        Returns:
+            The chain's config for execution.
+        """
+        #>> STUB
+        #| chain.success_count += 1
+        #| from datetime import datetime
+        #| chain.last_used = datetime.utcnow().isoformat()
+        #| return chain.config
+        #<< STUB
+
+    def construct(self, task_description: str) -> Dict[str, Any]:
+        """Construct a new pipeline configuration.
+
+        No match in golden_chains — return a default construction config.
+        The actual pipeline invocation happens externally.
+
+        Args:
+            task_description: The task to construct a pipeline for.
+
+        Returns:
+            A default construction config.
+        """
+        #>> STUB
+        #| default_config = {
+        #|     "task": task_description,
+        #|     "pipeline": "default",
+        #|     "model": "minimax",
+        #|     "tools": ["file_edit", "bash", "read"],
+        #|     "max_iterations": 10,
+        #| }
+        #| return default_config
+        #<< STUB
+
+    def record(
+        self,
+        task_description: str,
+        strategy: str,
+        config: Dict[str, Any],
+        success: bool,
+    ) -> BanditOutcome:
+        """Record the outcome of a decision.
+
+        If success and strategy was "construct", graduate the config
+        to a golden chain.
+
+        Args:
+            task_description: The task that was executed.
+            strategy: "select" or "construct".
+            config: The config that was used.
+            success: Whether the execution succeeded.
+
+        Returns:
+            The recorded BanditOutcome.
+        """
+        #>> STUB
+        #| from datetime import datetime
+        #| outcome = BanditOutcome(
+        #|     task_description=task_description,
+        #|     strategy=strategy,
+        #|     config_used=config,
+        #|     success=success,
+        #|     timestamp=datetime.utcnow().isoformat(),
+        #| )
+        #| self.outcomes.append(outcome)
+        #| if success and strategy == "construct":
+        #|     self.graduate(task_description, config)
+        #| return outcome
+        #<< STUB
+
+    def graduate(self, task_description: str, config: Dict[str, Any]) -> GoldenChain:
+        """Create a new GoldenChain from a successful construction.
+
+        Derive task_pattern from the task_description keywords.
+
+        Args:
+            task_description: The task that succeeded.
+            config: The config that worked.
+
+        Returns:
+            The new GoldenChain.
+        """
+        #>> STUB
+        #| words = task_description.lower().split()
+        #| key_words = [w for w in words if len(w) > 3][:3]
+        #| task_pattern = "|".join(key_words)
+        #| chain_name = f"chain_{len(self.golden_chains)}"
+        #| new_chain = GoldenChain(
+        #|     name=chain_name,
+        #|     task_pattern=task_pattern,
+        #|     config=config,
+        #|     success_count=1,
+        #|     last_used=None,
+        #| )
+        #| self.golden_chains[chain_name] = new_chain
+        #| return new_chain
+        #<< STUB
+
+
+# =============================================================================
+# Factory Function
+# =============================================================================
+
+def make_bandit() -> CompoctopusAgent:
+    """Create a Bandit agent with KeywordBasedStateMachine.
+
+    Returns:
+        A configured Bandit CompoctopusAgent.
+    """
+    #>> STUB
+    #| bandit = Bandit()
+    #| bandit.agent_name = "bandit"
+    #| bandit.model = "minimax"
+    #| bandit.chain = Chain(name="bandit_chain")
+    #| bandit.system_prompt = SystemPrompt(
+    #|     sections=[
+    #|         PromptSection(
+    #|             name="role",
+    #|             content="You are the Bandit, head of Compoctopus. "
+    #|                     "You decide between Select (reuse golden chain) "
+    #|                     "and Construct (build new pipeline).",
+    #|         ),
+    #|     ]
+    #| )
+    #| return bandit
+    #<< STUB

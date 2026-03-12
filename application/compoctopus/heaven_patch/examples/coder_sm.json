@@ -1,0 +1,57 @@
+{
+    "name": "coder",
+    "initial_state": "WRITE",
+    "terminal_states": [
+        "DONE"
+    ],
+    "states": {
+        "WRITE": {
+            "goal": "Write the .🐙 code file from the spec",
+            "tools": [
+                "write_file",
+                "read_file"
+            ],
+            "prompt_suffix": "You are writing code. Follow the spec exactly."
+        },
+        "ANNEAL": {
+            "goal": "Validate and refine the code for correctness",
+            "tools": [
+                "read_file"
+            ],
+            "prompt_suffix": "Check the code against the spec. Fix any issues."
+        },
+        "TEST": {
+            "goal": "Run the test suite and verify all tests pass",
+            "tools": [
+                "run_tests"
+            ],
+            "prompt_suffix": "Execute tests. Report results."
+        },
+        "REWRITE": {
+            "goal": "Fix failing tests by rewriting code",
+            "tools": [
+                "write_file",
+                "read_file"
+            ],
+            "prompt_suffix": "Fix the code based on test failures."
+        },
+        "DONE": {
+            "goal": "All tests pass. Return the result."
+        }
+    },
+    "transitions": {
+        "WRITE": [
+            "ANNEAL"
+        ],
+        "ANNEAL": [
+            "TEST"
+        ],
+        "TEST": [
+            "DONE",
+            "REWRITE"
+        ],
+        "REWRITE": [
+            "ANNEAL"
+        ]
+    }
+}

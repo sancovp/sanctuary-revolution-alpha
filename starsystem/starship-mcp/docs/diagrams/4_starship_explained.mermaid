@@ -1,0 +1,18 @@
+erDiagram
+    MCP-Host-Agent ||--o{ MCP : "loads"
+    Python-Libraries ||--|| MCP-Console-Scripts : "have"
+    MCP-Console-Scripts ||--|| MCP : "become"
+    
+    MCP-Host-Agent ||--|| STARSHIP : "uses"
+    STARSHIP ||--o{ Flight-Configs : "uses Waypoint"
+    Flight-Configs ||--o{ Flights : "define"
+    STARSHIP ||--|| STARLOG : "uses"
+    STARLOG ||--|| Persistence : "enables"
+    Flights ||--o{ WAYPOINT: "use"
+    Flights ||--|| Auto-Prompting : "are a kind of"
+    Auto-Prompting ||--|| VibeCodingCorePattern : "enables agent to perform"
+    VibeCodingCorePattern ||--|| Code : "makes"
+    VibeCodingCorePattern ||--|| Structured-Templates : "makes"
+    Code ||--|| Python-Libraries : "packaged_as"
+    Auto-Prompting ||--|| Structured-Templates : "has"
+    Structured-Templates ||--|| Code : "informs"

@@ -1,0 +1,197 @@
+{
+  "family_root": "treekanban",
+  "parent": "sancrev",
+  "domain": "treekanban",
+  "description": "TreeKanban - Everything that feeds the SQLite kanban board (Canopy schedule + GIINT planning + OPERA vendor)",
+  "nodes": {
+    "treekanban": {
+      "type": "Menu",
+      "prompt": "TREEKANBAN",
+      "description": "TreeKanban - Canopy schedule, GIINT planning, OPERA vendor all feed SQLite board",
+      "signature": "treekanban() -> kanban_operations",
+      "options": {
+        "1": "tk_next_task",
+        "2": "tk_schedule",
+        "3": "tk_planning",
+        "4": "tk_vendor"
+      }
+    },
+
+    "tk_next_task": {
+      "type": "Callable",
+      "prompt": "Get Next Task (Kanban)",
+      "description": "Get next task from TreeKanban build lane with auto-ratcheting from plan. Also triggers auto-vendor of operadic flows.",
+      "signature": "tk_next_task() -> str",
+      "import_path": "strata.treeshell_functions",
+      "import_object": "execute_action",
+      "function_name": "execute_action",
+      "is_async": true,
+      "default_args": {
+        "server_name": "giint-llm-intelligence",
+        "action_name": "get_next_task_from_treekanban"
+      }
+    },
+
+    "tk_schedule": {
+      "type": "Menu",
+      "prompt": "SCHEDULE (Canopy)",
+      "description": "Canopy master schedule - user-facing interface to TreeKanban. Items sync to SQLite board via omnisanc hooks.",
+      "signature": "tk_schedule() -> schedule_operations",
+      "options": {
+        "1": "tk_add_item",
+        "2": "tk_next_item",
+        "3": "tk_view",
+        "4": "tk_complete",
+        "5": "tk_item_status"
+      }
+    },
+
+    "tk_add_item": {
+      "type": "Callable",
+      "prompt": "Add Schedule Item",
+      "description": "Add work item to master schedule. Types: AI+Human, AI-Only, Human-Only. Execution: mission or plotted_course.",
+      "signature": "tk_add_item(item_type: str, description: str, execution_type: str, execution_type_decision_explanation: str, priority: int = 5) -> str",
+      "import_path": "strata.treeshell_functions",
+      "import_object": "execute_action",
+      "function_name": "execute_action",
+      "is_async": true,
+      "default_args": {
+        "server_name": "canopy",
+        "action_name": "add_to_schedule"
+      }
+    },
+
+    "tk_next_item": {
+      "type": "Callable",
+      "prompt": "Get Next Pending Item",
+      "description": "Get next pending item from schedule. Optionally filter by type (AI+Human, AI-Only, Human-Only).",
+      "signature": "tk_next_item(item_type: str = null) -> str",
+      "import_path": "strata.treeshell_functions",
+      "import_object": "execute_action",
+      "function_name": "execute_action",
+      "is_async": true,
+      "default_args": {
+        "server_name": "canopy",
+        "action_name": "get_next_item"
+      }
+    },
+
+    "tk_view": {
+      "type": "Callable",
+      "prompt": "View Schedule",
+      "description": "View master schedule with optional status filter (pending, in_progress, completed).",
+      "signature": "tk_view(status_filter: str = null) -> str",
+      "import_path": "strata.treeshell_functions",
+      "import_object": "execute_action",
+      "function_name": "execute_action",
+      "is_async": true,
+      "default_args": {
+        "server_name": "canopy",
+        "action_name": "view_schedule"
+      }
+    },
+
+    "tk_complete": {
+      "type": "Callable",
+      "prompt": "Mark Complete",
+      "description": "Mark schedule item as completed. Triggers OPERA pattern detection via omnisanc hook.",
+      "signature": "tk_complete(item_id: str) -> str",
+      "import_path": "strata.treeshell_functions",
+      "import_object": "execute_action",
+      "function_name": "execute_action",
+      "is_async": true,
+      "default_args": {
+        "server_name": "canopy",
+        "action_name": "mark_complete"
+      }
+    },
+
+    "tk_item_status": {
+      "type": "Callable",
+      "prompt": "Update Item Status",
+      "description": "Update schedule item status (pending, in_progress, completed).",
+      "signature": "tk_item_status(item_id: str, status: str) -> str",
+      "import_path": "strata.treeshell_functions",
+      "import_object": "execute_action",
+      "function_name": "execute_action",
+      "is_async": true,
+      "default_args": {
+        "server_name": "canopy",
+        "action_name": "update_item_status"
+      }
+    },
+
+    "tk_planning": {
+      "type": "Menu",
+      "prompt": "PLANNING (GIINT → Board)",
+      "description": "GIINT planning tools that auto-sync to TreeKanban SQLite board via omnisanc hooks.",
+      "signature": "tk_planning() -> planning_operations",
+      "options": {
+        "1": "tk_add_deliverable",
+        "2": "tk_add_task",
+        "3": "tk_update_task"
+      }
+    },
+
+    "tk_add_deliverable": {
+      "type": "Callable",
+      "prompt": "Add Deliverable → Board",
+      "description": "Add deliverable to GIINT component. Omnisanc hook auto-creates card on TreeKanban SQLite board.",
+      "signature": "tk_add_deliverable(project_id: str, feature_name: str, component_name: str, deliverable_name: str) -> str",
+      "import_path": "strata.treeshell_functions",
+      "import_object": "execute_action",
+      "function_name": "execute_action",
+      "is_async": true,
+      "default_args": {
+        "server_name": "giint-llm-intelligence",
+        "action_name": "planning__add_deliverable_to_component"
+      }
+    },
+
+    "tk_add_task": {
+      "type": "Callable",
+      "prompt": "Add Task → Board",
+      "description": "Add task to GIINT deliverable. Omnisanc hook auto-creates card on TreeKanban SQLite board.",
+      "signature": "tk_add_task(project_id: str, feature_name: str, component_name: str, deliverable_name: str, task_id: str, is_human_only_task: bool, agent_id: str = 'gnosys', human_name: str = '') -> str",
+      "import_path": "strata.treeshell_functions",
+      "import_object": "execute_action",
+      "function_name": "execute_action",
+      "is_async": true,
+      "default_args": {
+        "server_name": "giint-llm-intelligence",
+        "action_name": "planning__add_task_to_deliverable",
+        "agent_id": "gnosys"
+      }
+    },
+
+    "tk_update_task": {
+      "type": "Callable",
+      "prompt": "Update Task Status → Board",
+      "description": "Update GIINT task status. Syncs to TreeKanban SQLite board (blocked/measure/learn lanes).",
+      "signature": "tk_update_task(project_id: str, feature_name: str, component_name: str, deliverable_name: str, task_id: str, is_done: bool, is_blocked: bool, blocked_description: str, is_ready: bool) -> str",
+      "import_path": "strata.treeshell_functions",
+      "import_object": "execute_action",
+      "function_name": "execute_action",
+      "is_async": true,
+      "default_args": {
+        "server_name": "giint-llm-intelligence",
+        "action_name": "planning__update_task_status"
+      }
+    },
+
+    "tk_vendor": {
+      "type": "Callable",
+      "prompt": "Vendor Operadic Flow → Board",
+      "description": "Vendor an OPERA operadic flow. Omnisanc hook auto-creates pattern card on TreeKanban SQLite board.",
+      "signature": "tk_vendor(flow_id: str) -> str",
+      "import_path": "strata.treeshell_functions",
+      "import_object": "execute_action",
+      "function_name": "execute_action",
+      "is_async": true,
+      "default_args": {
+        "server_name": "opera",
+        "action_name": "vendor_operadic_flow"
+      }
+    }
+  }
+}

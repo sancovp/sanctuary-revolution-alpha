@@ -1,0 +1,153 @@
+"""CompoctopusAgent — the abstract type for all Compoctopus agents.
+
+A CompoctopusAgent is:
+    1. A Chain of SDNA* steps (SDNACs, FunctionLinks) connected by Dovetails
+    2. Each SDNAC has its own HermesConfig → its own Heaven agent
+    3. Mechanical steps (ANNEAL, VERIFY) are FunctionLinks (no LLM)
+    4. execute() runs self.chain.execute(ctx) — Chain handles sequencing
+    5. Dovetails validate outputs and map inputs between steps
+
+Architecture:
+    CompoctopusAgent (Chain + metadata)
+      └── Chain/SDNAFlow/EvalChain
+          ├── SDNAC (phase 1: own HermesConfig, own tools, own agent)
+          │     ├── Ariadne (context injection)
+          │     └── Poimandres (LLM execution via HeavenAgent)
+          ├── Dovetail (validates output, maps input)
+          ├── SDNAC (phase 2: different agent, different tools)
+          ├── Dovetail
+          ├── FunctionLink (mechanical step, no LLM)
+          └── ...
+
+Agent types use different SDNA primitives:
+    - Planner: Chain (sequential, no loops)
+    - OctoCoder: EvalChain (annealing loop with verify evaluator)
+    - Bandit: EvalChain (SELECT → CONSTRUCT → SELECT loop)
+
+This is Step 0 of the bootstrap: the abstract type that all agents
+implement. The 🐙 Coder is the first concrete instance.
+"""
+
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Union
+
+from compoctopus.base import CompilerArm
+from compoctopus.chain_ontology import Link, Chain, EvalChain, LinkResult, LinkStatus
+from compoctopus.types import (
+    ArmKind,
+    CompiledAgent,
+    GeometricAlignmentReport,
+    MermaidSpec,
+    PromptSection,
+    SystemPrompt,
+    TaskSpec,
+    ToolManifest,
+)
+from compoctopus.context import CompilationContext
+
+logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# CompoctopusAgent — Chain-based orchestration via SDNA primitives
+# =============================================================================
+
+@dataclass
+class CompoctopusAgent(CompilerArm):
+    """The universal Compoctopus type. Everything is this.
+
+    Inherits CompilerArm (which inherits Link). A CompoctopusAgent
+    wraps a Chain of SDNA* steps. Workers, compiler arms, pipeline
+    compilers — they're all CompoctopusAgent with different Chains.
+
+    Fields:
+    - chain: The SDNA Chain/SDNAFlow/EvalChain that orchestrates this agent
+    - system_prompt: the agent's identity and instructions (for describe/freeze)
+    - mermaid_spec: the executable sequence diagram (for validation)
+    - tool_manifest: equipped tools (union across all phases)
+    - arm_kind: which compiler arm this is (if acting as an arm)
+
+    The execute() method just runs self.chain.execute(ctx).
+    The Chain handles all sequencing, looping, and dovetailing.
+    """
+    agent_name: str = ""
+    chain: Optional[Union[Chain, EvalChain, Link]] = None
+    system_prompt: Optional[SystemPrompt] = None
+    mermaid_spec: Optional[MermaidSpec] = None
+    tool_manifest: Optional[ToolManifest] = None
+    task_spec: Optional[TaskSpec] = None
+    arm_kind: Optional[ArmKind] = None  # None = worker; set for compiler arms
+    model: str = "minimax"
+    modules: List[str] = field(default_factory=list)
+
+    # --- CompilerArm abstract methods (implemented) ---
+
+    @property
+    def kind(self) -> ArmKind:
+        #>> STUB
+        #<< STUB
+
+    def compile(self, ctx: CompilationContext) -> None:
+        """Compile by running this agent's chain."""
+        #>> STUB
+        #<< STUB
+
+    def validate(self, ctx: CompilationContext) -> GeometricAlignmentReport:
+        """Validate using geometric alignment."""
+        #>> STUB
+        #<< STUB
+
+    def get_mermaid_spec(self) -> MermaidSpec:
+        #>> STUB
+        #<< STUB
+
+    def get_system_prompt_sections(self) -> List[PromptSection]:
+        #>> STUB
+        #<< STUB
+
+    def get_tool_surface(self) -> ToolManifest:
+        #>> STUB
+        #<< STUB
+
+    @property
+    def name(self) -> str:
+        #>> STUB
+        #<< STUB
+
+    async def execute(self, context=None, **kwargs):
+        """Run the agent's chain.
+
+        The chain handles all orchestration:
+        - Chain: sequential execution with dovetail validation
+        - EvalChain: loop with evaluator (approve/reject/retry)
+        """
+        #>> STUB
+        #<< STUB
+
+    # --- Convenience methods ---
+
+    def describe(self, depth: int = 0) -> str:
+        #>> STUB
+        #<< STUB
+
+    def to_sdna(self) -> Dict[str, Any]:
+        """Serialize to SDNA config."""
+        #>> STUB
+        #<< STUB
+
+    def to_link(self) -> "CompoctopusAgent":
+        """Return self — CompoctopusAgent IS a Link."""
+        #>> STUB
+        #<< STUB
+
+    def freeze(self) -> CompiledAgent:
+        """Freeze to a CompiledAgent dataclass."""
+        #>> STUB
+        #<< STUB
+
+    def __repr__(self) -> str:
+        #>> STUB
+        #<< STUB

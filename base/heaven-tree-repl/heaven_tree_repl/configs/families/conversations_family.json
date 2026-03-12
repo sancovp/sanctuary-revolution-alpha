@@ -1,0 +1,154 @@
+{
+  "family_root": "conversations",
+  "parent": null,
+  "domain": "conversations",
+  "description": "Chat and conversation management system",
+  "nodes": {
+    "conversations": {
+      "id": "conversations",
+      "title": "\ud83d\udcac Conversation Management",
+      "description": "Default conversation system for all TreeShell applications",
+      "type": "Menu",
+      "options": {
+        "1": "start",
+        "2": "continue",
+        "3": "list",
+        "4": "load",
+        "5": "search"
+      }
+    },
+    "start": {
+      "id": "conversations_start",
+      "type": "Callable",
+      "prompt": "Start New Chat",
+      "description": "Start a new conversation using the currently selected agent config",
+      "function_name": "_start_chat",
+      "import_path": "heaven_tree_repl.conversation_chat_app",
+      "import_object": "_start_chat",
+      "is_async": true,
+      "args_schema": {
+        "title": "str",
+        "message": "str",
+        "tags": "str",
+        "agent_config": "$selected_agent_config",
+        "return_all_results": "bool"
+      }
+    },
+    "continue": {
+      "id": "conversations_continue",
+      "type": "Callable",
+      "description": "Continue the current active conversation with the selected agent",
+      "legacy_coordinate": "0.4.2",
+      "function_name": "_continue_chat",
+      "import_path": "heaven_tree_repl.conversation_chat_app",
+      "import_object": "_continue_chat",
+      "is_async": true,
+      "args_schema": {
+        "message": "str",
+        "agent_config": "$selected_agent_config",
+        "return_all_results": "bool"
+      },
+      "prompt": "Continue Chat"
+    },
+    "list": {
+      "id": "conversations_list",
+      "type": "Callable",
+      "description": "Show recent conversations",
+      "legacy_coordinate": "0.4.3",
+      "function_name": "_list_conversations",
+      "import_path": "heaven_tree_repl.conversation_chat_app",
+      "import_object": "_list_conversations",
+      "args_schema": {
+        "limit": "int"
+      },
+      "prompt": "List Conversations"
+    },
+    "load": {
+      "id": "conversations_load",
+      "type": "Callable",
+      "description": "Switch to an existing conversation",
+      "legacy_coordinate": "0.4.4",
+      "function_name": "_load_conversation",
+      "import_path": "heaven_tree_repl.conversation_chat_app",
+      "import_object": "_load_conversation",
+      "args_schema": {
+        "conversation_id": "str"
+      },
+      "prompt": "Load Conversation"
+    },
+    "search": {
+      "id": "conversations_search",
+      "type": "Callable",
+      "description": "Search conversations by title or tags",
+      "legacy_coordinate": "0.4.5",
+      "function_name": "_search_conversations",
+      "import_path": "heaven_tree_repl.conversation_chat_app",
+      "import_object": "_search_conversations",
+      "args_schema": {
+        "query": "str"
+      },
+      "prompt": "Search Conversations"
+    },
+    "management": {
+      "id": "conversations_management",
+      "type": "Callable",
+      "description": "Advanced conversation management features",
+      "legacy_coordinate": "0.2.1",
+      "prompt": "\ud83d\udccb Management Tools"
+    },
+    "archive": {
+      "id": "conversations_management_archive",
+      "type": "Callable",
+      "description": "Archive old conversations",
+      "legacy_coordinate": "0.2.1.1",
+      "function_name": "archive_conversations",
+      "import_path": "heaven_tree_repl.conversation_management",
+      "import_object": "archive_conversations",
+      "args_schema": {
+        "older_than_days": "int"
+      },
+      "prompt": "Archive Conversations"
+    },
+    "export": {
+      "id": "conversations_management_export",
+      "type": "Callable",
+      "description": "Export conversations to various formats",
+      "legacy_coordinate": "0.2.1.2",
+      "function_name": "export_conversations",
+      "import_path": "heaven_tree_repl.conversation_management",
+      "import_object": "export_conversations",
+      "args_schema": {
+        "format": "str",
+        "conversation_ids": "list"
+      },
+      "prompt": "Export Conversations"
+    },
+    "analytics": {
+      "id": "conversations_analytics",
+      "type": "Callable",
+      "description": "Conversation analytics and insights",
+      "legacy_coordinate": "0.2.2",
+      "prompt": "\ud83d\udcca Analytics"
+    },
+    "stats": {
+      "id": "conversations_analytics_stats",
+      "type": "Callable",
+      "description": "Show conversation usage statistics",
+      "legacy_coordinate": "0.2.2.1",
+      "function_name": "conversation_stats",
+      "import_path": "heaven_tree_repl.conversation_analytics",
+      "import_object": "conversation_stats",
+      "prompt": "Conversation Stats"
+    },
+    "patterns": {
+      "id": "conversations_analytics_patterns",
+      "type": "Callable",
+      "description": "Analyze conversation usage patterns",
+      "legacy_coordinate": "0.2.2.2",
+      "function_name": "analyze_usage_patterns",
+      "import_path": "heaven_tree_repl.conversation_analytics",
+      "import_object": "analyze_usage_patterns",
+      "prompt": "Usage Patterns"
+    }
+  }
+}

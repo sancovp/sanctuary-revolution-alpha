@@ -1,0 +1,10 @@
+flowchart TD
+    n2 --> B[STARSHIP + STARLOG]
+    B --> C[Auto Track Sessions]
+    B --> D[Manage Prompt Chains i.e. Flights]
+    C --> E[Context Engineering Programmable Inside STARSHIP e.g. Flight Configs]
+    D --> E
+    E --> F[Using STARSHIP meta flight configs to make new flight configs that engineer context]
+    F --> n1
+    n1@{ shape: "circle", label: "Problem Solved" }
+    n2@{ shape: "circle", label: "Context Loss Problem" }

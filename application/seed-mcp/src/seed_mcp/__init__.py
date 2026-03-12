@@ -1,0 +1,1 @@
+# SEED MCP - Unified System Identity for Compound Intelligence

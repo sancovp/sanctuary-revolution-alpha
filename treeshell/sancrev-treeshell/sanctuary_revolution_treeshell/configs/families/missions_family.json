@@ -1,0 +1,23 @@
+{
+  "family_root": "missions_home",
+  "parent": null,
+  "domain": "missions",
+  "description": "Missions — Mission configurator. Configure missions, plot course, select flights.",
+  "nodes": {
+    "missions_home": {
+      "type": "Menu",
+      "prompt": "Missions — Mission Control",
+      "options": {
+        "Mission Status": "execute_action.exec {\"server_name\": \"STARSYSTEM\", \"action_name\": \"mission_get_status\"}",
+        "Browse Mission Configs": "execute_action.exec {\"server_name\": \"STARSYSTEM\", \"action_name\": \"mission_select_menu\"}",
+        "Create Mission": "execute_action.exec {\"server_name\": \"STARSYSTEM\", \"action_name\": \"mission_create\"}",
+        "List All Missions": "execute_action.exec {\"server_name\": \"STARSYSTEM\", \"action_name\": \"mission_list\"}",
+        "Start Mission": "execute_action.exec {\"server_name\": \"STARSYSTEM\", \"action_name\": \"mission_start\"}",
+        "Plot Course": "execute_action.exec {\"server_name\": \"starship\", \"action_name\": \"plot_course\"}",
+        "Browse Flights": "execute_action.exec {\"server_name\": \"starship\", \"action_name\": \"fly\"}",
+        "Fleet Health": "execute_action.exec {\"server_name\": \"STARSYSTEM\", \"action_name\": \"get_health\"}",
+        "Back to HOME": "jump cf_home"
+      }
+    }
+  }
+}

@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sanctuary-revolution-treeshell"
+version = "0.2.0"
+description = "Sanctuary Revolution - Unified TreeShell (Game + GNOSYS + Skills)"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp",
+    "sanctuary-revolution",
+    "heaven-tree-repl",
+    "gnosys-strata>=0.1.0",
+    "skill-manager-mcp>=0.1.0",
+]
+
+[tool.setuptools.package-data]
+sanctuary_revolution_treeshell = ["configs/**/*.json"]
+
+[project.scripts]
+sanctuary-revolution-treeshell = "sanctuary_revolution_treeshell.mcp_server:serve"

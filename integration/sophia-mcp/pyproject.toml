@@ -1,0 +1,24 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sophia-mcp"
+version = "0.1.0"
+description = "Sophia-MCP: Wisdom/Routing Layer for GNOSYS compound intelligence"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Isaac Wostrel-Rubin", email = "isaac@sancovp.com"}
+]
+keywords = ["mcp", "agent", "routing", "wisdom", "claude"]
+dependencies = [
+    "mcp>=1.0.0",
+]
+
+[project.scripts]
+sophia-mcp = "sophia_mcp.server:mcp.run"
+
+[tool.hatch.build.targets.wheel]
+packages = ["sophia_mcp"]

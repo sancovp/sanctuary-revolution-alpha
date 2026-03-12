@@ -1,0 +1,41 @@
+{
+  "domain": "conversation_ingestion_setup",
+  "version": "1.0.0",
+  "description": "Phase 1-2: Setup publishing set and select conversation for ingestion",
+  "directories": {},
+  "root_files": [
+    {
+      "sequence_number": 1,
+      "filename": "01_check_status.md",
+      "title": "Check Ingestion Status",
+      "content": "# Step 1: Check Current Status\n\nUse: `status()`\n\nThis shows:\n- Active publishing set (if any)\n- Active conversation (if any)\n- Current phase\n- What needs to happen next\n\nIf no publishing set is active, proceed to Step 2.\nIf publishing set is active but no conversation selected, skip to Step 4.",
+      "piece_type": "instruction",
+      "dependencies": []
+    },
+    {
+      "sequence_number": 2,
+      "filename": "02_list_or_create_publishing_set.md",
+      "title": "List or Create Publishing Set",
+      "content": "# Step 2: Publishing Set Management\n\n## Check existing sets:\nUse: `list_publishing_sets()`\n\n## Create new set if needed:\nUse: `create_publishing_set(name, conversations)`\n\nExample:\n```\ncreate_publishing_set(\n  name=\"december_2024_batch\",\n  conversations=[\"halo-shield\", \"soseeh-deep-dive\", \"sanctuary-patterns\"]\n)\n```\n\nPublishing sets group conversations that will be processed together through Phases 5-8.",
+      "piece_type": "instruction",
+      "dependencies": [1]
+    },
+    {
+      "sequence_number": 3,
+      "filename": "03_activate_publishing_set.md",
+      "title": "Activate Publishing Set",
+      "content": "# Step 3: Activate Publishing Set\n\nUse: `set_publishing_set(name)`\n\nThis makes the publishing set your active working context.\n\n**IMPORTANT**: You cannot work on conversations without an active publishing set.\n\nAfter activation, the set tracks:\n- Which conversations are complete (Phase 5)\n- Publishing set phase (5→6→7→8)\n- Delivery status",
+      "piece_type": "instruction",
+      "dependencies": [2]
+    },
+    {
+      "sequence_number": 4,
+      "filename": "04_select_conversation.md",
+      "title": "Select Conversation to Ingest",
+      "content": "# Step 4: Select Conversation\n\n## List available conversations:\nUse: `list_available_conversations()`\n\nThis shows conversations in the active publishing set that are NOT yet at Phase 5.\n\n## Select one to work on:\nUse: `set_conversation(name)`\n\nExample: `set_conversation(\"halo-shield\")`\n\n**SETUP COMPLETE**: You are now ready to begin tagging.\n\nNext flight: `ingestion_tagging_flight_config`",
+      "piece_type": "instruction",
+      "dependencies": [3]
+    }
+  ],
+  "entry_point": "01_check_status.md"
+}

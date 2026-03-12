@@ -1,0 +1,273 @@
+#!/usr/bin/env python3
+"""Auto Daemon — watches for .🤖 flags and runs one self-improvement cycle.
+
+Runs in the sandbox container. Watches AUTO_QUEUE for .🤖 files.
+When found:
+  1. Reads the flag (focus area, rules)
+  2. git pull latest develop
+  3. pip install -e . (reinstall from fresh source)
+  4. Run OctoHead introspection → PRDs
+  5. Run pipeline daemon on PRDs
+  6. Commit output to feature branch
+  7. Open PR to develop
+  8. Delete .🤖 flag
+  9. Go back to watching
+
+Only processes one .🤖 at a time. Deletes extras.
+
+Usage:
+    python -m compoctopus.auto_daemon
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import logging
+import os
+import subprocess
+import sys
+import time
+from datetime import datetime
+from pathlib import Path
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(name)-25s %(levelname)-8s %(message)s',
+)
+logger = logging.getLogger("compoctopus.auto")
+
+AUTO_QUEUE = os.environ.get("COMPOCTOPUS_AUTO_QUEUE", "/tmp/compoctopus_auto_queue")
+REPO_URL = os.environ.get("COMPOCTOPUS_REPO_URL", "https://github.com/sancovp/compoctopus.git")
+WORK_DIR = "/tmp/compoctopus_autodev_workspace"
+DAEMON_QUEUE = "/tmp/compoctopus_daemon_queue"
+POLL_INTERVAL = 5  # seconds
+
+
+def run_cmd(cmd: str, cwd: str = WORK_DIR) -> str:
+    """Run shell command, return output."""
+    logger.debug("$ %s", cmd)
+    result = subprocess.run(cmd, shell=True, cwd=cwd, capture_output=True, text=True)
+    if result.returncode != 0 and result.stderr:
+        logger.warning("stderr: %s", result.stderr[:500])
+    return result.stdout.strip()
+
+
+def git_pull_latest():
+    """Clone or pull latest develop."""
+    ws = Path(WORK_DIR)
+    if (ws / ".git").exists():
+        run_cmd("git fetch origin")
+        run_cmd("git checkout develop")
+        run_cmd("git reset --hard origin/develop")
+        logger.info("Reset to latest origin/develop")
+    else:
+        ws.mkdir(parents=True, exist_ok=True)
+        run_cmd(f"git clone {REPO_URL} {WORK_DIR}", cwd="/tmp")
+        run_cmd("git checkout develop")
+        logger.info("Cloned repo, on develop")
+
+
+def reinstall():
+    """Reinstall compoctopus from fresh source."""
+    run_cmd("pip install -e . --quiet")
+    logger.info("Reinstalled from source")
+
+
+async def run_octohead_introspection(focus: str, rules: str):
+    """Run OctoHead to introspect and generate PRDs."""
+    # Reload compoctopus from fresh install
+    # Force reimport
+    for mod_name in list(sys.modules.keys()):
+        if mod_name.startswith("compoctopus"):
+            del sys.modules[mod_name]
+
+    from compoctopus.octohead import make_octohead
+    from heaven_base.tool_utils.completion_runners import exec_completion_style
+
+    tree = run_cmd(f"find {WORK_DIR}/compoctopus -name '*.py' -type f")
+
+    prompt = (
+        f"My project is at {WORK_DIR}. Here is the file structure:\n\n"
+        f"```\n{tree}\n```\n\n"
+        f"## Focus\n{focus}\n\n"
+        f"## Improvement Rules\n{rules}\n\n"
+        "Review the codebase. Identify the single most impactful improvement. "
+        "Create a PRD for it and queue it for the daemon. Only ONE improvement per cycle."
+    )
+
+    config = make_octohead()
+    result = await exec_completion_style(prompt=prompt, agent=config)
+
+    # Log response
+    msgs = result.get("messages", [])
+    if msgs:
+        last = msgs[-1]
+        content = last.get("content", "")
+        if isinstance(content, list):
+            text = "\n".join(b.get("text", "") for b in content if isinstance(b, dict))
+        else:
+            text = str(content)
+        logger.info("OctoHead:\n%s", text[:800])
+
+
+def wait_for_builds(timeout: int = 600) -> bool:
+    """Wait for daemon to process all .🪸 files."""
+    dq = Path(DAEMON_QUEUE)
+    start = time.time()
+    while time.time() - start < timeout:
+        corals = list(dq.glob("*.🪸"))
+        if not corals:
+            surfs = list(dq.glob("*.🏄")) + list((dq / "done").glob("*.🏄") if (dq / "done").exists() else [])
+            if surfs:
+                logger.info("Build complete: %d .🏄 reports", len(surfs))
+            return True
+        time.sleep(5)
+    logger.warning("Build timeout after %ds", timeout)
+    return False
+
+
+def commit_and_pr(focus: str) -> bool:
+    """Commit changes and open PR to develop."""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    branch = f"auto-dev/{timestamp}"
+    safe_focus = focus[:50].replace(" ", "-").lower()
+
+    run_cmd(f"git checkout -b {branch}")
+    run_cmd("git add -A")
+
+    diff = run_cmd("git diff --cached --stat")
+    if not diff:
+        logger.info("No changes to commit")
+        run_cmd("git checkout develop")
+        return False
+
+    msg = f"auto-dev: {safe_focus} ({timestamp})"
+    run_cmd(f'git commit -m "{msg}"')
+    run_cmd(f"git push origin {branch}")
+
+    pr_body = (
+        f"## 🤖 Automated Improvement\n\n"
+        f"**Focus:** {focus}\n\n"
+        f"Generated by Compoctopus auto-dev cycle.\n"
+        f"Review carefully before merging."
+    )
+    # Write PR body to temp file to avoid shell escaping issues
+    pr_body_file = Path("/tmp/pr_body.md")
+    pr_body_file.write_text(pr_body)
+
+    pr_url = run_cmd(
+        f'gh pr create --base develop --head {branch} '
+        f'--title "🤖 {msg}" '
+        f'--body-file /tmp/pr_body.md'
+    )
+    logger.info("PR created: %s", pr_url)
+
+    run_cmd("git checkout develop")
+    return True
+
+
+def clean_daemon_queue():
+    """Clean daemon queue between cycles."""
+    dq = Path(DAEMON_QUEUE)
+    for f in dq.glob("*"):
+        if f.is_file():
+            f.unlink()
+    done = dq / "done"
+    if done.exists():
+        for f in done.glob("*"):
+            f.unlink()
+
+
+async def process_flag(flag_path: Path):
+    """Process one .🤖 flag file."""
+    logger.info("=" * 60)
+    logger.info("🤖 Auto-dev cycle starting")
+    logger.info("   Flag: %s", flag_path.name)
+    logger.info("=" * 60)
+
+    # Read flag
+    flag_data = json.loads(flag_path.read_text())
+    focus = flag_data.get("focus", "general improvement")
+    rules = flag_data.get("rules", "")
+
+    logger.info("   Focus: %s", focus)
+
+    try:
+        # 1. Pull latest
+        git_pull_latest()
+
+        # 2. Reinstall
+        reinstall()
+
+        # 3. Clean daemon queue
+        clean_daemon_queue()
+
+        # 4. OctoHead introspection → PRDs
+        await run_octohead_introspection(focus, rules)
+
+        # 5. Wait for builds
+        has_corals = list(Path(DAEMON_QUEUE).glob("*.🪸"))
+        if has_corals:
+            logger.info("Waiting for %d corals to build...", len(has_corals))
+            wait_for_builds()
+
+        # 6. Commit + PR
+        committed = commit_and_pr(focus)
+
+        if committed:
+            logger.info("✅ Cycle complete — PR opened")
+        else:
+            logger.info("⏭️ Cycle complete — no changes")
+
+    except Exception as e:
+        logger.error("❌ Cycle failed: %s", e, exc_info=True)
+
+    finally:
+        # 7. Always delete the flag
+        flag_path.unlink(missing_ok=True)
+        logger.info("🗑️ Flag deleted: %s", flag_path.name)
+
+        # Delete any extra flags (only one at a time)
+        queue = Path(AUTO_QUEUE)
+        for extra in queue.glob("*.🤖"):
+            logger.warning("Deleting extra flag: %s", extra.name)
+            extra.unlink()
+
+
+async def daemon_loop():
+    """Main loop — watch for .🤖 flags."""
+    queue = Path(AUTO_QUEUE)
+    queue.mkdir(parents=True, exist_ok=True)
+
+    logger.info("🤖 Auto daemon started")
+    logger.info("   Watching: %s", queue)
+    logger.info("   Interval: %ds", POLL_INTERVAL)
+    logger.info("   Waiting for .🤖 flags...\n")
+
+    while True:
+        flags = sorted(queue.glob("*.🤖"))
+
+        if flags:
+            # Process only the first one
+            await process_flag(flags[0])
+
+            # Delete any extras
+            for extra in flags[1:]:
+                logger.warning("Deleting extra flag: %s", extra.name)
+                extra.unlink()
+
+        await asyncio.sleep(POLL_INTERVAL)
+
+
+def main():
+    os.environ.setdefault("HEAVEN_DATA_DIR", "/tmp/heaven_data")
+
+    try:
+        asyncio.run(daemon_loop())
+    except KeyboardInterrupt:
+        logger.info("\n👋 Auto daemon stopped.")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,26 @@
+{
+  "family_root": "agent_management_approvals",
+  "parent": "agent_management",
+  "domain": "agent_management",
+  "description": "Review and approve agent-generated workflows",
+  "nodes": {
+    "agent_management_approvals": {
+      "id": "agent_management_approvals",
+      "title": "\u2705 Workflow Approvals",
+      "description": "Review and approve agent-generated workflows",
+      "type": "Menu",
+      "options": {
+        "1": "view_pending"
+      }
+    },
+    "view_pending": {
+      "id": "agent_management_approvals_view_pending",
+      "title": "View Pending Approvals",
+      "description": "Show all workflows awaiting human approval",
+      "type": "Callable",
+      "callable": {
+        "function_name": "_view_pending_approvals"
+      }
+    }
+  }
+}

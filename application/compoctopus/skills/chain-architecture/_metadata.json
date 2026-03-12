@@ -1,0 +1,6 @@
+{
+    "name": "chain-architecture",
+    "domain": "compoctopus",
+    "subdomain": "architecture",
+    "description": "Chain vs EvalChain patterns, link types, dovetail rules, proven design patterns (Annealer, Decomposer, Router)"
+}

@@ -1,0 +1,13 @@
+{
+    "octohead": {
+        "name": "octohead",
+        "domain": "compoctopus",
+        "subdomain": null,
+        "description": "Core skills for OctoHead — PRD authoring, chain architecture, behavioral assertions",
+        "skills": [
+            "prd-authoring",
+            "chain-architecture",
+            "behavioral-assertions"
+        ]
+    }
+}

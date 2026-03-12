@@ -1,0 +1,49 @@
+{
+  "domain": "conversation_ingestion_publishing",
+  "version": "1.0.0",
+  "description": "Phase 6-8: Create canonical frameworks with journey metadata and deliver to Discord",
+  "directories": {},
+  "root_files": [
+    {
+      "sequence_number": 1,
+      "filename": "01_advance_to_phase6.md",
+      "title": "Advance Publishing Set to Phase 6",
+      "content": "# Step 1: Advance to Phase 6\n\n## Check publishing set status:\nUse: `get_publishing_set_status(name)`\n\nAll conversations must be at Phase 5 before advancing.\n\n## Advance to Phase 6:\nUse: `authorize_publishing_set_phase(name)`\n\nPhase 6 = Journey Metadata phase.\n\nThis unlocks `set_journey_metadata()` for canonical frameworks.",
+      "piece_type": "instruction",
+      "dependencies": []
+    },
+    {
+      "sequence_number": 2,
+      "filename": "02_assign_canonicals.md",
+      "title": "Assign Canonicals to Emergents",
+      "content": "# Step 2: Assign Canonical Frameworks\n\nEach emergent framework needs a canonical parent.\n\n## Add canonical to registry (if new):\nUse: `add_canonical_framework(strata, slot_type, framework_name, framework_state)`\n\nSlot types: reference | collection | workflow | library | operating_context\nFramework state: aspirational | actual\n\n## Assign emergent to canonical:\nUse: `assign_canonical_to_emergent(emergent_name, canonical_name)`\n\nMultiple emergents can belong to one canonical.\n\nExample: HALO, SOSEEH, HIEL emergents → HALO_SHIELD canonical",
+      "piece_type": "instruction",
+      "dependencies": [1]
+    },
+    {
+      "sequence_number": 3,
+      "filename": "03_journey_metadata.md",
+      "title": "Add Journey Metadata",
+      "content": "# Step 3: Journey Metadata (Phase 6)\n\nEach canonical needs journey metadata for Discord posting.\n\nUse: `set_journey_metadata(canonical_framework, obstacle, overcome, dream)`\n\n## The Three Fields:\n- **obstacle**: What problem does this framework solve? What was blocking progress?\n- **overcome**: How does the framework address the obstacle? What shift happened?\n- **dream**: What becomes possible? What future state does this enable?\n\nThis becomes the Discord journey post that draws people in.\n\n## Advance to Phase 7:\nUse: `authorize_publishing_set_phase(name)`\n\nRequires: ALL canonicals have journey metadata.",
+      "piece_type": "instruction",
+      "dependencies": [2]
+    },
+    {
+      "sequence_number": 4,
+      "filename": "04_canonical_documents.md",
+      "title": "Create Canonical Documents",
+      "content": "# Step 4: Canonical Documents (Phase 7)\n\n## Create canonical document:\nUse: `set_canonical_document(canonical_name, emergents)`\n\nThis creates a JSON that references all emergent JSONs.\n\n## Preview canonical:\nUse: `preview_canonical(canonical_name, output_path)`\n\nThis renders the full canonical with all emergents composed into one document.\n\nReview the markdown. This is what goes on Discord.\n\n## Advance to Phase 8:\nUse: `authorize_publishing_set_phase(name)`\n\nRequires: ALL canonical documents written.",
+      "piece_type": "instruction",
+      "dependencies": [3]
+    },
+    {
+      "sequence_number": 5,
+      "filename": "05_deliver.md",
+      "title": "Deliver to Discord",
+      "content": "# Step 5: Delivery (Phase 8)\n\nWhen Phase 8 is reached, publishing set status becomes 'delivered'.\n\n## Post to Discord:\nUse Discord MCP tools to post:\n1. Journey metadata → `#<strata>-journeys` channel\n2. Framework document → `#<strata>-frameworks` channel\n\n## Channels per strata:\n- paiab: `#paiab-journeys`, `#paiab-frameworks`\n- sanctum: `#sanctum-journeys`, `#sanctum-frameworks`\n- cave: `#cave-journeys`, `#cave-frameworks`\n\n**INGESTION COMPLETE**: Publishing set delivered. Start new publishing set for next batch.",
+      "piece_type": "instruction",
+      "dependencies": [4]
+    }
+  ],
+  "entry_point": "01_advance_to_phase6.md"
+}

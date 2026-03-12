@@ -1,0 +1,32 @@
+{
+  "name": "twi-marketplace",
+  "owner": {
+    "name": "TWI",
+    "email": "isaac@sanctuary.systems"
+  },
+  "metadata": {
+    "description": "TWI Community Plugins - GNOSYS compound intelligence ecosystem",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "autopoiesis",
+      "source": "./",
+      "description": "Autopoiesis Plugin - Self-maintaining promise loops that enforce honest AI work through stop hooks",
+      "version": "0.1.4",
+      "author": {
+        "name": "Isaac Wostrel-Rubin",
+        "email": "isaac@sanctuary.systems"
+      },
+      "license": "GPBL-1.0",
+      "keywords": [
+        "ai-agent",
+        "autopoiesis",
+        "promise-loops",
+        "honest-work",
+        "self-maintenance"
+      ],
+      "category": "productivity"
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "domain": "conversation_ingestion_emergent",
+  "version": "1.2.0",
+  "description": "Phase 4-5: Create emergent framework documents using Hero's Journey structure",
+  "directories": {},
+  "root_files": [
+    {
+      "sequence_number": 1,
+      "filename": "01_list_emergents.md",
+      "title": "List Emergent Frameworks",
+      "content": "# Step 1: Review Emergent Frameworks\n\nUse: `list_emergent_frameworks()`\n\nThis shows all emergent frameworks discovered during tagging, with:\n- Name and strata\n- Number of bundled pairs\n- Whether document exists\n\nIdentify which frameworks need documents created.\n\n**CHECK**: Do you have multiple emergent frameworks or just one mega-framework?\n- A conversation typically yields 2-6 emergents\n- If you only have 1, consider whether it should be split",
+      "piece_type": "instruction",
+      "dependencies": []
+    },
+    {
+      "sequence_number": 2,
+      "filename": "02_get_pairs_and_context.md",
+      "title": "Get Pairs AND Concept Neighborhood",
+      "content": "# Step 2: Get Pairs AND Related Context\n\n## Get pairs for this emergent:\nUse: `get_emergent_pairs(emergent_name)`\n\nThis returns all pairs tagged with `emergent_framework: <name>`.\n\n## Get concept neighborhood:\nLook at the concept tags in those pairs. For each concept:\n- What OTHER emergent frameworks share this concept?\n- Pull those as context for synthesis\n\nExample: If synthesizing SOSEEH and it has concept 'Extreme_Environment':\n- What other emergents touch 'Extreme_Environment'?\n- Pull those for context so your synthesis is aware of related frameworks\n\n**Synthesis is NOT done in isolation.** Related emergents inform how you write this one.",
+      "piece_type": "instruction",
+      "dependencies": [1]
+    },
+    {
+      "sequence_number": 3,
+      "filename": "03_understand_structure.md",
+      "title": "Understand Hero's Journey Document Structure",
+      "content": "# Step 3: Understand the Document Structure\n\nThe framework document follows **Hero's Journey** structure:\n\n## DREAM (The Return - Master of Two Worlds)\n- Short: 1-3 sentences\n- The end state you now have access to\n- What the reader achieves if they complete the journey\n\n## PROOF (The Full Journey - Acts 1, 2, 3)\nThis is the MAIN CONTENT. NOT a summary. The UNABRIDGED origin story.\n\n**ACT 1 - THE CALL (Discovery)**\n- How you found out you were thinking about this\n- The situation that triggered the thinking\n- Include the 'oh wait', 'hold on' moments\n- What you were doing, what you noticed\n\n**ACT 2 - THE ROAD OF TRIALS (Development)**\n- How you developed the idea\n- Connections made, analogies drawn\n- The 'oh I see' moments\n- Tangents, refinements, corrections\n- Include quotes from the conversation\n\n**ACT 3 - THE ORDEAL AND REWARD (Proof)**\n- The hypothesis/experiment that proves the framework\n- 'If this is right, then X should cause Y'\n- The test that validates the pattern\n- This is the CROWN of the journey\n\n## TERMS\n- Words that emerged from the proof story\n- Each traceable to a specific moment in the proof\n\n## REQUIREMENTS\n- Conditions to achieve the dream\n- Each with obstacle/overcome/support from the proof\n\n## DIAGRAMS\n- Visual representation of the framework's structure\n- Use Mermaid syntax for flowcharts, sequence diagrams, or concept maps\n- Show: entities, relationships, flows, hierarchies\n- The diagram should make the framework's logic VISIBLE\n- Someone should be able to grasp the core structure from the diagram alone\n\n## EXAMPLES\n- THE EXPERIMENT: How to run the proof yourself\n- What to set up, what to expect\n- Reproducible test of the framework",
+      "piece_type": "instruction",
+      "dependencies": [2]
+    },
+    {
+      "sequence_number": 4,
+      "filename": "04_create_and_fill.md",
+      "title": "Create and Fill Document - ITERATIVE PROCESS",
+      "content": "# Step 4: Create and Fill the Document\n\n## ⚠️ CRITICAL: THIS IS AN ITERATIVE PROCESS ⚠️\n\n**DO NOT fill out all fields at once.**\n**DO NOT write the entire document in one response.**\n\nEach field is a CHAPTER of a BOOK. You must:\n1. Write ONE FIELD at a time\n2. Take MULTIPLE RESPONSES per field if needed\n3. Review and expand each field before moving to the next\n4. This process MAY TAKE MULTIPLE CONVERSATIONS\n\n## Create skeleton:\nUse: `set_emergent_document(emergent_name)`\n\nThis creates JSON at `/tmp/heaven_data/frameworks/emergent_<name>.json`\n\n## Fill in the content - ONE FIELD AT A TIME:\n\n### Field 1: dream\n- Write ONLY the dream field\n- This should be 3-5 complete sentences minimum\n- Review it. Is it vivid? Does it capture the emotional truth?\n- Edit and expand until satisfied\n- THEN move to field 2\n\n### Field 2: proof\n- This is the MAIN CONTENT - expect 1000-2000+ words\n- Write Act 1 (Discovery) - multiple paragraphs\n- Review Act 1. Expand it. Include quotes.\n- Write Act 2 (Development) - multiple paragraphs\n- Review Act 2. Expand it. Include quotes.\n- Write Act 3 (Proof) - multiple paragraphs\n- Review Act 3. Expand it.\n- THEN move to field 3\n\n### Field 3: terms\n- Each term definition should be a FULL PARAGRAPH\n- Not a sentence. Not a fragment. A PARAGRAPH.\n- Write one term, review it, expand it\n- Write next term, review it, expand it\n- THEN move to field 4\n\n### Field 4: requirements\n- Each requirement has 4 subfields (requirement, obstacle, overcome, support)\n- Each subfield should be a FULL PARAGRAPH\n- Write one requirement completely, review all 4 paragraphs\n- Write next requirement, review\n- THEN move to field 5\n\n### Field 5: diagrams\n- Create a Mermaid diagram showing the framework's structure\n- Use flowchart, graph, or sequence diagram as appropriate\n- Show the KEY ENTITIES and their RELATIONSHIPS\n- The diagram should be self-explanatory\n- Test that it renders correctly in markdown preview\n- THEN move to field 6\n\n### Field 6: examples\n- This is a complete experimental protocol\n- Multiple paragraphs with step-by-step instructions\n- Someone should be able to run the experiment from this\n- Review and expand until it's actionable\n\n## Quality bar for each field:\n- NO single-sentence entries\n- NO fragments\n- ONLY complete, expounded paragraphs\n- If it reads like a summary, EXPAND IT\n- The origin IS the logic - preserve ALL texture",
+      "piece_type": "instruction",
+      "dependencies": [3]
+    },
+    {
+      "sequence_number": 5,
+      "filename": "05_preview_and_advance.md",
+      "title": "Preview and Advance Phase",
+      "content": "# Step 5: Preview and Advance\n\n## Preview the document:\nUse: `preview_emergent(emergent_name, output_path)`\n\nExample: `preview_emergent(\"SOSEEH\", \"/tmp/preview.md\")`\n\nReview the markdown rendering.\n\n**Quality bar**: Does it read like a graduate-level philosophy paper?\n- First person narrative\n- Complete journey from discovery to proof\n- Depth, not compression\n\nIf it reads like a summary or form, go back and expand.\n\n## All emergent documents done?\nUse: `authorize_next_phase(conversation)`\n\nThis advances to Phase 5 (conversation complete).\n\n## More emergent frameworks?\nGo back to Step 2 for next framework.\n\n**EMERGENT COMPLETE**: When all conversations at Phase 5, move to `ingestion_publishing_flight_config`",
+      "piece_type": "instruction",
+      "dependencies": [4]
+    }
+  ],
+  "entry_point": "01_list_emergents.md"
+}

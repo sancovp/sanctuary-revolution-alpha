@@ -1,0 +1,118 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Mission Schema",
+  "description": "Cross-session sequence enforcement with step injection and ratcheting",
+  "type": "object",
+  "required": ["mission_id", "name", "session_sequence"],
+  "properties": {
+    "mission_id": {
+      "type": "string",
+      "description": "Unique mission identifier (e.g., 'auth_feature_implementation')"
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable mission name (e.g., 'Complete Auth Feature')"
+    },
+    "description": {
+      "type": "string",
+      "description": "What this mission accomplishes",
+      "default": ""
+    },
+    "domain": {
+      "type": "string",
+      "description": "Mission domain for categorization (e.g., 'feature_development')",
+      "default": "general"
+    },
+    "subdomain": {
+      "type": "string",
+      "description": "More specific categorization (e.g., 'authentication')",
+      "default": ""
+    },
+    "session_sequence": {
+      "type": "array",
+      "description": "Ordered sequence of sessions to execute",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["project_path", "flight_config"],
+        "properties": {
+          "project_path": {
+            "type": "string",
+            "description": "STARLOG project path for this session"
+          },
+          "flight_config": {
+            "type": "string",
+            "description": "Path to flight config JSON file"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "in_progress", "completed", "aborted"],
+            "default": "pending",
+            "description": "Session execution status"
+          },
+          "session_id": {
+            "type": "string",
+            "description": "STARLOG session ID when executed",
+            "default": null
+          },
+          "notes": {
+            "type": "string",
+            "description": "Optional notes for this step",
+            "default": ""
+          }
+        }
+      }
+    },
+    "current_step": {
+      "type": "integer",
+      "description": "Current position in session_sequence (0-indexed)",
+      "default": 0,
+      "minimum": 0
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "active", "completed", "aborted"],
+      "default": "pending",
+      "description": "Overall mission status"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Mission creation timestamp"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Last update timestamp"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When mission execution started",
+      "default": null
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When mission completed",
+      "default": null
+    },
+    "template_source": {
+      "type": "string",
+      "description": "Mission template this was created from",
+      "default": null
+    },
+    "conversations_count": {
+      "type": "integer",
+      "description": "Number of conversations across all sessions",
+      "default": 0,
+      "minimum": 0
+    },
+    "sessions_completed": {
+      "type": "integer",
+      "description": "Number of sessions completed",
+      "default": 0,
+      "minimum": 0
+    }
+  }
+}

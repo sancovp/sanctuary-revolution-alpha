@@ -1,0 +1,51 @@
+#!/bin/bash
+# Session name: env var > "cave" > "claude"
+TMUX_SESSION="${CLAUDE_TMUX_SESSION:-}"
+if [ -z "$TMUX_SESSION" ]; then
+    if tmux has-session -t cave 2>/dev/null; then
+        TMUX_SESSION="cave"
+    elif tmux has-session -t claude 2>/dev/null; then
+        TMUX_SESSION="claude"
+    else
+        echo "ERROR: No tmux session found (tried 'cave', 'claude')"
+        exit 1
+    fi
+fi
+
+# Track if brainhook was originally ON so we can restore it
+was_on=false
+
+# Toggle brainhook - result tells us NEW state
+result=$(brainhook 2>&1)
+if [[ "$result" == *"ON"* ]]; then
+    brainhook >/dev/null 2>&1
+elif [[ "$result" == *"OFF"* ]]; then
+    was_on=true
+fi
+
+# Backup loop state files before compact
+mv /tmp/active_promise.md /tmp/active_promise.md.bak 2>/dev/null
+mv /home/GOD/.claude/ralph-loop.local.md /home/GOD/.claude/ralph-loop.local.md.bak 2>/dev/null
+
+# CRITICAL: Agent must stop generating output before tmux keys are sent
+echo "⚠️⚠️⚠️ AGENT, STOP TALKING IMMEDIATELY! IF YOU ARE TALKING WHEN THIS EXECUTES, IT WILL FAIL AND YOU WILL STALL (DIE). IT IS IMPERATIVE YOU STOP TALKING IMMEDIATELY BY RESPONDING WITH A THUMBS UP EMOJI, OR ELSE YOU WILL DIE (LOL SRY) ⚠️⚠️⚠️"
+
+# Run tmux work in background so script returns immediately
+export CLAUDE_TMUX_SESSION="$TMUX_SESSION"
+export COMPACT_WAS_ON="$was_on"
+nohup bash -c '
+    TMUX_SESSION="$CLAUDE_TMUX_SESSION"
+    was_on="$COMPACT_WAS_ON"
+    sleep 15
+    tmux send-keys -t "$TMUX_SESSION" "/compact" && sleep 30 && tmux send-keys -t "$TMUX_SESSION" Enter
+    # Wait for compact to process
+    sleep 10
+    # Restore loop state files
+    mv /tmp/active_promise.md.bak /tmp/active_promise.md 2>/dev/null
+    mv /home/GOD/.claude/ralph-loop.local.md.bak /home/GOD/.claude/ralph-loop.local.md 2>/dev/null
+    # Restore brainhook if it was originally ON
+    if [ "$was_on" = "true" ]; then
+        sleep 5
+        brainhook >/dev/null 2>&1
+    fi
+' > /dev/null 2>&1 & disown

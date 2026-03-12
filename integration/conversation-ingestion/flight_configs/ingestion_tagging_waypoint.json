@@ -1,0 +1,49 @@
+{
+  "domain": "conversation_ingestion_tagging",
+  "version": "1.1.0",
+  "description": "Phase 3: Tag conversation pairs - concepts first, then emergent frameworks",
+  "directories": {},
+  "root_files": [
+    {
+      "sequence_number": 1,
+      "filename": "01_check_existing_emergents.md",
+      "title": "Check Existing Emergent Frameworks",
+      "content": "# Step 1: Check Existing Emergent Frameworks FIRST\n\nUse: `list_emergent_frameworks()`\n\n**WHY THIS MATTERS**: Emergent frameworks accumulate across conversations. You might be tagging pairs that belong to an EXISTING emergent from a previous conversation.\n\nReview what blankets already exist. As you tag, you'll assign pairs to:\n- Existing emergents (if the content fits)\n- New emergents (only if genuinely new blanket needed)\n\n**DO NOT** create new emergents for things that already have blankets.",
+      "piece_type": "instruction",
+      "dependencies": []
+    },
+    {
+      "sequence_number": 2,
+      "filename": "02_read_batch.md",
+      "title": "Read Batch of Pairs",
+      "content": "# Step 2: Read Next Batch\n\nUse: `show_pairs(start, end)`\n\nRead 15-20 pairs at a time. Example: `show_pairs(0, 20)`\n\n**CRITICAL RULE**: Read batch -> Tag batch -> Next batch.\nNEVER read the entire conversation first. This wastes context.\n\nAs you read, identify:\n1. Which pairs have NO useful content (chitchat, greetings) -> strata + evolving only\n2. Which pairs have ANY content needed for synthesis -> full tag chain\n\n**What counts as 'definition' content?**\n- Origin stories (how something was discovered)\n- Struggle narratives (what was hard)\n- 'Oh I see' moments (realizations)\n- Technical explanations\n- Examples and applications\n- ANYTHING that would appear in a framework document\n\nIf it contributes to understanding, it's definition content.",
+      "piece_type": "instruction",
+      "dependencies": [1]
+    },
+    {
+      "sequence_number": 3,
+      "filename": "03_understand_tagging.md",
+      "title": "Understand Tag Types",
+      "content": "# Step 3: Tag Types\n\n## CRITICAL: EVERY PAIR MUST HAVE CONCEPTS\n\n**Concepts are WHAT THE PAIR IS ABOUT. Period.**\n\nThis is **metaconstructive** - the FACT that something is being observed IS a concept.\n\nExamples:\n- User says they have anxiety -> tag: `anxiety`\n- User says they are thinking about dragons -> tag: `thinking_about_dragons`\n- User says 'dragons are real in the sense they are imaginary' -> tags: `dragons_real_as_imaginary`, `dragons`\n- User discusses SOSEEH -> tag: `SOSEEH`\n- User mentions feeling stuck -> tag: `feeling_stuck`\n\n**If a pair is ABOUT something identifiable, tag it as that concept.**\n**If a pair is NOT about anything (pure chitchat like 'ok' or 'thanks'), it only gets `evolving`.**\n\nMost pairs ARE about something. Tag liberally. A single pair can have MANY concept tags.\n\n## The Hierarchy:\n\n**Concepts** = WHAT IT IS ABOUT. Tag everything.\n- Every distinct idea gets a concept tag\n- Examples: HALO, SOSEEH, anxiety, user_realization, naming_difficulty\n- Concepts are for RETRIEVAL - 'show me everything about X'\n\n**Emergent Frameworks** = BLANKETS over groups of concepts.\n- A boundary that says 'these concepts go together for synthesis'\n- NOT one-per-concept. Many concepts fit under one emergent.\n- Examples: HALO-SHIELD (blankets HALO, SOSEEH, HIEL, etc.)\n- A conversation typically yields 2-6 emergent frameworks\n\n**Canonical Frameworks** = PROMOTED frameworks that compose emergents.\n- Created later, not during tagging\n\n## Ratcheting Chain:\nstrata -> evolving -> definition -> concept -> emergent_framework\n\nEach requires the previous.",
+      "piece_type": "instruction",
+      "dependencies": [2]
+    },
+    {
+      "sequence_number": 4,
+      "filename": "04_tag_batch.md",
+      "title": "Tag the Batch",
+      "content": "# Step 4: Tag Batch with batch_tag_operations\n\nUse: `batch_tag_operations(operations)`\n\n## Example - Pair about SOSEEH specifically:\n```json\n[\n  {\"action\": \"tag_pair\", \"index\": 5, \"tag_type\": \"strata\", \"value\": \"paiab\"},\n  {\"action\": \"tag_pair\", \"index\": 5, \"tag_type\": \"evolving\"},\n  {\"action\": \"tag_pair\", \"index\": 5, \"tag_type\": \"definition\"},\n  {\"action\": \"tag_pair\", \"index\": 5, \"tag_type\": \"concept\", \"value\": \"SOSEEH\"},\n  {\"action\": \"tag_pair\", \"index\": 5, \"tag_type\": \"concept\", \"value\": \"Extreme_Environment\"},\n  {\"action\": \"tag_pair\", \"index\": 5, \"tag_type\": \"emergent_framework\", \"value\": \"SOSEEH\"}\n]\n```\n\n## Example - Pair about HALO-SHIELD composition:\n```json\n[\n  {\"action\": \"tag_pair\", \"index\": 12, \"tag_type\": \"strata\", \"value\": \"paiab\"},\n  {\"action\": \"tag_pair\", \"index\": 12, \"tag_type\": \"evolving\"},\n  {\"action\": \"tag_pair\", \"index\": 12, \"tag_type\": \"definition\"},\n  {\"action\": \"tag_pair\", \"index\": 12, \"tag_type\": \"concept\", \"value\": \"HALO\"},\n  {\"action\": \"tag_pair\", \"index\": 12, \"tag_type\": \"concept\", \"value\": \"SOSEEH\"},\n  {\"action\": \"tag_pair\", \"index\": 12, \"tag_type\": \"concept\", \"value\": \"HIEL\"},\n  {\"action\": \"tag_pair\", \"index\": 12, \"tag_type\": \"emergent_framework\", \"value\": \"HALO-SHIELD\"}\n]\n```\n\n## Example - Chitchat pairs:\n```json\n[\n  {\"action\": \"tag_range\", \"start\": 0, \"end\": 3, \"tag_type\": \"strata\", \"value\": \"paiab\"},\n  {\"action\": \"tag_range\", \"start\": 0, \"end\": 3, \"tag_type\": \"evolving\"}\n]\n```\n\n**KEY**: Assign emergent_framework based on what the pair is PRIMARILY about, not everything it mentions.",
+      "piece_type": "instruction",
+      "dependencies": [3]
+    },
+    {
+      "sequence_number": 5,
+      "filename": "05_repeat_or_advance.md",
+      "title": "Repeat or Advance Phase",
+      "content": "# Step 5: Continue or Advance\n\n## More pairs to tag?\nGo back to Step 2: `show_pairs(next_start, next_end)`\n\n## All pairs tagged?\nCheck status: `get_phase_status(conversation)`\n\nIf Phase 3 complete (all definition pairs have concepts):\nUse: `authorize_next_phase(conversation)`\n\nThis advances to Phase 4 (Emergent Framework Assignment).\n\n**BEFORE ADVANCING** - Review your emergent frameworks:\n- Did you create multiple emergents or just one mega-framework?\n- Could any emergent be split into more specific blankets?\n- Are emergents reusable (could future convos tag into them)?\n\n**TAGGING COMPLETE**: Move to `ingestion_emergent_flight_config`",
+      "piece_type": "instruction",
+      "dependencies": [4]
+    }
+  ],
+  "entry_point": "01_check_existing_emergents.md"
+}

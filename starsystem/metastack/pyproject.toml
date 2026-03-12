@@ -1,0 +1,40 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pydantic-stack-core"
+version = "0.1.4"
+description = "Minimal library for stackable, renderable Pydantic models"
+authors = [{name = "HEAVEN Team"}]
+readme = "README.md"
+requires-python = ">=3.9"
+
+dependencies = [
+    "pydantic>=2.0.0",
+    "fastmcp>=0.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+]
+registry = [
+    "heaven-framework>=0.1.0",
+]
+
+[project.scripts]
+metastack-server = "pydantic_stack_core.mcp_server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["pydantic_stack_core"]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 100
+
+[tool.black]
+target-version = ["py39"]
+line-length = 100

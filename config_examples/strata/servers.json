@@ -1,0 +1,93 @@
+{
+  "mcp": {
+    "servers": {
+      "starlog": {
+        "command": "python",
+        "args": [
+          "-m",
+          "starlog_mcp.starlog_mcp"
+        ],
+        "env": {
+          "HEAVEN_DATA_DIR": "__FILL_IN_YOUR_PATH__"
+        },
+        "enabled": true
+      },
+      "starship": {
+        "command": "python",
+        "args": [
+          "-m",
+          "starship_mcp.starship_mcp"
+        ],
+        "env": {
+          "HEAVEN_DATA_DIR": "__FILL_IN_YOUR_PATH__"
+        },
+        "enabled": true
+      },
+      "waypoint": {
+        "command": "python",
+        "args": [
+          "-m",
+          "payload_discovery.mcp_server_v2"
+        ],
+        "env": {
+          "HEAVEN_DATA_DIR": "__FILL_IN_YOUR_PATH__"
+        },
+        "enabled": true
+      },
+      "STARSYSTEM": {
+        "command": "python",
+        "args": [
+          "-m",
+          "starsystem.starsystem_mcp"
+        ],
+        "env": {
+          "HEAVEN_DATA_DIR": "__FILL_IN_YOUR_PATH__"
+        },
+        "enabled": true
+      },
+      "metastack": {
+        "command": "python",
+        "args": [
+          "-m",
+          "pydantic_stack_core.mcp_server"
+        ],
+        "env": {
+          "HEAVEN_DATA_DIR": "__FILL_IN_YOUR_PATH__"
+        },
+        "enabled": true
+      },
+      "giint-llm-intelligence": {
+        "command": "python",
+        "args": [
+          "-m",
+          "llm_intelligence.mcp_server"
+        ],
+        "env": {
+          "HEAVEN_DATA_DIR": "__FILL_IN_YOUR_PATH__"
+        },
+        "enabled": true
+      },
+      "sanctuary": {
+        "command": "sanctuary-server",
+        "args": [],
+        "env": {
+          "SANCTUARY_CARTON_ENABLED": "false"
+        },
+        "enabled": true
+      }
+    },
+    "sets": {
+      "starsystem": {
+        "description": "Core navigation and session tracking MCPs",
+        "servers": [
+          "STARSYSTEM",
+          "starship",
+          "starlog",
+          "waypoint",
+          "metastack",
+          "giint-llm-intelligence"
+        ]
+      }
+    }
+  }
+}

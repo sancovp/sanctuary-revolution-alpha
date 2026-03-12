@@ -1,0 +1,29 @@
+{
+  "description": "Autopoiesis plugin hooks - promise loops, brainhook reflection, metabrainhook orchestration",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/autopoiesis_stop_hook.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/brainhook.py"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/metabrainhook.py"
+          }
+        ]
+      }
+    ]
+  }
+}

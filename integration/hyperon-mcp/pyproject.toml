@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hyperon-mcp"
+version = "0.1.0"
+description = "Persistent Hyperon/MeTTa integration with MCP interface"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "hyperon>=0.2.8",
+    "fastmcp>=0.3.0",
+    "pydantic>=2.0.0",
+    "metta-motto>=0.0.12",
+    "snet.sdk>=5.0.0"
+]
+
+[project.optional-dependencies]
+heaven = ["heaven-framework"]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0"
+]

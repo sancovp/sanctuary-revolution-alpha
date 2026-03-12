@@ -1,0 +1,46 @@
+{
+  "mission_id": "auth_feature_implementation",
+  "name": "Complete Auth Feature",
+  "description": "Build authentication across shared libraries and API, including OAuth integration and session management",
+  "domain": "feature_development",
+  "subdomain": "authentication",
+  "session_sequence": [
+    {
+      "project_path": "/projects/shared-auth",
+      "flight_config": "build_auth_lib_flight.json",
+      "status": "pending",
+      "session_id": null,
+      "notes": "Build core auth library with JWT and OAuth support"
+    },
+    {
+      "project_path": "/projects/shared-auth",
+      "flight_config": "test_auth_lib_flight.json",
+      "status": "pending",
+      "session_id": null,
+      "notes": "Comprehensive testing of auth library"
+    },
+    {
+      "project_path": "/projects/api",
+      "flight_config": "integrate_auth_flight.json",
+      "status": "pending",
+      "session_id": null,
+      "notes": "Integrate auth library into API endpoints"
+    },
+    {
+      "project_path": "/projects/api",
+      "flight_config": "test_integration_flight.json",
+      "status": "pending",
+      "session_id": null,
+      "notes": "End-to-end integration testing"
+    }
+  ],
+  "current_step": 0,
+  "status": "pending",
+  "created_at": "2025-10-06T12:00:00Z",
+  "updated_at": "2025-10-06T12:00:00Z",
+  "started_at": null,
+  "completed_at": null,
+  "template_source": null,
+  "conversations_count": 0,
+  "sessions_completed": 0
+}

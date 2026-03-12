@@ -1,0 +1,20 @@
+#!/bin/bash
+exec > /tmp/claude_restart_handler.log 2>&1
+
+TMUX_SESSION="${CLAUDE_TMUX_SESSION:-cave}"
+
+sleep 30
+# Exit current session
+tmux send-keys -t "$TMUX_SESSION" '/exit' && sleep 1 && tmux send-keys -t "$TMUX_SESSION" Enter
+# Wait for claude to die
+MAX=120; W=0; while pgrep -x "claude" > /dev/null && [ $W -lt $MAX ]; do sleep 2; W=$((W+2)); done
+[ $W -ge $MAX ] && exit 1
+sleep 2
+# Start fresh claude with debug and resume
+tmux send-keys -t "$TMUX_SESSION" 'claude --debug' Enter
+sleep 8
+tmux send-keys -t "$TMUX_SESSION" '/resume' && sleep 1 && tmux send-keys -t "$TMUX_SESSION" Enter
+sleep 15 && tmux send-keys -t "$TMUX_SESSION" '1' && sleep 1 && tmux send-keys -t "$TMUX_SESSION" Enter
+sleep 5
+tmux send-keys -t "$TMUX_SESSION" 'ALIVE! Hot restart complete.'
+sleep 1 && tmux send-keys -t "$TMUX_SESSION" Enter

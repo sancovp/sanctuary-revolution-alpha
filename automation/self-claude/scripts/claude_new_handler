@@ -1,0 +1,24 @@
+#!/bin/bash
+# Handler for self_new - spawns fresh chat with first message
+exec > /tmp/claude_new_handler.log 2>&1
+
+TMUX_SESSION="${CLAUDE_TMUX_SESSION:-cave}"
+PROMPT_FILE="${SELF_NEW_PROMPT_FILE:-PROMPT.md}"
+
+sleep 5
+# Exit current session
+tmux send-keys -t "$TMUX_SESSION" '/exit' && sleep 1 && tmux send-keys -t "$TMUX_SESSION" Enter
+# Wait for claude to die
+MAX=120; W=0; while pgrep -x "claude" > /dev/null && [ $W -lt $MAX ]; do sleep 2; W=$((W+2)); done
+[ $W -ge $MAX ] && exit 1
+sleep 2
+# Start fresh claude
+tmux send-keys -t "$TMUX_SESSION" 'claude --debug' Enter
+sleep 8
+# Inject the prompt file content as first message
+if [ -f "$PROMPT_FILE" ]; then
+    PROMPT_CONTENT=$(cat "$PROMPT_FILE")
+    tmux send-keys -t "$TMUX_SESSION" "$PROMPT_CONTENT"
+    sleep 1
+    tmux send-keys -t "$TMUX_SESSION" Enter
+fi

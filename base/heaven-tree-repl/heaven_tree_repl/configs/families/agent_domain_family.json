@@ -1,0 +1,15 @@
+{
+  "family_root": "agent_domain",
+  "parent": null,
+  "domain": "agent_operations",
+  "description": "Agent workspace for domain-specific functionality and custom nodes",
+  "nodes": {
+    "1": {
+      "type": "Menu",
+      "prompt": "🎯 Agent Domain",
+      "description": "Agent workspace for domain-specific functionality and custom nodes",
+      "signature": "domain() -> domain_options",
+      "options": {}
+    }
+  }
+}

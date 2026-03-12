@@ -1,0 +1,45 @@
+{
+  "name": "sancrev_game_loop_flight_config",
+  "domain": "sanctuary",
+  "description": "Complete sanctuary-revolution game loop to create a VEC",
+  "work_loop_subchain": [
+    {
+      "step": 1,
+      "action": "new_game",
+      "description": "Create new game: new_game.exec {\"player_name\": \"...\", \"sanctum_name\": \"...\"}",
+      "required_args": ["player_name", "sanctum_name"]
+    },
+    {
+      "step": 2,
+      "action": "activate_sanctum",
+      "description": "Activate SANCTUM: activate_sanctum.exec {\"sanctum_name\": \"...\"}",
+      "required_args": ["sanctum_name"]
+    },
+    {
+      "step": 3,
+      "action": "create_journey",
+      "description": "Create journey: create_journey.exec {\"name\": \"...\", \"description\": \"...\", \"origin_situation\": \"...\", \"revelation\": \"...\", \"stages\": [...]}",
+      "required_args": ["name", "description", "origin_situation", "revelation"]
+    },
+    {
+      "step": 4,
+      "action": "create_mvs",
+      "description": "Create MVS: create_mvs.exec {\"name\": \"...\", \"journey_name\": \"...\", \"description\": \"...\", \"rituals\": [...], \"boundaries\": [...], \"structures\": [...]}",
+      "required_args": ["name", "journey_name", "description"]
+    },
+    {
+      "step": 5,
+      "action": "create_vec",
+      "description": "Create VEC: create_vec.exec {\"name\": \"...\", \"journey_name\": \"...\", \"mvs_name\": \"...\", \"description\": \"...\"}",
+      "required_args": ["name", "journey_name", "mvs_name"]
+    },
+    {
+      "step": 6,
+      "action": "deploy_agent",
+      "description": "Deploy agent: deploy_agent.exec {\"vec_name\": \"...\", \"agent_name\": \"...\"}",
+      "required_args": ["vec_name", "agent_name"]
+    }
+  ],
+  "success_condition": "[VEC] Agent deployed",
+  "gear_events": ["flight", "plugin", "system_prompt", "agent"]
+}

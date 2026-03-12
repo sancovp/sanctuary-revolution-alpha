@@ -1,0 +1,20 @@
+{
+  "family_root": "landing_home",
+  "parent": null,
+  "domain": "landing",
+  "description": "Landing — Post-journey wrap-up. End starlogs, report progress, review.",
+  "nodes": {
+    "landing_home": {
+      "type": "Menu",
+      "prompt": "Landing Pad — Post-Journey",
+      "options": {
+        "End Starlog": "execute_action.exec {\"server_name\": \"starlog\", \"action_name\": \"end_starlog\"}",
+        "Report Progress": "execute_action.exec {\"server_name\": \"STARSYSTEM\", \"action_name\": \"mission_report_progress\"}",
+        "Mission Status": "execute_action.exec {\"server_name\": \"STARSYSTEM\", \"action_name\": \"mission_get_status\"}",
+        "Fleet Health": "execute_action.exec {\"server_name\": \"STARSYSTEM\", \"action_name\": \"get_health\"}",
+        "Launch Again": "jump missions_home",
+        "Back to HOME": "jump cf_home"
+      }
+    }
+  }
+}

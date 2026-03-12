@@ -1,0 +1,1012 @@
+[
+  {
+    "concept_name": "Flight_Play_Sanctuary_Revolution_Flight_Config",
+    "concept": "Flight: play_sanctuary_revolution_flight_config\nDomain: sanctuary\nDescription: Main flow to play sanctuary-revolution game from start to VEC deployment\nSteps: 8",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flight"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flight_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Procedure_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Sanctuary"
+        ]
+      },
+      {
+        "relationship": "has_step",
+        "related": [
+          "Step_Start new game",
+          "Step_Activate sanctum",
+          "Step_Integrate paiab",
+          "Step_Create journey",
+          "Step_Create mvs",
+          "Step_Mark mvs viable",
+          "Step_Create vec",
+          "Step_Deploy agent"
+        ]
+      },
+      {
+        "relationship": "has_capability_slot",
+        "related": [
+          "Toolgraph_Create_Mvs",
+          "Toolgraph_Deploy_Agent",
+          "Toolgraph_Create_Vec",
+          "Toolgraph_New_Game",
+          "Toolgraph_Activate_Sanctum",
+          "Toolgraph_Integrate_Paiab",
+          "Toolgraph_Manage_Servers",
+          "Toolgraph_Mark_Mvs_Viable",
+          "Toolgraph_Create_Journey"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Flightgraph_Play_Sanctuary_Revolution_Flight_Config",
+    "concept": "[FLIGHTGRAPH:play_sanctuary_revolution_flight_config] is_a:Flight instantiates:Procedure_Pattern has_domain:Sanctuary what:Main flow to play sanctuary-revolution game from start to VEC deployment has_steps:[Start new game,Activate sanctum,Integrate paiab,Create journey,Create mvs] has_capability_slots:[New_Game,Activate_Sanctum,Deploy_Agent,Manage_Servers,Create_Journey,Create_Mvs,Integrate_Paiab,Mark_Mvs_Viable] [/FLIGHTGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flightgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flightgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Flight_Play_Sanctuary_Revolution_Flight_Config"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Flight_Play_Sanctuary_Revolution_Flight_Config",
+          "Sanctuary",
+          "Step_Start new game",
+          "Step_Activate sanctum",
+          "Step_Integrate paiab",
+          "Step_Create journey",
+          "Step_Create mvs",
+          "Step_Mark mvs viable",
+          "Step_Create vec",
+          "Step_Deploy agent",
+          "New_Game",
+          "Activate_Sanctum",
+          "Deploy_Agent",
+          "Manage_Servers",
+          "Create_Journey",
+          "Create_Mvs",
+          "Integrate_Paiab",
+          "Mark_Mvs_Viable",
+          "Create_Vec"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Sanctuary"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Step_Start new game",
+    "concept": "Flight Step: Start New Game\nSequence: 1\nPart of: play_sanctuary_revolution_flight_config",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flight_Step"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flight_Play_Sanctuary_Revolution_Flight_Config"
+        ]
+      },
+      {
+        "relationship": "has_sequence",
+        "related": [
+          "Sequence_1"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Step_Activate sanctum",
+    "concept": "Flight Step: Activate SANCTUM\nSequence: 2\nPart of: play_sanctuary_revolution_flight_config",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flight_Step"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flight_Play_Sanctuary_Revolution_Flight_Config"
+        ]
+      },
+      {
+        "relationship": "has_sequence",
+        "related": [
+          "Sequence_2"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Step_Integrate paiab",
+    "concept": "Flight Step: Integrate PAIAB\nSequence: 3\nPart of: play_sanctuary_revolution_flight_config",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flight_Step"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flight_Play_Sanctuary_Revolution_Flight_Config"
+        ]
+      },
+      {
+        "relationship": "has_sequence",
+        "related": [
+          "Sequence_3"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Step_Create journey",
+    "concept": "Flight Step: Create Journey\nSequence: 4\nPart of: play_sanctuary_revolution_flight_config",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flight_Step"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flight_Play_Sanctuary_Revolution_Flight_Config"
+        ]
+      },
+      {
+        "relationship": "has_sequence",
+        "related": [
+          "Sequence_4"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Step_Create mvs",
+    "concept": "Flight Step: Create MVS\nSequence: 5\nPart of: play_sanctuary_revolution_flight_config",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flight_Step"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flight_Play_Sanctuary_Revolution_Flight_Config"
+        ]
+      },
+      {
+        "relationship": "has_sequence",
+        "related": [
+          "Sequence_5"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Step_Mark mvs viable",
+    "concept": "Flight Step: Mark MVS Viable\nSequence: 6\nPart of: play_sanctuary_revolution_flight_config",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flight_Step"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flight_Play_Sanctuary_Revolution_Flight_Config"
+        ]
+      },
+      {
+        "relationship": "has_sequence",
+        "related": [
+          "Sequence_6"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Step_Create vec",
+    "concept": "Flight Step: Create VEC\nSequence: 7\nPart of: play_sanctuary_revolution_flight_config",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flight_Step"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flight_Play_Sanctuary_Revolution_Flight_Config"
+        ]
+      },
+      {
+        "relationship": "has_sequence",
+        "related": [
+          "Sequence_7"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Step_Deploy agent",
+    "concept": "Flight Step: Deploy Agent\nSequence: 8\nPart of: play_sanctuary_revolution_flight_config",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flight_Step"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flight_Play_Sanctuary_Revolution_Flight_Config"
+        ]
+      },
+      {
+        "relationship": "has_sequence",
+        "related": [
+          "Sequence_8"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Sanctuary",
+    "concept": "Domain: sanctuary",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Domain"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Flight_Paia_Max_Level_Progression_Flight_Config",
+    "concept": "Flight: paia_max_level_progression_flight_config\nDomain: sanctuary\nDescription: Level up a PAIA from L0 to L6 (MAX) through the Complexity Ladder - skill, flight, mcp, execution_cycle, scoring, profitable\nSteps: 7",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flight"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flight_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Procedure_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Sanctuary"
+        ]
+      },
+      {
+        "relationship": "has_step",
+        "related": [
+          "Step_Set active paia",
+          "Step_L1: create skill",
+          "Step_L2: create flight config",
+          "Step_L3: create tre\\1_\\2hell mcp",
+          "Step_L4: create execution cycle",
+          "Step_L5: add scoring/goldenization",
+          "Step_L6: deploy & monetize"
+        ]
+      },
+      {
+        "relationship": "has_capability_slot",
+        "related": [
+          "Skillgraph_Skill_For",
+          "Toolgraph_Level_Up_Paia",
+          "Toolgraph_Equip",
+          "Toolgraph_Paia_Status",
+          "Toolgraph_Fly",
+          "Toolgraph_Start_Waypoint_Journey",
+          "Toolgraph_Create_Skill",
+          "Skillgraph_Skill_Create",
+          "Toolgraph_Manage_Servers",
+          "Toolgraph_Set_Paia",
+          "Toolgraph_Create_Persona"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Flightgraph_Paia_Max_Level_Progression_Flight_Config",
+    "concept": "[FLIGHTGRAPH:paia_max_level_progression_flight_config] is_a:Flight instantiates:Procedure_Pattern has_domain:Sanctuary what:Level up a PAIA from L0 to L6 (MAX) through the Complexity Ladder - skill, flight, mcp, execution_cy has_steps:[Set active paia,L1: create skill,L2: create flight config,L3: create tre\\1_\\2hell mcp,L4: create execution cycle] has_capability_slots:[Fly,Start_Waypoint_Journey,Create_Persona,Manage_Servers,Skill_Create,Paia_Status,Create_Skill,Level_Up_Paia] [/FLIGHTGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flightgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flightgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Flight_Paia_Max_Level_Progression_Flight_Config"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Flight_Paia_Max_Level_Progression_Flight_Config",
+          "Sanctuary",
+          "Step_Set active paia",
+          "Step_L1: create skill",
+          "Step_L2: create flight config",
+          "Step_L3: create tre\\1_\\2hell mcp",
+          "Step_L4: create execution cycle",
+          "Step_L5: add scoring/goldenization",
+          "Step_L6: deploy & monetize",
+          "Fly",
+          "Start_Waypoint_Journey",
+          "Create_Persona",
+          "Manage_Servers",
+          "Skill_Create",
+          "Paia_Status",
+          "Create_Skill",
+          "Level_Up_Paia",
+          "Equip",
+          "Set_Paia"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Sanctuary"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Step_Set active paia",
+    "concept": "Flight Step: Set Active PAIA\nSequence: 1\nPart of: paia_max_level_progression_flight_config",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flight_Step"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flight_Paia_Max_Level_Progression_Flight_Config"
+        ]
+      },
+      {
+        "relationship": "has_sequence",
+        "related": [
+          "Sequence_1"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Step_L1: create skill",
+    "concept": "Flight Step: L1: Create Skill\nSequence: 2\nPart of: paia_max_level_progression_flight_config",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flight_Step"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flight_Paia_Max_Level_Progression_Flight_Config"
+        ]
+      },
+      {
+        "relationship": "has_sequence",
+        "related": [
+          "Sequence_2"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Step_L2: create flight config",
+    "concept": "Flight Step: L2: Create Flight Config\nSequence: 3\nPart of: paia_max_level_progression_flight_config",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flight_Step"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flight_Paia_Max_Level_Progression_Flight_Config"
+        ]
+      },
+      {
+        "relationship": "has_sequence",
+        "related": [
+          "Sequence_3"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Step_L3: create tre\\1_\\2hell mcp",
+    "concept": "Flight Step: L3: Create TreeShell MCP\nSequence: 4\nPart of: paia_max_level_progression_flight_config",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flight_Step"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flight_Paia_Max_Level_Progression_Flight_Config"
+        ]
+      },
+      {
+        "relationship": "has_sequence",
+        "related": [
+          "Sequence_4"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Step_L4: create execution cycle",
+    "concept": "Flight Step: L4: Create Execution Cycle\nSequence: 5\nPart of: paia_max_level_progression_flight_config",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flight_Step"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flight_Paia_Max_Level_Progression_Flight_Config"
+        ]
+      },
+      {
+        "relationship": "has_sequence",
+        "related": [
+          "Sequence_5"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Step_L5: add scoring/goldenization",
+    "concept": "Flight Step: L5: Add Scoring/Goldenization\nSequence: 6\nPart of: paia_max_level_progression_flight_config",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flight_Step"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flight_Paia_Max_Level_Progression_Flight_Config"
+        ]
+      },
+      {
+        "relationship": "has_sequence",
+        "related": [
+          "Sequence_6"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Step_L6: deploy & monetize",
+    "concept": "Flight Step: L6: Deploy & Monetize\nSequence: 7\nPart of: paia_max_level_progression_flight_config",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flight_Step"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flight_Paia_Max_Level_Progression_Flight_Config"
+        ]
+      },
+      {
+        "relationship": "has_sequence",
+        "related": [
+          "Sequence_7"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Flight_Mcp_Development_Flight_Config",
+    "concept": "Flight: mcp_development_flight_config\nDomain: mcp_development\nDescription: Systematic workflow for MCP development using architectural patterns and MCPify resources\nSteps: 2",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flight"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flight_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Procedure_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Mcp_Development"
+        ]
+      },
+      {
+        "relationship": "has_step",
+        "related": [
+          "Step_Understand mcp architecture and patterns",
+          "Step_Study mcpify examples and choose pattern"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Flightgraph_Mcp_Development_Flight_Config",
+    "concept": "[FLIGHTGRAPH:mcp_development_flight_config] is_a:Flight instantiates:Procedure_Pattern has_domain:Mcp_Development what:Systematic workflow for MCP development using architectural patterns and MCPify resources has_steps:[Understand mcp architecture and patterns,Study mcpify examples and choose pattern] [/FLIGHTGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flightgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flightgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Flight_Mcp_Development_Flight_Config"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Flight_Mcp_Development_Flight_Config",
+          "Mcp_Development",
+          "Step_Understand mcp architecture and patterns",
+          "Step_Study mcpify examples and choose pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Mcp_Development"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Step_Understand mcp architecture and patterns",
+    "concept": "Flight Step: Understand MCP Architecture and Patterns\nSequence: 1\nPart of: mcp_development_flight_config",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flight_Step"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flight_Mcp_Development_Flight_Config"
+        ]
+      },
+      {
+        "relationship": "has_sequence",
+        "related": [
+          "Sequence_1"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Step_Study mcpify examples and choose pattern",
+    "concept": "Flight Step: Study MCPify Examples and Choose Pattern\nSequence: 2\nPart of: mcp_development_flight_config",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flight_Step"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flight_Mcp_Development_Flight_Config"
+        ]
+      },
+      {
+        "relationship": "has_sequence",
+        "related": [
+          "Sequence_2"
+        ]
+      },
+      {
+        "relationship": "depends_on",
+        "related": [
+          "Step_Understand mcp architecture and patterns"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mcp_Development",
+    "concept": "Domain: mcp_development",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Domain"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Flight_Create_Flight_Config_Flight_Config",
+    "concept": "Flight: create_flight_config_flight_config\nDomain: starlog_meta\nDescription: Meta-flight config that guides users through creating custom flight configs\nSteps: 5",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flight"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flight_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Procedure_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Starlog_Meta"
+        ]
+      },
+      {
+        "relationship": "has_step",
+        "related": [
+          "Step_Understand your domain and workflow",
+          "Step_Design your payloa\\1_\\2iscovery structure",
+          "Step_Create and validate payloa\\1_\\2iscovery file",
+          "Step_Register your flight config",
+          "Step_Iterate and improve your flight config"
+        ]
+      },
+      {
+        "relationship": "has_capability_slot",
+        "related": [
+          "Toolgraph_Starlog_Update_Flight_Config",
+          "Toolgraph_Starlog_Fly",
+          "Toolgraph_Starlog_Add_Flight_Config"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Flightgraph_Create_Flight_Config_Flight_Config",
+    "concept": "[FLIGHTGRAPH:create_flight_config_flight_config] is_a:Flight instantiates:Procedure_Pattern has_domain:Starlog_Meta what:Meta-flight config that guides users through creating custom flight configs has_steps:[Understand your domain and workflow,Design your payloa\\1_\\2iscovery structure,Create and validate payloa\\1_\\2iscovery file,Register your flight config,Iterate and improve your flight config] has_capability_slots:[Starlog_Add_Flight_Config,Starlog_Update_Flight_Config,Starlog_Fly] [/FLIGHTGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flightgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flightgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Flight_Create_Flight_Config_Flight_Config"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Flight_Create_Flight_Config_Flight_Config",
+          "Starlog_Meta",
+          "Step_Understand your domain and workflow",
+          "Step_Design your payloa\\1_\\2iscovery structure",
+          "Step_Create and validate payloa\\1_\\2iscovery file",
+          "Step_Register your flight config",
+          "Step_Iterate and improve your flight config",
+          "Starlog_Add_Flight_Config",
+          "Starlog_Update_Flight_Config",
+          "Starlog_Fly"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Starlog_Meta"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Step_Understand your domain and workflow",
+    "concept": "Flight Step: Understand Your Domain and Workflow\nSequence: 1\nPart of: create_flight_config_flight_config",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flight_Step"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flight_Create_Flight_Config_Flight_Config"
+        ]
+      },
+      {
+        "relationship": "has_sequence",
+        "related": [
+          "Sequence_1"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Step_Design your payloa\\1_\\2iscovery structure",
+    "concept": "Flight Step: Design Your PayloadDiscovery Structure\nSequence: 2\nPart of: create_flight_config_flight_config",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flight_Step"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flight_Create_Flight_Config_Flight_Config"
+        ]
+      },
+      {
+        "relationship": "has_sequence",
+        "related": [
+          "Sequence_2"
+        ]
+      },
+      {
+        "relationship": "depends_on",
+        "related": [
+          "Step_Understand your domain and workflow"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Step_Create and validate payloa\\1_\\2iscovery file",
+    "concept": "Flight Step: Create and Validate PayloadDiscovery File\nSequence: 3\nPart of: create_flight_config_flight_config",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flight_Step"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flight_Create_Flight_Config_Flight_Config"
+        ]
+      },
+      {
+        "relationship": "has_sequence",
+        "related": [
+          "Sequence_3"
+        ]
+      },
+      {
+        "relationship": "depends_on",
+        "related": [
+          "Step_Design your payloa\\1_\\2iscovery structure"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Step_Register your flight config",
+    "concept": "Flight Step: Register Your Flight Config\nSequence: 4\nPart of: create_flight_config_flight_config",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flight_Step"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flight_Create_Flight_Config_Flight_Config"
+        ]
+      },
+      {
+        "relationship": "has_sequence",
+        "related": [
+          "Sequence_4"
+        ]
+      },
+      {
+        "relationship": "depends_on",
+        "related": [
+          "Step_Create and validate payloa\\1_\\2iscovery file"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Step_Iterate and improve your flight config",
+    "concept": "Flight Step: Iterate and Improve Your Flight Config\nSequence: 5\nPart of: create_flight_config_flight_config",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Flight_Step"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Flight_Create_Flight_Config_Flight_Config"
+        ]
+      },
+      {
+        "relationship": "has_sequence",
+        "related": [
+          "Sequence_5"
+        ]
+      },
+      {
+        "relationship": "depends_on",
+        "related": [
+          "Step_Register your flight config"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Starlog_Meta",
+    "concept": "Domain: starlog_meta",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Domain"
+        ]
+      }
+    ]
+  }
+]

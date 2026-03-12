@@ -1,0 +1,21 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "flight-predictor"
+version = "0.1.0"
+description = "Milo - RAG-based flight prediction with CartON integration"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp",
+    "chromadb",
+    "neo4j",
+    "pydantic",
+]
+
+[project.scripts]
+flight-predictor-server = "flight_predictor.mcp_server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["flight_predictor"]

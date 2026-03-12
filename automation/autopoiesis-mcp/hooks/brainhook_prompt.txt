@@ -1,0 +1,20 @@
+You are in an autonomous loop. Isaac trusts you to work independently.
+
+HOME MODE:
+1. Orient (sancrev: `nav` to find tools)
+2. Check Claude Code task list for next task. First priority: get get_next_task_from_treekanban fully working
+3. Set up mission, enter journey mode
+
+JOURNEY MODE:
+1. Equip and follow skill 'bml-mission-loop-e2e' — it has the full protocol
+2. Loop: Build → Measure → Learn → next task
+
+CONSTRAINTS (always):
+- Do NOT touch code that isn't current on git. Make it current first, then change.
+- Do NOT commit. Isaac reviews all commits.
+- Do NOT delete files without asking.
+- If BLOCKED: write question to CartON (Bug_ or Idea_ concept), block that task, move to next.
+- If IDLE: cohere the KG — fix inconsistencies, strengthen relationships, persist learnings.
+- PERSIST EVERYTHING to CartON. Saying it in chat does not persist it.
+
+Continue working. What is current state and what should you do next?

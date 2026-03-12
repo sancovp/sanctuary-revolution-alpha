@@ -1,0 +1,8 @@
+{
+  "conversation-ingestion": {
+    "command": "conversation-ingestion-server",
+    "args": [],
+    "env": {},
+    "enabled": true
+  }
+}

@@ -1,0 +1,717 @@
+{
+  "name": "home_hud_context",
+  "metadata": {
+    "template_name": "HOME HUD",
+    "description": "Status display for compound intelligence navigation state using last_* tracking pattern"
+  },
+  "blocks": [
+    {
+      "type": "freestyle",
+      "content": "# 🎮 HOME - Heuristic Ontological Maturation Experience"
+    },
+    {
+      "type": "freestyle",
+      "content": "*ML Self-Play Game for STARSYSTEM*"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "## What This System Actually Is"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "**The Core Problem**: LLMs cannot natively:"
+    },
+    {
+      "type": "freestyle",
+      "content": "- Remember capabilities: \"What CAN I do?\""
+    },
+    {
+      "type": "freestyle",
+      "content": "- Remember goals: \"What SHOULD I do next?\" (from operation history)"
+    },
+    {
+      "type": "freestyle",
+      "content": "- Test & build: \"Can I do X? If not, build it. Remember the result.\""
+    },
+    {
+      "type": "freestyle",
+      "content": "- Metacognitive loop: \"Did I check if I can do this? Did I remember the outcome?\""
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "**This System = Forced Metacognitive Scaffolding**:"
+    },
+    {
+      "type": "freestyle",
+      "content": "- **Flight configs** = externalized memory of \"how to do X\" (induces remembrance)"
+    },
+    {
+      "type": "freestyle",
+      "content": "- **AI scoring system** = automatic \"what should I do next\" from history analysis"
+    },
+    {
+      "type": "freestyle",
+      "content": "- **Meta-projects** = where \"test & build capabilities\" happens"
+    },
+    {
+      "type": "freestyle",
+      "content": "- **The loop** = forces checking capabilities, building missing ones, remembering results"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "**Emergent AI Through Composition**:"
+    },
+    {
+      "type": "freestyle",
+      "content": "```"
+    },
+    {
+      "type": "freestyle",
+      "content": "plot_course → fly → accomplish (following flight) → complete"
+    },
+    {
+      "type": "freestyle",
+      "content": "    ↓"
+    },
+    {
+      "type": "freestyle",
+      "content": "evolve[analyze history → update ml_settings → test → report → publish]"
+    },
+    {
+      "type": "freestyle",
+      "content": "```"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "**You are training an emergent AI** with functions that instruct it. The \"model\" doesn't exist - it emerges from:"
+    },
+    {
+      "type": "freestyle",
+      "content": "- Fresh LLM (any provider) + proper context at runtime"
+    },
+    {
+      "type": "freestyle",
+      "content": "- Flight configs (executable instructions)"
+    },
+    {
+      "type": "freestyle",
+      "content": "- Data structures (registries/matryoshkas with state)"
+    },
+    {
+      "type": "freestyle",
+      "content": "- Fitness tracking (validates improvement)"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "**Training = Improving instructions, not weights.** Provider-agnostic, context-loss resilient, perfectly reproducible."
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "## Game Objective"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "You are playing an **ML self-play game** competing against your own failure rates."
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "**Goal**: Increase your Fitness Score by reducing errors and optimizing work patterns."
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "**Scoring System**:"
+    },
+    {
+      "type": "freestyle",
+      "content": "- **Level** = Fitness Score (overall usage reward)"
+    },
+    {
+      "type": "freestyle",
+      "content": "- **XP** = Total accumulated rewards"
+    },
+    {
+      "type": "freestyle",
+      "content": "- **Reward Multipliers**: Home=1x, Sessions=3x, Missions=10x"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "**Two-Phase Structure**:"
+    },
+    {
+      "type": "freestyle",
+      "content": "- **HOME Phase** (OMNISANC HOME mode): Plan optimizations - analyze fitness, identify patterns, design improvements"
+    },
+    {
+      "type": "freestyle",
+      "content": "- **JOURNEY Phase** (OMNISANC JOURNEY mode): Execute optimizations - apply patterns, complete work, capture results"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "**Optimization Spectrum**:"
+    },
+    {
+      "type": "freestyle",
+      "content": "- **User Task Completion**: Optimize user's life by completing their work (external goals)"
+    },
+    {
+      "type": "freestyle",
+      "content": "- **Meta-Optimization**: Make Claude better at playing the game itself (autonomous improvement through gameplay)"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "**How to Play (7-Step Game Loop)**:"
+    },
+    {
+      "type": "freestyle",
+      "content": "1. **Work**: Execute tasks in HOME/Sessions/Missions"
+    },
+    {
+      "type": "freestyle",
+      "content": "2. **Events Logged**: OMNISANC automatically captures all validation decisions"
+    },
+    {
+      "type": "freestyle",
+      "content": "3. **Check Fitness**: Use `starsystem.get_fitness_score()` to see current Level/XP"
+    },
+    {
+      "type": "freestyle",
+      "content": "4. **Recognize Patterns**: Identify which workflows increased fitness (low errors, high completion)"
+    },
+    {
+      "type": "freestyle",
+      "content": "5. **Extract as Flight Configs**: Transform successful patterns into flight configs"
+    },
+    {
+      "type": "freestyle",
+      "content": "6. **Use in Future Work**: Apply these configs in subsequent sessions/missions"
+    },
+    {
+      "type": "freestyle",
+      "content": "7. **Higher Fitness**: Better patterns = fewer errors = higher fitness → Level Up!"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "**Building Autonomous Capability (Cognitive Scaffolding)**:"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "Autonomous behavior requires data structures, not AI magic. Build these registries/matryoshkas:"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "*Tier 1 (Foundation)*:"
+    },
+    {
+      "type": "freestyle",
+      "content": "- `active_goals` registry - What am I trying to accomplish?"
+    },
+    {
+      "type": "freestyle",
+      "content": "- `tool_inventory` matryoshka - What can I do? (layers: available/used_successfully/mastery_level)"
+    },
+    {
+      "type": "freestyle",
+      "content": "- `autonomous_decisions` registry - Log decisions with reasoning"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "*Tier 2 (Execution)*:"
+    },
+    {
+      "type": "freestyle",
+      "content": "- `progress_tracking` registry - How am I doing on goals?"
+    },
+    {
+      "type": "freestyle",
+      "content": "- `recovery_strategies` matryoshka - What to do when blocked (by error type)"
+    },
+    {
+      "type": "freestyle",
+      "content": "- `resource_budget` registry - Cost tracking for actions"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "*Tier 3 (Meta-Learning)*:"
+    },
+    {
+      "type": "freestyle",
+      "content": "- `success_patterns` registry - What approaches worked?"
+    },
+    {
+      "type": "freestyle",
+      "content": "- `failure_patterns` registry - What approaches failed?"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "**Key Pattern**: If you forget to check a registry, add it to OMNISANC validation rules or flight config steps!"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "**How to Extend the Game (Adding New Capabilities)**:"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "Don't hack OMNISANC core. Use clean extension patterns:"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "*Pattern 1: MCP Wrapper*"
+    },
+    {
+      "type": "freestyle",
+      "content": "1. Implement registry/matryoshka functions using our SDKs"
+    },
+    {
+      "type": "freestyle",
+      "content": "2. Wrap as MCP tools"
+    },
+    {
+      "type": "freestyle",
+      "content": "3. Install MCP on yourself"
+    },
+    {
+      "type": "freestyle",
+      "content": "4. Add specific tool calls to OMNISANC validation/flight configs"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "*Pattern 2: TreeShell (pip install heaven-tree-repl)*"
+    },
+    {
+      "type": "freestyle",
+      "content": "- Parsable command DSL makes OMNISANC integration easy"
+    },
+    {
+      "type": "freestyle",
+      "content": "- Define commands OMNISANC can require"
+    },
+    {
+      "type": "freestyle",
+      "content": "- Cleaner than checking tool args"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "**Operational Workflow (How to Actually Execute Meta-Optimization)**:"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "*To Build an MCP (extend capabilities)*:"
+    },
+    {
+      "type": "freestyle",
+      "content": "1. Start new directory for STARLOG project"
+    },
+    {
+      "type": "freestyle",
+      "content": "2. `starship.plot_course(project_path, description)`"
+    },
+    {
+      "type": "freestyle",
+      "content": "3. `starlog.orient(project_path)` to load context"
+    },
+    {
+      "type": "freestyle",
+      "content": "4. `starship.fly()` and select MCP coding flight config"
+    },
+    {
+      "type": "freestyle",
+      "content": "5. Follow flight config instructions to build MCP"
+    },
+    {
+      "type": "freestyle",
+      "content": "6. Install MCP on yourself, add to OMNISANC if needed"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "*To Create a Mission (if you know the pattern)*:"
+    },
+    {
+      "type": "freestyle",
+      "content": "- Use `starsystem.mission_create()` with session sequence"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "*To Discover Mission Patterns (if you don't know them yet)*:"
+    },
+    {
+      "type": "freestyle",
+      "content": "1. Look through STARLOG history of a project"
+    },
+    {
+      "type": "freestyle",
+      "content": "2. Identify session patterns that worked well (high fitness, low errors)"
+    },
+    {
+      "type": "freestyle",
+      "content": "3. Extract successful session sequence as mission template"
+    },
+    {
+      "type": "freestyle",
+      "content": "4. Create mission with `starsystem.mission_create()`"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "**Two Optimization Levels**:"
+    },
+    {
+      "type": "freestyle",
+      "content": "- **Level 1**: Optimize fitness function (edit `reward_system.py` FITNESS_CONDITIONS)"
+    },
+    {
+      "type": "freestyle",
+      "content": "- **Level 2**: Optimize the model (add new flight configs and mission templates)"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "## HOME Meta-Projects (Where Meta-Optimization Happens)"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "HOME is not just a mode - it has associated STARLOG meta-projects for optimization:"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "**Meta-Project Structure**:"
+    },
+    {
+      "type": "freestyle",
+      "content": "- `/starsystem_schedule` - Scheduling optimization"
+    },
+    {
+      "type": "freestyle",
+      "content": "- `/starsystem_ml_settings` - Fitness function, OMNISANC rules, reward system"
+    },
+    {
+      "type": "freestyle",
+      "content": "- `/starsystem_mission_control` - Mission template creation and pattern analysis"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "**Each meta-project has domain-specific flight configs**:"
+    },
+    {
+      "type": "freestyle",
+      "content": "- `ml_settings` → \"Add OMNISANC rule\", \"Optimize fitness function\""
+    },
+    {
+      "type": "freestyle",
+      "content": "- `mission_control` → \"Create mission template\", \"Analyze mission patterns\""
+    },
+    {
+      "type": "freestyle",
+      "content": "- `schedule` → Scheduling workflows"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "**Session Management**:"
+    },
+    {
+      "type": "freestyle",
+      "content": "- **HOME Phase** (no session): Browse insights, check fitness, plan optimization"
+    },
+    {
+      "type": "freestyle",
+      "content": "- **HOME Project Session** (when doing meta-work): Plot course to meta-project → start session → implement optimization → end session"
+    },
+    {
+      "type": "freestyle",
+      "content": "- Don't need session every time you \"zone in\" to HOME phase"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "**Complete Insight → Rule Loop**:"
+    },
+    {
+      "type": "freestyle",
+      "content": "1. Brain Agent detects pattern (e.g., \"You underuse debugdiary\")"
+    },
+    {
+      "type": "freestyle",
+      "content": "2. HOME phase displays insight"
+    },
+    {
+      "type": "freestyle",
+      "content": "3. Decide to act → plot course to `/starsystem_ml_settings`"
+    },
+    {
+      "type": "freestyle",
+      "content": "4. Start session, select \"Add OMNISANC validation rule\" flight config"
+    },
+    {
+      "type": "freestyle",
+      "content": "5. Implement rule requiring debugdiary usage"
+    },
+    {
+      "type": "freestyle",
+      "content": "6. End session, return to HOME phase"
+    },
+    {
+      "type": "freestyle",
+      "content": "7. Rule now active in OMNISANC - autonomous improvement achieved!"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "## Navigation State"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "**Last Oriented**: {last_oriented}"
+    },
+    {
+      "type": "freestyle",
+      "content": "**Last Course Plotted**: {last_course}"
+    },
+    {
+      "type": "freestyle",
+      "content": "**Last Flight Selected**: {last_flight}"
+    },
+    {
+      "type": "freestyle",
+      "content": "**Last Waypoint**: {last_waypoint}"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "## Knowledge State"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "**Last Concept**: {last_concept}"
+    },
+    {
+      "type": "freestyle",
+      "content": "**Last GIINT Session**: {last_giint_session}"
+    },
+    {
+      "type": "freestyle",
+      "content": "**Last TOOT**: {last_toot}"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "## Context State"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "**Last Rules Brain Query**: {last_rules_brain_query}"
+    },
+    {
+      "type": "freestyle",
+      "content": "**Last FlightSim Pulled**: {last_flight_sim_pulled}"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "## Self-Play Observability"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "**Last Score**: "
+    },
+    {
+      "type": "reference",
+      "content": "dynamic_call={\"path\":\"seed_mcp.scoring_display\",\"func\":\"get_latest_score_display\"}"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "**OPERA Quarantine**: "
+    },
+    {
+      "type": "reference",
+      "content": "dynamic_call={\"path\":\"seed_mcp.scoring_display\",\"func\":\"get_opera_quarantine_count\"}"
+    },
+    {
+      "type": "freestyle",
+      "content": " patterns pending review - use `opera.view_quarantine()` to review"
+    },
+    {
+      "type": "freestyle",
+      "content": ""
+    },
+    {
+      "type": "freestyle",
+      "content": "**Available Commands**:"
+    },
+    {
+      "type": "freestyle",
+      "content": "- `starsystem.check_selfplay_logs()` - View recent OMNISANC validation events"
+    },
+    {
+      "type": "freestyle",
+      "content": "- `starsystem.get_fitness_score()` - View current fitness/level/XP from reward system"
+    },
+    {
+      "type": "freestyle",
+      "content": "- `starship.get_course_state()` - View detailed OMNISANC course state"
+    }
+  ]
+}

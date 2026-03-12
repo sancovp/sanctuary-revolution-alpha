@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["sanctuary_revolution*"]
+
+[project]
+name = "sanctuary-revolution"
+version = "0.5.0"
+description = "The game layer encoding the entire phase space transformation journey."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2.0",
+    "youknow-kernel",
+    "sanctuary-system",
+    "cave-harness>=0.1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+game = ["paia-builder", "cave-builder", "sanctum-builder", "omnisanc"]

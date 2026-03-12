@@ -1,0 +1,806 @@
+{
+  "family_root": "sancrev",
+  "parent": null,
+  "domain": "sanctuary_revolution",
+  "description": "Sanctuary Revolution - The full game for life transformation",
+  "nodes": {
+    "sancrev": {
+      "type": "Menu",
+      "prompt": "SANCTUARY REVOLUTION",
+      "description": "The full game - orchestrates SANCTUM, PAIAB, CAVE into VECs",
+      "signature": "sancrev() -> game_operations",
+      "options": {
+        "1": "game",
+        "2": "journey",
+        "3": "mvs",
+        "4": "vec",
+        "5": "sanctum",
+        "6": "paiab",
+        "7": "cave"
+      }
+    },
+    "game": {
+      "type": "Menu",
+      "prompt": "Game Operations",
+      "description": "Core game management - new game, select, status, stack check",
+      "signature": "game() -> game_ops",
+      "options": {
+        "1": "new_game",
+        "2": "select_player",
+        "3": "game_status",
+        "4": "list_players",
+        "5": "stack_status"
+      }
+    },
+    "new_game": {
+      "type": "Callable",
+      "prompt": "New Game",
+      "description": "Start a new sanctuary revolution game",
+      "signature": "new_game(player_name: str, sanctum_name: str = None) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "new_game",
+      "function_name": "new_game",
+      "is_async": true,
+      "args_schema": {
+        "player_name": "str",
+        "sanctum_name": "Optional"
+      }
+    },
+    "select_player": {
+      "type": "Callable",
+      "prompt": "Select Player",
+      "description": "Select a player/game to continue",
+      "signature": "select_player(player_name: str) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "select_player",
+      "function_name": "select_player",
+      "is_async": true,
+      "args_schema": {
+        "player_name": "str"
+      }
+    },
+    "game_status": {
+      "type": "Callable",
+      "prompt": "Game Status",
+      "description": "Get full game status - nested SANCTUM/PAIAB/CAVE structure",
+      "signature": "game_status() -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "game_status",
+      "function_name": "game_status",
+      "is_async": true,
+      "args_schema": {}
+    },
+    "list_players": {
+      "type": "Callable",
+      "prompt": "List Players",
+      "description": "List all players/games",
+      "signature": "list_players() -> List[Dict]",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "list_players",
+      "function_name": "list_players",
+      "is_async": true,
+      "args_schema": {}
+    },
+    "stack_status": {
+      "type": "Callable",
+      "prompt": "Stack Status",
+      "description": "Check if all three builders are stacked (PAIAB + SANCTUM + CAVE)",
+      "signature": "stack_status() -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "stack_status",
+      "function_name": "stack_status",
+      "is_async": true,
+      "args_schema": {}
+    },
+    "journey": {
+      "type": "Menu",
+      "prompt": "Journey Operations",
+      "description": "SanctuaryJourney - the revelation of transformation",
+      "signature": "journey() -> journey_ops",
+      "options": {
+        "1": "create_journey",
+        "2": "list_journeys",
+        "3": "complete_journey"
+      }
+    },
+    "create_journey": {
+      "type": "Callable",
+      "prompt": "Create Journey",
+      "description": "Create a SanctuaryJourney - the revelation of transformation",
+      "signature": "create_journey(name: str, description: str, origin_situation: str, revelation: str, stages: List[str] = None) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "create_journey",
+      "function_name": "create_journey",
+      "is_async": true,
+      "args_schema": {
+        "name": "str",
+        "description": "str",
+        "origin_situation": "str",
+        "revelation": "str",
+        "stages": "Optional"
+      }
+    },
+    "list_journeys": {
+      "type": "Callable",
+      "prompt": "List Journeys",
+      "description": "List all journeys for current player",
+      "signature": "list_journeys() -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "list_journeys",
+      "function_name": "list_journeys",
+      "is_async": true,
+      "args_schema": {}
+    },
+    "complete_journey": {
+      "type": "Callable",
+      "prompt": "Complete Journey",
+      "description": "Mark a journey as complete",
+      "signature": "complete_journey(journey_name: str) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "complete_journey",
+      "function_name": "complete_journey",
+      "is_async": true,
+      "args_schema": {
+        "journey_name": "str"
+      }
+    },
+    "mvs": {
+      "type": "Menu",
+      "prompt": "MVS Operations",
+      "description": "Minimum Viable Sanctuary - rituals, boundaries, structures",
+      "signature": "mvs() -> mvs_ops",
+      "options": {
+        "1": "create_mvs",
+        "2": "list_mvs",
+        "3": "mark_mvs_viable"
+      }
+    },
+    "create_mvs": {
+      "type": "Callable",
+      "prompt": "Create MVS",
+      "description": "Create a Minimum Viable Sanctuary for a journey",
+      "signature": "create_mvs(name: str, journey_name: str, description: str, rituals: List[str] = None, boundaries: List[str] = None, structures: List[str] = None) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "create_mvs",
+      "function_name": "create_mvs",
+      "is_async": true,
+      "args_schema": {
+        "name": "str",
+        "journey_name": "str",
+        "description": "str",
+        "rituals": "Optional",
+        "boundaries": "Optional",
+        "structures": "Optional"
+      }
+    },
+    "list_mvs": {
+      "type": "Callable",
+      "prompt": "List MVS",
+      "description": "List all MVS systems for current player",
+      "signature": "list_mvs() -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "list_mvs",
+      "function_name": "list_mvs",
+      "is_async": true,
+      "args_schema": {}
+    },
+    "mark_mvs_viable": {
+      "type": "Callable",
+      "prompt": "Mark MVS Viable",
+      "description": "Mark an MVS as viable (tested and working)",
+      "signature": "mark_mvs_viable(mvs_name: str) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "mark_mvs_viable",
+      "function_name": "mark_mvs_viable",
+      "is_async": true,
+      "args_schema": {
+        "mvs_name": "str"
+      }
+    },
+    "vec": {
+      "type": "Menu",
+      "prompt": "VEC Operations",
+      "description": "Victory-Everything Chain = Journey + MVS + Agent",
+      "signature": "vec() -> vec_ops",
+      "options": {
+        "1": "create_vec",
+        "2": "list_vecs",
+        "3": "deploy_agent"
+      }
+    },
+    "create_vec": {
+      "type": "Callable",
+      "prompt": "Create VEC",
+      "description": "Create a Victory-Everything Chain = Journey + MVS + Agent",
+      "signature": "create_vec(name: str, journey_name: str, mvs_name: str, agent_name: str = None, description: str = None) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "create_vec",
+      "function_name": "create_vec",
+      "is_async": true,
+      "args_schema": {
+        "name": "str",
+        "journey_name": "str",
+        "mvs_name": "str",
+        "agent_name": "Optional",
+        "description": "Optional"
+      }
+    },
+    "list_vecs": {
+      "type": "Callable",
+      "prompt": "List VECs",
+      "description": "List all VECs for current player",
+      "signature": "list_vecs() -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "list_vecs",
+      "function_name": "list_vecs",
+      "is_async": true,
+      "args_schema": {}
+    },
+    "deploy_agent": {
+      "type": "Callable",
+      "prompt": "Deploy Agent",
+      "description": "Deploy an agent to a VEC",
+      "signature": "deploy_agent(vec_name: str, agent_name: str) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "deploy_agent",
+      "function_name": "deploy_agent",
+      "is_async": true,
+      "args_schema": {
+        "vec_name": "str",
+        "agent_name": "str"
+      }
+    },
+    "sanctum": {
+      "type": "Menu",
+      "prompt": "Sanctum Operations",
+      "description": "SANCTUM life architecture - rituals, goals, boundaries, GEAR tracking",
+      "signature": "sanctum() -> sanctum_ops",
+      "options": {
+        "1": "sanctum_new",
+        "2": "sanctum_select",
+        "3": "sanctum_which",
+        "4": "sanctum_list",
+        "5": "sanctum_status",
+        "6": "sanctum_add_ritual",
+        "7": "sanctum_add_goal",
+        "8": "sanctum_add_boundary",
+        "9": "sanctum_update_domain",
+        "10": "sanctum_create_mvs",
+        "11": "sanctum_create_journey",
+        "12": "sanctum_check_vec",
+        "13": "sanctum_gear_status",
+        "14": "sanctum_check_complete"
+      }
+    },
+    "sanctum_new": {
+      "type": "Callable",
+      "prompt": "New SANCTUM",
+      "description": "Create a new SANCTUM life architecture",
+      "signature": "sanctum_new(name: str, description: str) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "sanctum_new",
+      "function_name": "sanctum_new",
+      "is_async": true,
+      "args_schema": {"name": "str", "description": "str"}
+    },
+    "sanctum_select": {
+      "type": "Callable",
+      "prompt": "Select SANCTUM",
+      "description": "Select a SANCTUM to work on",
+      "signature": "sanctum_select(name: str) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "sanctum_select",
+      "function_name": "sanctum_select",
+      "is_async": true,
+      "args_schema": {"name": "str"}
+    },
+    "sanctum_which": {
+      "type": "Callable",
+      "prompt": "Which SANCTUM",
+      "description": "Show currently selected SANCTUM",
+      "signature": "sanctum_which() -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "sanctum_which",
+      "function_name": "sanctum_which",
+      "is_async": true,
+      "args_schema": {}
+    },
+    "sanctum_list": {
+      "type": "Callable",
+      "prompt": "List SANCTUMs",
+      "description": "List all SANCTUM life architectures",
+      "signature": "sanctum_list() -> List[Dict]",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "sanctum_list",
+      "function_name": "sanctum_list",
+      "is_async": true,
+      "args_schema": {}
+    },
+    "sanctum_status": {
+      "type": "Callable",
+      "prompt": "SANCTUM Status",
+      "description": "Get SANCTUM status with GEAR scores and domain breakdown",
+      "signature": "sanctum_status() -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "sanctum_status",
+      "function_name": "sanctum_status",
+      "is_async": true,
+      "args_schema": {}
+    },
+    "sanctum_add_ritual": {
+      "type": "Callable",
+      "prompt": "Add Ritual",
+      "description": "Add a ritual (domains: health, wealth, relationships, purpose, growth, environment)",
+      "signature": "sanctum_add_ritual(name: str, description: str, domain: str, frequency: str, duration_minutes: int) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "sanctum_add_ritual",
+      "function_name": "sanctum_add_ritual",
+      "is_async": true,
+      "args_schema": {"name": "str", "description": "str", "domain": "str", "frequency": "Optional", "duration_minutes": "Optional"}
+    },
+    "sanctum_add_goal": {
+      "type": "Callable",
+      "prompt": "Add Goal",
+      "description": "Add a goal to SANCTUM",
+      "signature": "sanctum_add_goal(name: str, description: str, domain: str) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "sanctum_add_goal",
+      "function_name": "sanctum_add_goal",
+      "is_async": true,
+      "args_schema": {"name": "str", "description": "str", "domain": "str"}
+    },
+    "sanctum_add_boundary": {
+      "type": "Callable",
+      "prompt": "Add Boundary",
+      "description": "Add a boundary/constraint to SANCTUM",
+      "signature": "sanctum_add_boundary(name: str, description: str, domain: str, rule: str) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "sanctum_add_boundary",
+      "function_name": "sanctum_add_boundary",
+      "is_async": true,
+      "args_schema": {"name": "str", "description": "str", "domain": "str", "rule": "str"}
+    },
+    "sanctum_update_domain": {
+      "type": "Callable",
+      "prompt": "Update Domain",
+      "description": "Update a domain score (0-100)",
+      "signature": "sanctum_update_domain(domain: str, score: int) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "sanctum_update_domain",
+      "function_name": "sanctum_update_domain",
+      "is_async": true,
+      "args_schema": {"domain": "str", "score": "int"}
+    },
+    "sanctum_create_mvs": {
+      "type": "Callable",
+      "prompt": "Link MVS",
+      "description": "Link a Minimum Viable Sanctuary to this SANCTUM",
+      "signature": "sanctum_create_mvs(mvs_name: str) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "sanctum_create_mvs",
+      "function_name": "sanctum_create_mvs",
+      "is_async": true,
+      "args_schema": {"mvs_name": "str"}
+    },
+    "sanctum_create_journey": {
+      "type": "Callable",
+      "prompt": "Link Journey",
+      "description": "Link a SanctuaryJourney to this SANCTUM",
+      "signature": "sanctum_create_journey(journey_name: str) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "sanctum_create_journey",
+      "function_name": "sanctum_create_journey",
+      "is_async": true,
+      "args_schema": {"journey_name": "str"}
+    },
+    "sanctum_check_vec": {
+      "type": "Callable",
+      "prompt": "Check VEC",
+      "description": "Check Victory-Everything Chain completion status",
+      "signature": "sanctum_check_vec() -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "sanctum_check_vec",
+      "function_name": "sanctum_check_vec",
+      "is_async": true,
+      "args_schema": {}
+    },
+    "sanctum_gear_status": {
+      "type": "Callable",
+      "prompt": "GEAR Status",
+      "description": "Get GEAR score breakdown (Growth, Experience, Awareness, Reality)",
+      "signature": "sanctum_gear_status() -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "sanctum_gear_status",
+      "function_name": "sanctum_gear_status",
+      "is_async": true,
+      "args_schema": {}
+    },
+    "sanctum_check_complete": {
+      "type": "Callable",
+      "prompt": "Check Complete",
+      "description": "Check if SANCTUM is complete (all domains >= 80%)",
+      "signature": "sanctum_check_complete() -> bool",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "sanctum_check_complete",
+      "function_name": "sanctum_check_complete",
+      "is_async": true,
+      "args_schema": {}
+    },
+    "paiab": {
+      "type": "Menu",
+      "prompt": "PAIAB Operations",
+      "description": "PAIA Builder - create and manage Personal AI Agents",
+      "signature": "paiab() -> paiab_ops",
+      "options": {
+        "1": "paiab_new",
+        "2": "paiab_select",
+        "3": "paiab_which",
+        "4": "paiab_list",
+        "5": "paiab_add_skill",
+        "6": "paiab_add_mcp",
+        "7": "paiab_add_hook",
+        "8": "paiab_add_agent",
+        "9": "paiab_add_flight",
+        "10": "paiab_add_persona",
+        "11": "paiab_list_components",
+        "12": "paiab_advance_tier",
+        "13": "paiab_gear_status"
+      }
+    },
+    "paiab_new": {
+      "type": "Callable",
+      "prompt": "New PAIA",
+      "description": "Create a new PAIA project",
+      "signature": "paiab_new(name: str, description: str, git_dir: str = None) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "paiab_new",
+      "function_name": "paiab_new",
+      "is_async": true,
+      "args_schema": {
+        "name": "str",
+        "description": "str",
+        "git_dir": "Optional"
+      }
+    },
+    "paiab_select": {
+      "type": "Callable",
+      "prompt": "Select PAIA",
+      "description": "Select a PAIA to work on",
+      "signature": "paiab_select(name: str) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "paiab_select",
+      "function_name": "paiab_select",
+      "is_async": true,
+      "args_schema": {
+        "name": "str"
+      }
+    },
+    "paiab_which": {
+      "type": "Callable",
+      "prompt": "Which PAIA",
+      "description": "Show currently selected PAIA",
+      "signature": "paiab_which() -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "paiab_which",
+      "function_name": "paiab_which",
+      "is_async": true,
+      "args_schema": {}
+    },
+    "paiab_list": {
+      "type": "Callable",
+      "prompt": "List PAIAs",
+      "description": "List all PAIA projects",
+      "signature": "paiab_list() -> List[Dict]",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "paiab_list",
+      "function_name": "paiab_list",
+      "is_async": true,
+      "args_schema": {}
+    },
+    "paiab_add_skill": {
+      "type": "Callable",
+      "prompt": "Add Skill",
+      "description": "Add a skill to current PAIA",
+      "signature": "paiab_add_skill(name: str, domain: str, category: str, description: str) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "paiab_add_skill",
+      "function_name": "paiab_add_skill",
+      "is_async": true,
+      "args_schema": {
+        "name": "str",
+        "domain": "str",
+        "category": "str",
+        "description": "str"
+      }
+    },
+    "paiab_add_mcp": {
+      "type": "Callable",
+      "prompt": "Add MCP",
+      "description": "Add an MCP to current PAIA",
+      "signature": "paiab_add_mcp(name: str, description: str) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "paiab_add_mcp",
+      "function_name": "paiab_add_mcp",
+      "is_async": true,
+      "args_schema": {
+        "name": "str",
+        "description": "str"
+      }
+    },
+    "paiab_add_hook": {
+      "type": "Callable",
+      "prompt": "Add Hook",
+      "description": "Add a hook to current PAIA",
+      "signature": "paiab_add_hook(name: str, hook_type: str, description: str) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "paiab_add_hook",
+      "function_name": "paiab_add_hook",
+      "is_async": true,
+      "args_schema": {
+        "name": "str",
+        "hook_type": "str",
+        "description": "str"
+      }
+    },
+    "paiab_add_agent": {
+      "type": "Callable",
+      "prompt": "Add Agent",
+      "description": "Add a subagent to current PAIA",
+      "signature": "paiab_add_agent(name: str, description: str) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "paiab_add_agent",
+      "function_name": "paiab_add_agent",
+      "is_async": true,
+      "args_schema": {
+        "name": "str",
+        "description": "str"
+      }
+    },
+    "paiab_add_flight": {
+      "type": "Callable",
+      "prompt": "Add Flight",
+      "description": "Add a flight config to current PAIA",
+      "signature": "paiab_add_flight(name: str, domain: str, description: str) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "paiab_add_flight",
+      "function_name": "paiab_add_flight",
+      "is_async": true,
+      "args_schema": {
+        "name": "str",
+        "domain": "str",
+        "description": "str"
+      }
+    },
+    "paiab_add_persona": {
+      "type": "Callable",
+      "prompt": "Add Persona",
+      "description": "Add a persona to current PAIA",
+      "signature": "paiab_add_persona(name: str, domain: str, description: str, frame: str) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "paiab_add_persona",
+      "function_name": "paiab_add_persona",
+      "is_async": true,
+      "args_schema": {
+        "name": "str",
+        "domain": "str",
+        "description": "str",
+        "frame": "str"
+      }
+    },
+    "paiab_list_components": {
+      "type": "Callable",
+      "prompt": "List Components",
+      "description": "List components of a type in current PAIA",
+      "signature": "paiab_list_components(comp_type: str) -> List[Dict]",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "paiab_list_components",
+      "function_name": "paiab_list_components",
+      "is_async": true,
+      "args_schema": {
+        "comp_type": "str"
+      }
+    },
+    "paiab_advance_tier": {
+      "type": "Callable",
+      "prompt": "Advance Tier",
+      "description": "Advance a component to next tier",
+      "signature": "paiab_advance_tier(comp_type: str, name: str, fulfillment: str) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "paiab_advance_tier",
+      "function_name": "paiab_advance_tier",
+      "is_async": true,
+      "args_schema": {
+        "comp_type": "str",
+        "name": "str",
+        "fulfillment": "str"
+      }
+    },
+    "paiab_gear_status": {
+      "type": "Callable",
+      "prompt": "Gear Status",
+      "description": "Show PAIA gear status and tier progress",
+      "signature": "paiab_gear_status() -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "paiab_gear_status",
+      "function_name": "paiab_gear_status",
+      "is_async": true,
+      "args_schema": {}
+    },
+    "cave": {
+      "type": "Menu",
+      "prompt": "CAVE Operations",
+      "description": "CAVE Builder - business systems, value ladders, content",
+      "signature": "cave() -> cave_ops",
+      "options": {
+        "1": "cave_new",
+        "2": "cave_select",
+        "3": "cave_which",
+        "4": "cave_list",
+        "5": "cave_status",
+        "6": "cave_set_identity",
+        "7": "cave_init_value_ladder",
+        "8": "cave_add_offer",
+        "9": "cave_list_offers",
+        "10": "cave_add_journey",
+        "11": "cave_list_journeys",
+        "12": "cave_add_framework",
+        "13": "cave_list_frameworks",
+        "14": "cave_update_metrics"
+      }
+    },
+    "cave_new": {
+      "type": "Callable",
+      "prompt": "New CAVE",
+      "description": "Create a new CAVE business system",
+      "signature": "cave_new(name: str, description: str) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "cave_new",
+      "function_name": "cave_new",
+      "is_async": true,
+      "args_schema": {"name": "str", "description": "str"}
+    },
+    "cave_select": {
+      "type": "Callable",
+      "prompt": "Select CAVE",
+      "description": "Select a CAVE to work on",
+      "signature": "cave_select(name: str) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "cave_select",
+      "function_name": "cave_select",
+      "is_async": true,
+      "args_schema": {"name": "str"}
+    },
+    "cave_which": {
+      "type": "Callable",
+      "prompt": "Which CAVE",
+      "description": "Show currently selected CAVE",
+      "signature": "cave_which() -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "cave_which",
+      "function_name": "cave_which",
+      "is_async": true,
+      "args_schema": {}
+    },
+    "cave_list": {
+      "type": "Callable",
+      "prompt": "List CAVEs",
+      "description": "List all CAVE business systems",
+      "signature": "cave_list() -> List[Dict]",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "cave_list",
+      "function_name": "cave_list",
+      "is_async": true,
+      "args_schema": {}
+    },
+    "cave_status": {
+      "type": "Callable",
+      "prompt": "CAVE Status",
+      "description": "Get current CAVE status",
+      "signature": "cave_status() -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "cave_status",
+      "function_name": "cave_status",
+      "is_async": true,
+      "args_schema": {}
+    },
+    "cave_set_identity": {
+      "type": "Callable",
+      "prompt": "Set Identity",
+      "description": "Set identity constants (who_am_i, cta, bios)",
+      "signature": "cave_set_identity(...) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "cave_set_identity",
+      "function_name": "cave_set_identity",
+      "is_async": true,
+      "args_schema": {"who_am_i": "Optional", "cta": "Optional", "twitter_bio": "Optional", "linkedin_bio": "Optional", "about_short": "Optional", "brand_name": "Optional"}
+    },
+    "cave_init_value_ladder": {
+      "type": "Callable",
+      "prompt": "Init Value Ladder",
+      "description": "Initialize value ladder for CAVE",
+      "signature": "cave_init_value_ladder(name: str, description: str) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "cave_init_value_ladder",
+      "function_name": "cave_init_value_ladder",
+      "is_async": true,
+      "args_schema": {"name": "str", "description": "str"}
+    },
+    "cave_add_offer": {
+      "type": "Callable",
+      "prompt": "Add Offer",
+      "description": "Add offer to value ladder (lead_magnet, trip_wire, core_offering, upsell, premium)",
+      "signature": "cave_add_offer(name: str, description: str, stage: str, price: float) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "cave_add_offer",
+      "function_name": "cave_add_offer",
+      "is_async": true,
+      "args_schema": {"name": "str", "description": "str", "stage": "str", "price": "Optional"}
+    },
+    "cave_list_offers": {
+      "type": "Callable",
+      "prompt": "List Offers",
+      "description": "List offers in value ladder",
+      "signature": "cave_list_offers() -> List[Dict]",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "cave_list_offers",
+      "function_name": "cave_list_offers",
+      "is_async": true,
+      "args_schema": {}
+    },
+    "cave_add_journey": {
+      "type": "Callable",
+      "prompt": "Add Journey",
+      "description": "Add a journey (obstacle→solution story = ad)",
+      "signature": "cave_add_journey(title: str, domain: str, obstacle: str, solution: str, transformation: str) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "cave_add_journey",
+      "function_name": "cave_add_journey",
+      "is_async": true,
+      "args_schema": {"title": "str", "domain": "str", "obstacle": "str", "solution": "str", "transformation": "str"}
+    },
+    "cave_list_journeys": {
+      "type": "Callable",
+      "prompt": "List Journeys",
+      "description": "List journeys, optionally by domain",
+      "signature": "cave_list_journeys(domain: str) -> List[Dict]",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "cave_list_journeys",
+      "function_name": "cave_list_journeys",
+      "is_async": true,
+      "args_schema": {"domain": "Optional"}
+    },
+    "cave_add_framework": {
+      "type": "Callable",
+      "prompt": "Add Framework",
+      "description": "Add a framework (extracted knowledge)",
+      "signature": "cave_add_framework(name: str, domain: str, problem_pattern: str, solution_pattern: str, implementation: str) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "cave_add_framework",
+      "function_name": "cave_add_framework",
+      "is_async": true,
+      "args_schema": {"name": "str", "domain": "str", "problem_pattern": "str", "solution_pattern": "str", "implementation": "str"}
+    },
+    "cave_list_frameworks": {
+      "type": "Callable",
+      "prompt": "List Frameworks",
+      "description": "List frameworks, optionally by domain",
+      "signature": "cave_list_frameworks(domain: str) -> List[Dict]",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "cave_list_frameworks",
+      "function_name": "cave_list_frameworks",
+      "is_async": true,
+      "args_schema": {"domain": "Optional"}
+    },
+    "cave_update_metrics": {
+      "type": "Callable",
+      "prompt": "Update Metrics",
+      "description": "Update CAVE metrics (MRR, subscribers)",
+      "signature": "cave_update_metrics(mrr: float, subscribers: int) -> str",
+      "import_path": "sanctuary_revolution_treeshell.treeshell_functions",
+      "import_object": "cave_update_metrics",
+      "function_name": "cave_update_metrics",
+      "is_async": true,
+      "args_schema": {"mrr": "Optional", "subscribers": "Optional"}
+    }
+  }
+}

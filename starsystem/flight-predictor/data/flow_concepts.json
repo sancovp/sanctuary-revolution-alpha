@@ -1,0 +1,140 @@
+[
+  {
+    "concept_name": "Canopyflowgraph_Test_Pattern_001",
+    "concept": "[CANOPYFLOWGRAPH:test_pattern_001] is_a:Canopyflowgraph instantiates:Workflow_Pattern has_status:promoted what:Mock pattern for testing quarantine workflow has_steps:[AI,Human] execution_types:[autonomous,review] [/CANOPYFLOWGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Canopyflowgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Canopyflowgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Workflow_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Promoted"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Canopyflowgraph_Test_Pattern_002",
+    "concept": "[CANOPYFLOWGRAPH:test_pattern_002] is_a:Canopyflowgraph instantiates:Workflow_Pattern has_status:rejected what:This pattern should be rejected has_steps:[AI] execution_types:[autonomous] [/CANOPYFLOWGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Canopyflowgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Canopyflowgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Workflow_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Rejected"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Operadicflowgraph_Default_Human_Ai_Collaboration",
+    "concept": "[OPERADICFLOWGRAPH:default_human_ai_collaboration] is_a:Operadicflowgraph instantiates:Workflow_Pattern has_status:golden what:Default collaborative work pattern for bootstrapping OPERA before pattern detect has_steps:[AI+Human] execution_types:[plotted_course] [/OPERADICFLOWGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Operadicflowgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Operadicflowgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Golden_Workflow_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Golden"
+        ]
+      },
+      {
+        "relationship": "verified_by",
+        "related": [
+          "Verifier_System"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Operadicflowgraph_Operadic_20251013_133204",
+    "concept": "[OPERADICFLOWGRAPH:operadic_20251013_133204] is_a:Operadicflowgraph instantiates:Workflow_Pattern has_status:golden what:Mock pattern for testing quarantine workflow has_steps:[AI,Human] execution_types:[autonomous,review] [/OPERADICFLOWGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Operadicflowgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Operadicflowgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Golden_Workflow_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Golden"
+        ]
+      },
+      {
+        "relationship": "verified_by",
+        "related": [
+          "Verifier_Isaac"
+        ]
+      },
+      {
+        "relationship": "promoted_from",
+        "related": [
+          "Canopyflowgraph_Test_Pattern_001"
+        ]
+      }
+    ]
+  }
+]

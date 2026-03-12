@@ -1,0 +1,32 @@
+{
+  "family_root": "agent_management",
+  "parent": null,
+  "domain": "agent_management",
+  "description": "Human interface for managing AI agents and workflows",
+  "nodes": {
+    "agent_management": {
+      "id": "agent_management",
+      "title": "\ud83c\udfae Agent Management Hub",
+      "description": "Human interface for managing AI agents and workflows",
+      "type": "Menu",
+      "options": {
+        "1": "equipment",
+        "2": "system",
+        "3": "approvals",
+        "4": "sessions"
+      }
+    },
+    "system": {
+      "id": "agent_management.system",
+      "title": "\u2699\ufe0f System",
+      "description": "System settings and monitoring",
+      "type": "Callable"
+    },
+    "sessions": {
+      "id": "agent_management.sessions",
+      "title": "\ud83d\udcca Sessions",
+      "description": "Manage active and historical sessions",
+      "type": "Callable"
+    }
+  }
+}

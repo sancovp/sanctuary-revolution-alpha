@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "giint-llm-intelligence"
+version = "0.1.8"
+description = "GIINT - General Intuitive Intelligence for Neural Transformers: Multi-fire cognitive architecture"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "fastmcp>=2.12.2",
+]
+
+[project.scripts]
+llm-intelligence-server = "llm_intelligence.mcp_server:main"

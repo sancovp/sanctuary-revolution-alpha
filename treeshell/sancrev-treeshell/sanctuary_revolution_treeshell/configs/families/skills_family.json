@@ -1,0 +1,388 @@
+{
+  "family_root": "skills",
+  "parent": null,
+  "domain": "skill_manager",
+  "description": "Skill Manager - three-tier skill architecture: global catalog, equipped state, skillsets, personas",
+  "nodes": {
+    "skills": {
+      "type": "Menu",
+      "prompt": "Skill Manager",
+      "description": "Skill Manager - three-tier skill architecture: global catalog, equipped state, skillsets, personas",
+      "signature": "skill_manager() -> skill_operations",
+      "options": {
+        "1": "list_skills",
+        "2": "list_domains",
+        "3": "list_by_domain",
+        "4": "get_skill",
+        "5": "create_skill",
+        "6": "browse_skills",
+        "7": "search_skills",
+        "8": "list_equipped",
+        "9": "get_equipped_content",
+        "10": "equip",
+        "11": "unequip",
+        "12": "unequip_all",
+        "13": "list_skillsets",
+        "14": "create_skillset",
+        "15": "add_to_skillset",
+        "16": "match_skilllog",
+        "17": "list_personas",
+        "18": "create_persona",
+        "19": "equip_persona",
+        "20": "get_active_persona",
+        "21": "deactivate_persona",
+        "22": "list_quarantine"
+      }
+    },
+    "list_skills": {
+      "type": "Callable",
+      "prompt": "List Skills",
+      "description": "List all skills in global catalog.",
+      "signature": "list_skills() -> str",
+      "import_path": "skill_manager.treeshell_functions",
+      "import_object": "list_skills",
+      "function_name": "list_skills",
+      "is_async": false,
+      "args_schema": {}
+    },
+    "list_domains": {
+      "type": "Callable",
+      "prompt": "List Domains",
+      "description": "List all available skill domains.",
+      "signature": "list_domains() -> str",
+      "import_path": "skill_manager.treeshell_functions",
+      "import_object": "list_domains",
+      "function_name": "list_domains",
+      "is_async": false,
+      "args_schema": {}
+    },
+    "list_by_domain": {
+      "type": "Callable",
+      "prompt": "List By Domain",
+      "description": "List all skills and skillsets in a domain.",
+      "signature": "list_by_domain(domain: str) -> str",
+      "import_path": "skill_manager.treeshell_functions",
+      "import_object": "list_by_domain",
+      "function_name": "list_by_domain",
+      "is_async": false,
+      "args_schema": {
+        "domain": "str"
+      }
+    },
+    "get_skill": {
+      "type": "Callable",
+      "prompt": "Get Skill",
+      "description": "Get full content of a skill.",
+      "signature": "get_skill(name: str) -> str",
+      "import_path": "skill_manager.treeshell_functions",
+      "import_object": "get_skill",
+      "function_name": "get_skill",
+      "is_async": false,
+      "args_schema": {
+        "name": "str"
+      }
+    },
+    "create_skill": {
+      "type": "Menu",
+      "prompt": "Create Skill",
+      "description": "Create a skill — choose type: understand (knowledge), single_turn (immediate action), preflight (multi-step with flight)",
+      "signature": "create_skill() -> skill_type_menu",
+      "options": {
+        "1": "create_understand",
+        "2": "create_single_turn",
+        "3": "create_preflight"
+      }
+    },
+    "create_understand": {
+      "type": "Callable",
+      "prompt": "Create Understand Skill",
+      "description": "Create an UNDERSTAND skill — pure context for discussion/recall. For TALKING about a domain.",
+      "signature": "create_understand(name: str, domain: str, content: str, what: str, when: str, subdomain: str = '', describes_component: str = '', starsystem: str = '') -> str",
+      "import_path": "skill_manager.treeshell_functions",
+      "import_object": "create_understand",
+      "function_name": "create_understand",
+      "is_async": false,
+      "args_schema": {
+        "name": "str",
+        "domain": "str",
+        "content": "str",
+        "what": "str",
+        "when": "str",
+        "subdomain": "str",
+        "describes_component": "str",
+        "starsystem": "str"
+      }
+    },
+    "create_single_turn": {
+      "type": "Callable",
+      "prompt": "Create Single Turn Skill",
+      "description": "Create a SINGLE_TURN_PROCESS skill — context + immediate action, done in one turn.",
+      "signature": "create_single_turn(name: str, domain: str, content: str, what: str, when: str, subdomain: str = '', describes_component: str = '', starsystem: str = '') -> str",
+      "import_path": "skill_manager.treeshell_functions",
+      "import_object": "create_single_turn",
+      "function_name": "create_single_turn",
+      "is_async": false,
+      "args_schema": {
+        "name": "str",
+        "domain": "str",
+        "content": "str",
+        "what": "str",
+        "when": "str",
+        "subdomain": "str",
+        "describes_component": "str",
+        "starsystem": "str"
+      }
+    },
+    "create_preflight": {
+      "type": "Callable",
+      "prompt": "Create Preflight Skill",
+      "description": "Create a PREFLIGHT skill — primes for work, points to flight config for multi-step tasks.",
+      "signature": "create_preflight(name: str, domain: str, content: str, what: str, when: str, subdomain: str = '', describes_component: str = '', starsystem: str = '') -> str",
+      "import_path": "skill_manager.treeshell_functions",
+      "import_object": "create_preflight",
+      "function_name": "create_preflight",
+      "is_async": false,
+      "args_schema": {
+        "name": "str",
+        "domain": "str",
+        "content": "str",
+        "what": "str",
+        "when": "str",
+        "subdomain": "str",
+        "describes_component": "str",
+        "starsystem": "str"
+      }
+    },
+    "browse_skills": {
+      "type": "Callable",
+      "prompt": "Browse Skills",
+      "description": "Browse skills by progressive drill-down. START HERE for skill discovery. No args = see categories, then add category, domain, subdomain to narrow down. Add query for scoped semantic search.",
+      "signature": "browse_skills(category: str = '', domain: str = '', subdomain: str = '', query: str = '', page: int = 1) -> str",
+      "import_path": "skill_manager.treeshell_functions",
+      "import_object": "browse_skills",
+      "function_name": "browse_skills",
+      "is_async": false,
+      "args_schema": {
+        "category": "str",
+        "domain": "str",
+        "subdomain": "str",
+        "query": "str",
+        "page": "int"
+      }
+    },
+    "search_skills": {
+      "type": "Callable",
+      "prompt": "Search Skills",
+      "description": "Search skills and skillsets using RAG. Use browse_skills first to narrow scope.",
+      "signature": "search_skills(query: str, n_results: int = 5) -> str",
+      "import_path": "skill_manager.treeshell_functions",
+      "import_object": "search_skills",
+      "function_name": "search_skills",
+      "is_async": false,
+      "args_schema": {
+        "query": "str",
+        "n_results": "int"
+      }
+    },
+    "list_equipped": {
+      "type": "Callable",
+      "prompt": "List Equipped",
+      "description": "List currently equipped skills. Use agent_id to check a specific agent's equipped skills.",
+      "signature": "list_equipped(agent_id: str = '') -> str",
+      "import_path": "skill_manager.treeshell_functions",
+      "import_object": "list_equipped",
+      "function_name": "list_equipped",
+      "is_async": false,
+      "args_schema": {
+        "agent_id": "str"
+      }
+    },
+    "get_equipped_content": {
+      "type": "Callable",
+      "prompt": "Get Equipped Content",
+      "description": "Get full content of all equipped skills. Use agent_id to get a specific agent's equipped content.",
+      "signature": "get_equipped_content(agent_id: str = '') -> str",
+      "import_path": "skill_manager.treeshell_functions",
+      "import_object": "get_equipped_content",
+      "function_name": "get_equipped_content",
+      "is_async": false,
+      "args_schema": {
+        "agent_id": "str"
+      }
+    },
+    "equip": {
+      "type": "Callable",
+      "prompt": "Equip",
+      "description": "Equip a skill or skillset. Use agent_id to equip for a specific agent (e.g. 'conductor').",
+      "signature": "equip(name: str, agent_id: str = '') -> str",
+      "import_path": "skill_manager.treeshell_functions",
+      "import_object": "equip",
+      "function_name": "equip",
+      "is_async": false,
+      "args_schema": {
+        "name": "str",
+        "agent_id": "str"
+      }
+    },
+    "unequip": {
+      "type": "Callable",
+      "prompt": "Unequip",
+      "description": "Unequip a skill. Use agent_id to unequip from a specific agent.",
+      "signature": "unequip(name: str, agent_id: str = '') -> str",
+      "import_path": "skill_manager.treeshell_functions",
+      "import_object": "unequip",
+      "function_name": "unequip",
+      "is_async": false,
+      "args_schema": {
+        "name": "str",
+        "agent_id": "str"
+      }
+    },
+    "unequip_all": {
+      "type": "Callable",
+      "prompt": "Unequip All",
+      "description": "Clear all equipped skills. Use agent_id to clear a specific agent's equipped skills.",
+      "signature": "unequip_all(agent_id: str = '') -> str",
+      "import_path": "skill_manager.treeshell_functions",
+      "import_object": "unequip_all",
+      "function_name": "unequip_all",
+      "is_async": false,
+      "args_schema": {
+        "agent_id": "str"
+      }
+    },
+    "list_skillsets": {
+      "type": "Callable",
+      "prompt": "List Skillsets",
+      "description": "List all skillsets.",
+      "signature": "list_skillsets() -> str",
+      "import_path": "skill_manager.treeshell_functions",
+      "import_object": "list_skillsets",
+      "function_name": "list_skillsets",
+      "is_async": false,
+      "args_schema": {}
+    },
+    "create_skillset": {
+      "type": "Callable",
+      "prompt": "Create Skillset",
+      "description": "Create a skillset with domain.",
+      "signature": "create_skillset(name: str, domain: str, description: str, skills: str, subdomain: str = '') -> str",
+      "import_path": "skill_manager.treeshell_functions",
+      "import_object": "create_skillset",
+      "function_name": "create_skillset",
+      "is_async": false,
+      "args_schema": {
+        "name": "str",
+        "domain": "str",
+        "description": "str",
+        "skills": "str",
+        "subdomain": "str"
+      }
+    },
+    "add_to_skillset": {
+      "type": "Callable",
+      "prompt": "Add To Skillset",
+      "description": "Add a skill to a skillset.",
+      "signature": "add_to_skillset(skillset_name: str, skill_name: str) -> str",
+      "import_path": "skill_manager.treeshell_functions",
+      "import_object": "add_to_skillset",
+      "function_name": "add_to_skillset",
+      "is_async": false,
+      "args_schema": {
+        "skillset_name": "str",
+        "skill_name": "str"
+      }
+    },
+    "match_skilllog": {
+      "type": "Callable",
+      "prompt": "Match SkillLog",
+      "description": "Match a SkillLog prediction against catalog.",
+      "signature": "match_skilllog(prediction: str) -> str",
+      "import_path": "skill_manager.treeshell_functions",
+      "import_object": "match_skilllog",
+      "function_name": "match_skilllog",
+      "is_async": false,
+      "args_schema": {
+        "prediction": "str"
+      }
+    },
+    "list_personas": {
+      "type": "Callable",
+      "prompt": "List Personas",
+      "description": "List all personas.",
+      "signature": "list_personas() -> str",
+      "import_path": "skill_manager.treeshell_functions",
+      "import_object": "list_personas",
+      "function_name": "list_personas",
+      "is_async": false,
+      "args_schema": {}
+    },
+    "create_persona": {
+      "type": "Callable",
+      "prompt": "Create Persona",
+      "description": "Create a persona bundling frame, MCP set, skillset, and identity.",
+      "signature": "create_persona(name: str, domain: str, description: str, frame: str, mcp_set: str = '', skillset: str = '', carton_identity: str = '', subdomain: str = '') -> str",
+      "import_path": "skill_manager.treeshell_functions",
+      "import_object": "create_persona",
+      "function_name": "create_persona",
+      "is_async": false,
+      "args_schema": {
+        "name": "str",
+        "domain": "str",
+        "description": "str",
+        "frame": "str",
+        "mcp_set": "str",
+        "skillset": "str",
+        "carton_identity": "str",
+        "subdomain": "str"
+      }
+    },
+    "equip_persona": {
+      "type": "Callable",
+      "prompt": "Equip Persona",
+      "description": "Equip a persona - loads frame, skillset, AND activates MCP set automatically. Use agent_id for a specific agent.",
+      "signature": "equip_persona(name: str, agent_id: str = '') -> str",
+      "import_path": "sanctuary_revolution_treeshell.persona_treeshell_functions",
+      "import_object": "equip_persona_unified",
+      "function_name": "equip_persona_unified",
+      "is_async": true,
+      "args_schema": {
+        "name": "str",
+        "agent_id": "str"
+      }
+    },
+    "get_active_persona": {
+      "type": "Callable",
+      "prompt": "Get Active Persona",
+      "description": "Get the currently active persona.",
+      "signature": "get_active_persona() -> str",
+      "import_path": "sanctuary_revolution_treeshell.persona_treeshell_functions",
+      "import_object": "get_active_persona_unified",
+      "function_name": "get_active_persona_unified",
+      "is_async": false,
+      "args_schema": {}
+    },
+    "deactivate_persona": {
+      "type": "Callable",
+      "prompt": "Deactivate Persona",
+      "description": "Deactivate current persona, unequip all skills, AND disconnect MCP set.",
+      "signature": "deactivate_persona() -> str",
+      "import_path": "sanctuary_revolution_treeshell.persona_treeshell_functions",
+      "import_object": "deactivate_persona_unified",
+      "function_name": "deactivate_persona_unified",
+      "is_async": true,
+      "args_schema": {}
+    },
+    "list_quarantine": {
+      "type": "Callable",
+      "prompt": "List Quarantine",
+      "description": "List all quarantined skills (duplicates detected during sync).",
+      "signature": "list_quarantine() -> str",
+      "import_path": "skill_manager.treeshell_functions",
+      "import_object": "list_quarantine",
+      "function_name": "list_quarantine",
+      "is_async": false,
+      "args_schema": {}
+    }
+  }
+}

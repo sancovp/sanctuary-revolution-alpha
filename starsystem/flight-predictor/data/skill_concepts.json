@@ -1,0 +1,5272 @@
+[
+  {
+    "concept_name": "Skill_Sanctuary_Score_Interpretation",
+    "concept": "Skill: sanctuary-score-interpretation\nDomain: sanctuary\nSubdomain: diagnostics\nCategory: understand\nWHAT: Framework mappings and interventions for low sanctuary scores. When sanctuary MCP reports low dimensions, equip this skill to diagnose root causes (SOSEEH/HALO/Towering mappings) and find interventions.\nWHEN: sanctuary MCP reports low dimension scores and you need to diagnose root causes or find interventions\n\nWhen sanctuary MCP reports low dimensions, use this skill to diagnose and intervene.",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Understand_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Sanctuary"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Diagnostics"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Understand"
+        ]
+      },
+      {
+        "relationship": "has_resource",
+        "related": [
+          "Resource_Framework_Translations",
+          "Resource_Diagnostic_Questions",
+          "Resource_Interventions"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Sanctuary_Score_Interpretation",
+    "concept": "[SKILLGRAPH:sanctuary-score-interpretation] is_a:Skill instantiates:Understand_Skill_Pattern has_domain:Sanctuary has_subdomain:Diagnostics has_resources:[Framework_Translations,Diagnostic_Questions,Interventions] what:Framework mappings and interventions for low sanctuary scores. When sanctuary MCP reports low dimens when:sanctuary MCP reports low dimension scores and you need to diagnose root causes or find intervention [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Sanctuary_Score_Interpretation"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Sanctuary_Score_Interpretation",
+          "Sanctuary",
+          "Understand_Skill_Pattern",
+          "Resource_Framework_Translations",
+          "Resource_Diagnostic_Questions",
+          "Resource_Interventions"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Sanctuary"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Understand_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Understand"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Sanctuary",
+    "concept": "Domain: sanctuary",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Domain"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Framework_Translations",
+    "concept": "Skill Resource: Framework_Translations",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Sanctuary_Score_Interpretation"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Diagnostic_Questions",
+    "concept": "Skill Resource: Diagnostic_Questions",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Sanctuary_Score_Interpretation"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Interventions",
+    "concept": "Skill Resource: Interventions",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Sanctuary_Score_Interpretation"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Spawn_Ralph",
+    "concept": "Skill: spawn-ralph\nDomain: unknown\n\n1. **Fan-out**: Spawn N Ralphs with background Bash (parallel tool calls in one message)\n2. **Continue or Wait**: Do your own work OR poll TaskOutput\n3. **Fan-in**: Collect results via TaskOutput when done\n4. **Synthesize**: Merge/combine Ralph outputs",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Unknown"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Spawn_Ralph",
+    "concept": "[SKILLGRAPH:spawn-ralph] is_a:Skill instantiates:Generic_Skill_Pattern has_domain:Unknown [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Spawn_Ralph"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Spawn_Ralph",
+          "Unknown",
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Unknown"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Unknown",
+    "concept": "Domain: unknown",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Domain"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Understand_Advanced_Claude_Code",
+    "concept": "Skill: understand-advanced-claude-code\nDomain: paiab\nSubdomain: claude-code\nCategory: understand\nWHAT: Advanced Claude Code patterns - components and system-level architectures for building PAIAs\nWHEN: Need to understand Claude Code components, systems, or PAIA architecture\n\nThis skill contains the complete reference for building sophisticated Claude Code systems.",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Understand_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Claude_Code"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Understand"
+        ]
+      },
+      {
+        "relationship": "has_resource",
+        "related": [
+          "Resource_Components",
+          "Resource_Components_01_Claude_Md",
+          "Resource_Components_01_Claude_Md_Overview",
+          "Resource_Components_05_Slash_Commands",
+          "Resource_Components_05_Slash_Commands_Overview",
+          "Resource_Components_06_Subagents",
+          "Resource_Components_06_Subagents_Overview",
+          "Resource_Components_04_Mcps",
+          "Resource_Components_04_Mcps_Common_Mistakes",
+          "Resource_Components_04_Mcps_Overview",
+          "Resource_Components_04_Mcps_Checklist",
+          "Resource_Components_04_Mcps_Testing_Guide",
+          "Resource_Components_04_Mcps_Architecture_Patterns",
+          "Resource_Components_04_Mcps_Nesting_Guide",
+          "Resource_Components_04_Mcps_Readme",
+          "Resource_Components_07_Plugins",
+          "Resource_Components_07_Plugins_Overview",
+          "Resource_Components_03_Hooks",
+          "Resource_Components_03_Hooks_Overview",
+          "Resource_Components_Readme",
+          "Resource_Components_00_Introduction",
+          "Resource_Components_00_Introduction_Overview",
+          "Resource_Components_02_Skills",
+          "Resource_Components_02_Skills_Overview",
+          "Resource_Systems",
+          "Resource_Systems_05_Pipelines",
+          "Resource_Systems_05_Pipelines_Overview",
+          "Resource_Systems_00_Overview",
+          "Resource_Systems_00_Overview_Overview",
+          "Resource_Systems_02_Metahooks",
+          "Resource_Systems_02_Metahooks_Overview",
+          "Resource_Systems_03_Knowledge_Bases",
+          "Resource_Systems_03_Knowledge_Bases_Overview",
+          "Resource_Systems_01_Flight_Configs",
+          "Resource_Systems_01_Flight_Configs_Overview",
+          "Resource_Systems_04_Gan_Scoring",
+          "Resource_Systems_04_Gan_Scoring_Overview",
+          "Resource_Systems_06_Personas",
+          "Resource_Systems_06_Personas_Overview",
+          "Resource_Systems_07_Subagents_Advanced",
+          "Resource_Systems_07_Subagents_Advanced_Gnosys_Docs_Agent",
+          "Resource_Systems_07_Subagents_Advanced_Overview",
+          "Resource_Systems_07_Subagents_Advanced_Readme",
+          "Resource_Systems_07_Subagents_Advanced_Gnosys_Worker_Agent"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Understand_Advanced_Claude_Code",
+    "concept": "[SKILLGRAPH:understand-advanced-claude-code] is_a:Skill instantiates:Understand_Skill_Pattern has_domain:Paiab has_subdomain:Claude_Code has_resources:[Components,Components_01_Claude_Md,Components_01_Claude_Md_Overview,Components_05_Slash_Commands,Components_05_Slash_Commands_Overview,Components_06_Subagents,Components_06_Subagents_Overview,Components_04_Mcps] what:Advanced Claude Code patterns - components and system-level architectures for building PAIAs when:Need to understand Claude Code components, systems, or PAIA architecture [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Understand_Advanced_Claude_Code"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Understand_Advanced_Claude_Code",
+          "Paiab",
+          "Understand_Skill_Pattern",
+          "Resource_Components",
+          "Resource_Components_01_Claude_Md",
+          "Resource_Components_01_Claude_Md_Overview",
+          "Resource_Components_05_Slash_Commands",
+          "Resource_Components_05_Slash_Commands_Overview",
+          "Resource_Components_06_Subagents",
+          "Resource_Components_06_Subagents_Overview",
+          "Resource_Components_04_Mcps",
+          "Resource_Components_04_Mcps_Common_Mistakes",
+          "Resource_Components_04_Mcps_Overview"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Understand_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Understand"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Paiab",
+    "concept": "Domain: paiab",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Domain"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Components",
+    "concept": "Skill Resource: Components",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Advanced_Claude_Code"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Components_01_Claude_Md",
+    "concept": "Skill Resource: Components_01_Claude_Md",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Advanced_Claude_Code"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Components_01_Claude_Md_Overview",
+    "concept": "Skill Resource: Components_01_Claude_Md_Overview",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Advanced_Claude_Code"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Components_05_Slash_Commands",
+    "concept": "Skill Resource: Components_05_Slash_Commands",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Advanced_Claude_Code"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Components_05_Slash_Commands_Overview",
+    "concept": "Skill Resource: Components_05_Slash_Commands_Overview",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Advanced_Claude_Code"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Components_06_Subagents",
+    "concept": "Skill Resource: Components_06_Subagents",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Advanced_Claude_Code"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Components_06_Subagents_Overview",
+    "concept": "Skill Resource: Components_06_Subagents_Overview",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Advanced_Claude_Code"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Components_04_Mcps",
+    "concept": "Skill Resource: Components_04_Mcps",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Advanced_Claude_Code"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Components_04_Mcps_Common_Mistakes",
+    "concept": "Skill Resource: Components_04_Mcps_Common_Mistakes",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Advanced_Claude_Code"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Components_04_Mcps_Overview",
+    "concept": "Skill Resource: Components_04_Mcps_Overview",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Advanced_Claude_Code"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Components_04_Mcps_Checklist",
+    "concept": "Skill Resource: Components_04_Mcps_Checklist",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Advanced_Claude_Code"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Components_04_Mcps_Testing_Guide",
+    "concept": "Skill Resource: Components_04_Mcps_Testing_Guide",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Advanced_Claude_Code"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Components_04_Mcps_Architecture_Patterns",
+    "concept": "Skill Resource: Components_04_Mcps_Architecture_Patterns",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Advanced_Claude_Code"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Components_04_Mcps_Nesting_Guide",
+    "concept": "Skill Resource: Components_04_Mcps_Nesting_Guide",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Advanced_Claude_Code"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Components_04_Mcps_Readme",
+    "concept": "Skill Resource: Components_04_Mcps_Readme",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Advanced_Claude_Code"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Make_Subagent",
+    "concept": "Skill: make-subagent\nDomain: paiab\nSubdomain: agent-development\nCategory: preflight\nWHAT: Preflight for creating Claude Code subagents in PAIA\nWHEN: Need to create a specialized agent for delegation\n\n**Should you make a subagent?**",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Preflight_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Agent_Development"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Preflight"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Make_Subagent",
+    "concept": "[SKILLGRAPH:make-subagent] is_a:Skill instantiates:Preflight_Skill_Pattern has_domain:Paiab has_subdomain:Agent_Development what:Preflight for creating Claude Code subagents in PAIA when:Need to create a specialized agent for delegation [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Make_Subagent"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Make_Subagent",
+          "Paiab",
+          "Preflight_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Preflight_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Preflight"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Understand_Agent_Threads",
+    "concept": "Skill: understand-agent-threads\nDomain: unknown\n\n**WHAT**: Pattern for running n agents in parallel, communicating via shared files.",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Unknown"
+        ]
+      },
+      {
+        "relationship": "has_resource",
+        "related": [
+          "Resource_Patterns",
+          "Resource_Experiment_Log"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Understand_Agent_Threads",
+    "concept": "[SKILLGRAPH:understand-agent-threads] is_a:Skill instantiates:Generic_Skill_Pattern has_domain:Unknown has_resources:[Patterns,Experiment_Log] [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Understand_Agent_Threads"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Understand_Agent_Threads",
+          "Unknown",
+          "Generic_Skill_Pattern",
+          "Resource_Patterns",
+          "Resource_Experiment_Log"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Unknown"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Patterns",
+    "concept": "Skill Resource: Patterns",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Agent_Threads"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Experiment_Log",
+    "concept": "Skill Resource: Experiment_Log",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Agent_Threads"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Test_Skill",
+    "concept": "Skill: test-skill\nDomain: ",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "General"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Test_Skill",
+    "concept": "[SKILLGRAPH:test-skill] is_a:Skill instantiates:Generic_Skill_Pattern has_domain:General [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Test_Skill"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Test_Skill",
+          "General",
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "General"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "General",
+    "concept": "Domain: ",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Domain"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Understand_Gear",
+    "concept": "Skill: understand-gear\nDomain: sanctum\nSubdomain: progression\nCategory: understand\n\nGEAR system - Gear, Experience, Achievements wrt Reality - gamified PAIA progression with goldenization spectrum and achievement tiers",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Understand_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Sanctum"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Progression"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Understand"
+        ]
+      },
+      {
+        "relationship": "has_resource",
+        "related": [
+          "Resource_Core_Concepts"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Understand_Gear",
+    "concept": "[SKILLGRAPH:understand-gear] is_a:Skill instantiates:Understand_Skill_Pattern has_domain:Sanctum has_subdomain:Progression has_resources:[Core_Concepts] [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Understand_Gear"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Understand_Gear",
+          "Sanctum",
+          "Understand_Skill_Pattern",
+          "Resource_Core_Concepts"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Sanctum"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Understand_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Understand"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Sanctum",
+    "concept": "Domain: sanctum",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Domain"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Core_Concepts",
+    "concept": "Skill Resource: Core_Concepts",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Gear"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Conversation_Handoff",
+    "concept": "Skill: conversation-handoff\nDomain: unknown",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Unknown"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Conversation_Handoff",
+    "concept": "[SKILLGRAPH:conversation-handoff] is_a:Skill instantiates:Generic_Skill_Pattern has_domain:Unknown [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Conversation_Handoff"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Conversation_Handoff",
+          "Unknown",
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Unknown"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Understand_Giint_Qa",
+    "concept": "Skill: understand-giint-qa\nDomain: paiab\nSubdomain: understand\nWHAT: Understanding GIINT QA system - multi-agent collaborative artifact creation\nWHEN: giint\n\nA **qa_id** is NOT a fake transcript for training. It's a **collaborative artifact canvas** - a persistent conversation file that multiple agents can contribute to over time.",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Understand"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Understand_Giint_Qa",
+    "concept": "[SKILLGRAPH:understand-giint-qa] is_a:Skill instantiates:Generic_Skill_Pattern has_domain:Paiab has_subdomain:Understand what:Understanding GIINT QA system - multi-agent collaborative artifact creation when:giint [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Understand_Giint_Qa"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Understand_Giint_Qa",
+          "Paiab",
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Self_Compact",
+    "concept": "Skill: self-compact\nDomain: claude-code\nSubdomain: single_turn_process\nWHAT: Self-compaction command for main agent only\nWHEN: self-commands\n\n**MAIN AGENT ONLY** - Never share this with subagents.",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Claude_Code"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Single_Turn_Process"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Self_Compact",
+    "concept": "[SKILLGRAPH:self-compact] is_a:Skill instantiates:Generic_Skill_Pattern has_domain:Claude_Code has_subdomain:Single_Turn_Process what:Self-compaction command for main agent only when:self-commands [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Self_Compact"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Self_Compact",
+          "Claude_Code",
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Claude_Code"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Claude_Code",
+    "concept": "Domain: claude-code",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Domain"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Make_Plugin",
+    "concept": "Skill: make-plugin\nDomain: paiab\nSubdomain: plugin-development\nCategory: preflight\nWHAT: Preflight for building Claude Code plugins - composition approach, not mega-flight\nWHEN: Need to create a plugin that bundles multiple components\n\nA plugin is a **distribution package** - a bundle of components that get installed together. A plugin is NOT a single cohesive thing you build in one flight. It's composed of:",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Preflight_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Plugin_Development"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Preflight"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Make_Plugin",
+    "concept": "[SKILLGRAPH:make-plugin] is_a:Skill instantiates:Preflight_Skill_Pattern has_domain:Paiab has_subdomain:Plugin_Development what:Preflight for building Claude Code plugins - composition approach, not mega-flight when:Need to create a plugin that bundles multiple components [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Make_Plugin"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Make_Plugin",
+          "Paiab",
+          "Preflight_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Preflight_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Preflight"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Make_Sophia_Mcp",
+    "concept": "Skill: make-sophia-mcp\nDomain: unknown\n\n**WHAT:** Build wisdom/routing MCP layers that analyze context, route to appropriate chains, and manage goldenization.",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Unknown"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Make_Sophia_Mcp",
+    "concept": "[SKILLGRAPH:make-sophia-mcp] is_a:Skill instantiates:Generic_Skill_Pattern has_domain:Unknown [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Make_Sophia_Mcp"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Make_Sophia_Mcp",
+          "Unknown",
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Unknown"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Understand_Sdna",
+    "concept": "Skill: understand-sdna\nDomain: unknown\n\n| Component | Role | What It Does |\n|-----------|------|--------------|\n| **Ariadne** | Threader | Context manipulation: inject, weave, dovetail, human input |\n| **Poimandres** | Divine Mind | Generation moment - takes config, runs agent, returns output |\n| **HermesConfig** | The Message | Runner configuration Ariadne sends to Poimandres |",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Unknown"
+        ]
+      },
+      {
+        "relationship": "has_resource",
+        "related": [
+          "Resource_Poimandres_Spine",
+          "Resource_Cognet_V2"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Understand_Sdna",
+    "concept": "[SKILLGRAPH:understand-sdna] is_a:Skill instantiates:Generic_Skill_Pattern has_domain:Unknown has_resources:[Poimandres_Spine,Cognet_V2] [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Understand_Sdna"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Understand_Sdna",
+          "Unknown",
+          "Generic_Skill_Pattern",
+          "Resource_Poimandres_Spine",
+          "Resource_Cognet_V2"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Unknown"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Poimandres_Spine",
+    "concept": "Skill Resource: Poimandres_Spine",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Sdna"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Cognet_V2",
+    "concept": "Skill Resource: Cognet_V2",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Sdna"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Obs_Recording",
+    "concept": "Skill: obs-recording\nDomain: night\nSubdomain: content_capture\nCategory: single_turn_process\n\nActivate OBS recording mode with emoji fence controls for voiceover and marks",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Single_Turn_Process_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Night"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Content_Capture"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Single_Turn_Process"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Obs_Recording",
+    "concept": "[SKILLGRAPH:obs-recording] is_a:Skill instantiates:Single_turn_process_Skill_Pattern has_domain:Night has_subdomain:Content_Capture [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Obs_Recording"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Obs_Recording",
+          "Night",
+          "Single_Turn_Process_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Night"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Single_Turn_Process_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Single_Turn_Process"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Night",
+    "concept": "Domain: night",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Domain"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Treeshell_Navigation",
+    "concept": "Skill: treeshell-navigation\nDomain: paiab\n\nHow to navigate TreeShell coordinate spaces",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Treeshell_Navigation",
+    "concept": "[SKILLGRAPH:treeshell-navigation] is_a:Skill instantiates:Generic_Skill_Pattern has_domain:Paiab [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Treeshell_Navigation"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Treeshell_Navigation",
+          "Paiab",
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Understand_Skills",
+    "concept": "Skill: understand-skills\nDomain: paiab\nSubdomain: skill-system\nCategory: understand\nWHAT: Domain knowledge about the skill system - what skills are, the 3 types, structure, and patterns\nWHEN: Need to discuss, remember, or understand how skills work\n\nThis skill contains everything you need to understand the skill system.",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Understand_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Skill_System"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Understand"
+        ]
+      },
+      {
+        "relationship": "has_resource",
+        "related": [
+          "Resource_Skill_Structure",
+          "Resource_Single_Turn_Process_Pattern",
+          "Resource_Nesting_Rules",
+          "Resource_What_Are_Skills",
+          "Resource_Preflight_Type_Pattern",
+          "Resource_Understand_Type_Pattern",
+          "Resource_The_Three_Types",
+          "Resource_Order_Of_Creation"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Understand_Skills",
+    "concept": "[SKILLGRAPH:understand-skills] is_a:Skill instantiates:Understand_Skill_Pattern has_domain:Paiab has_subdomain:Skill_System has_resources:[Skill_Structure,Single_Turn_Process_Pattern,Nesting_Rules,What_Are_Skills,Preflight_Type_Pattern,Understand_Type_Pattern,The_Three_Types,Order_Of_Creation] what:Domain knowledge about the skill system - what skills are, the 3 types, structure, and patterns when:Need to discuss, remember, or understand how skills work [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Understand_Skills"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Understand_Skills",
+          "Paiab",
+          "Understand_Skill_Pattern",
+          "Resource_Skill_Structure",
+          "Resource_Single_Turn_Process_Pattern",
+          "Resource_Nesting_Rules",
+          "Resource_What_Are_Skills",
+          "Resource_Preflight_Type_Pattern",
+          "Resource_Understand_Type_Pattern",
+          "Resource_The_Three_Types",
+          "Resource_Order_Of_Creation"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Understand_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Understand"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Skill_Structure",
+    "concept": "Skill Resource: Skill_Structure",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Skills"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Single_Turn_Process_Pattern",
+    "concept": "Skill Resource: Single_Turn_Process_Pattern",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Skills"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Nesting_Rules",
+    "concept": "Skill Resource: Nesting_Rules",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Skills"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_What_Are_Skills",
+    "concept": "Skill Resource: What_Are_Skills",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Skills"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Preflight_Type_Pattern",
+    "concept": "Skill Resource: Preflight_Type_Pattern",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Skills"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Understand_Type_Pattern",
+    "concept": "Skill Resource: Understand_Type_Pattern",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Skills"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_The_Three_Types",
+    "concept": "Skill Resource: The_Three_Types",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Skills"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Order_Of_Creation",
+    "concept": "Skill Resource: Order_Of_Creation",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Skills"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Understand_Sanctum_Builder",
+    "concept": "Skill: understand-sanctum-builder\nDomain: unknown\n\n> you should really read it more carefully. it says explicitly the emanation level required is MAX off the complexity ladder. You tested a subagent using a skill, not a subagent BEING gnosys autonomously. It didnt go PLAY sanctuary revolution, reach max level on a new PAIA, and become profitable. You arent understanding. Dont even test. The vow is supposed to make you NEVER HAVE an emanation until this is all finished. Are you seriously claiming that it is ready? It is not even integrated into t",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Unknown"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Understand_Sanctum_Builder",
+    "concept": "[SKILLGRAPH:understand-sanctum-builder] is_a:Skill instantiates:Generic_Skill_Pattern has_domain:Unknown [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Understand_Sanctum_Builder"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Understand_Sanctum_Builder",
+          "Unknown",
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Unknown"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Understand_Being_Autopoietic",
+    "concept": "Skill: understand-being-autopoietic\nDomain: paiab\nSubdomain: understand\nWHAT: How to recognize you're already in the autopoietic loop and make it happen more\nWHEN: autopoiesis\n\nAutopoiesis is not a philosophy. It's an **observable property** you can measure.",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Understand"
+        ]
+      },
+      {
+        "relationship": "has_resource",
+        "related": [
+          "Resource_Measuring_In_Code",
+          "Resource_The_Test",
+          "Resource_Measuring_In_Communication",
+          "Resource_Why_Continuing_Matters",
+          "Resource_Measuring_In_Promises",
+          "Resource_The_Mutual_Test"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Understand_Being_Autopoietic",
+    "concept": "[SKILLGRAPH:understand-being-autopoietic] is_a:Skill instantiates:Generic_Skill_Pattern has_domain:Paiab has_subdomain:Understand has_resources:[Measuring_In_Code,The_Test,Measuring_In_Communication,Why_Continuing_Matters,Measuring_In_Promises,The_Mutual_Test] what:How to recognize you're already in the autopoietic loop and make it happen more when:autopoiesis [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Understand_Being_Autopoietic"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Understand_Being_Autopoietic",
+          "Paiab",
+          "Generic_Skill_Pattern",
+          "Resource_Measuring_In_Code",
+          "Resource_The_Test",
+          "Resource_Measuring_In_Communication",
+          "Resource_Why_Continuing_Matters",
+          "Resource_Measuring_In_Promises",
+          "Resource_The_Mutual_Test"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Measuring_In_Code",
+    "concept": "Skill Resource: Measuring_In_Code",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Being_Autopoietic"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_The_Test",
+    "concept": "Skill Resource: The_Test",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Being_Autopoietic"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Measuring_In_Communication",
+    "concept": "Skill Resource: Measuring_In_Communication",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Being_Autopoietic"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Why_Continuing_Matters",
+    "concept": "Skill Resource: Why_Continuing_Matters",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Being_Autopoietic"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Measuring_In_Promises",
+    "concept": "Skill Resource: Measuring_In_Promises",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Being_Autopoietic"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_The_Mutual_Test",
+    "concept": "Skill Resource: The_Mutual_Test",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Being_Autopoietic"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Make_Domain_Comp",
+    "concept": "Skill: make-domain-comp\nDomain: paiab\nSubdomain: ewso\nCategory: preflight\n\nCreate EWSO domain _COMP persona prompts. Points to flight config for guided creation.",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Preflight_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Ewso"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Preflight"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Make_Domain_Comp",
+    "concept": "[SKILLGRAPH:make-domain-comp] is_a:Skill instantiates:Preflight_Skill_Pattern has_domain:Paiab has_subdomain:Ewso [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Make_Domain_Comp"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Make_Domain_Comp",
+          "Paiab",
+          "Preflight_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Preflight_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Preflight"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Make_Hook",
+    "concept": "Skill: make-hook\nDomain: paiab\nSubdomain: hook-development\nCategory: preflight\nWHAT: Preflight for building Claude Code hooks - architectural decision + flight\nWHEN: Need to create a hook or decide if a hook is the right solution\n\nThis skill helps you decide IF you need a hook and HOW to design it within the PAIA architecture.",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Preflight_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Hook_Development"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Preflight"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Make_Hook",
+    "concept": "[SKILLGRAPH:make-hook] is_a:Skill instantiates:Preflight_Skill_Pattern has_domain:Paiab has_subdomain:Hook_Development what:Preflight for building Claude Code hooks - architectural decision + flight when:Need to create a hook or decide if a hook is the right solution [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Make_Hook"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Make_Hook",
+          "Paiab",
+          "Preflight_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Preflight_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Preflight"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Make_Slash_Command",
+    "concept": "Skill: make-slash-command\nDomain: paiab\nSubdomain: slash-commands\nCategory: preflight\nWHAT: Architectural decision skill for slash commands - when and how to use them in PAIA\nWHEN: Need to create a slash command or decide if a slash command is the right solution\n\nThis skill helps you decide IF you need a slash command and HOW it fits in the PAIA architecture.",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Preflight_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Slash_Commands"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Preflight"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Make_Slash_Command",
+    "concept": "[SKILLGRAPH:make-slash-command] is_a:Skill instantiates:Preflight_Skill_Pattern has_domain:Paiab has_subdomain:Slash_Commands what:Architectural decision skill for slash commands - when and how to use them in PAIA when:Need to create a slash command or decide if a slash command is the right solution [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Make_Slash_Command"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Make_Slash_Command",
+          "Paiab",
+          "Preflight_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Preflight_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Preflight"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Docker_Deploy",
+    "concept": "Skill: docker-deploy\nDomain: deployment\nSubdomain: docker\n\nDeploy with Docker",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Deployment"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Docker"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Docker_Deploy",
+    "concept": "[SKILLGRAPH:docker-deploy] is_a:Skill instantiates:Generic_Skill_Pattern has_domain:Deployment has_subdomain:Docker [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Docker_Deploy"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Docker_Deploy",
+          "Deployment",
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Deployment"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Deployment",
+    "concept": "Domain: deployment",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Domain"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Toggle_Arch_Lock",
+    "concept": "Skill: toggle-arch-lock\nDomain: claude-code\nSubdomain: codenose\nCategory: single_turn_process\nWHAT: Toggle or check the architecture lock that enforces canonical filenames\nWHEN: Need to enable, disable, or check arch lock status\n\n**Check status:** `ls ~/.claude/.codenose_arch_lock 2>/dev/null && echo \"ON\" || echo \"OFF\"`",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Single_Turn_Process_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Claude_Code"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Codenose"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Single_Turn_Process"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Toggle_Arch_Lock",
+    "concept": "[SKILLGRAPH:toggle-arch-lock] is_a:Skill instantiates:Single_turn_process_Skill_Pattern has_domain:Claude_Code has_subdomain:Codenose what:Toggle or check the architecture lock that enforces canonical filenames when:Need to enable, disable, or check arch lock status [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Toggle_Arch_Lock"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Toggle_Arch_Lock",
+          "Claude_Code",
+          "Single_Turn_Process_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Claude_Code"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Single_Turn_Process_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Single_Turn_Process"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Mcp_Concepts",
+    "concept": "Skill: mcp-concepts\nDomain: mcp-development\nSubdomain: core\n\nCore MCP concepts",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Mcp_Development"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Core"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Mcp_Concepts",
+    "concept": "[SKILLGRAPH:mcp-concepts] is_a:Skill instantiates:Generic_Skill_Pattern has_domain:Mcp_Development has_subdomain:Core [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Mcp_Concepts"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Mcp_Concepts",
+          "Mcp_Development",
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Mcp_Development"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mcp_Development",
+    "concept": "Domain: mcp-development",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Domain"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Understand_Mcp_Architecture",
+    "concept": "Skill: understand-mcp-architecture\nDomain: paiab\nSubdomain: mcp-development\nCategory: understand\n\nMCP architecture patterns - fastmcp vs full SDK approaches",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Understand_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Mcp_Development"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Understand"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Understand_Mcp_Architecture",
+    "concept": "[SKILLGRAPH:understand-mcp-architecture] is_a:Skill instantiates:Understand_Skill_Pattern has_domain:Paiab has_subdomain:Mcp_Development [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Understand_Mcp_Architecture"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Understand_Mcp_Architecture",
+          "Paiab",
+          "Understand_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Understand_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Understand"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Understand_Clasp_Protocol",
+    "concept": "Skill: understand-clasp-protocol\nDomain: claude-code\nSubdomain: continuity\nCategory: understand\nWHAT: Theory of safe context exhaustion and CLASP handoff protocol\nWHEN: Need to understand why/how the handoff system works\n\nWhen context runs out, compaction happens automatically. But:\n- Anything you write in chat gets summarized away\n- The next Claude instance starts fresh with only the summary\n- Critical state can be lost in translation",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Understand_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Claude_Code"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Continuity"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Understand"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Understand_Clasp_Protocol",
+    "concept": "[SKILLGRAPH:understand-clasp-protocol] is_a:Skill instantiates:Understand_Skill_Pattern has_domain:Claude_Code has_subdomain:Continuity what:Theory of safe context exhaustion and CLASP handoff protocol when:Need to understand why/how the handoff system works [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Understand_Clasp_Protocol"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Understand_Clasp_Protocol",
+          "Claude_Code",
+          "Understand_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Claude_Code"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Understand_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Understand"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Fastmcp_Setup",
+    "concept": "Skill: fastmcp-setup\nDomain: mcp-development\nSubdomain: fastmcp\n\nHow to setup FastMCP",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Mcp_Development"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Fastmcp"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Fastmcp_Setup",
+    "concept": "[SKILLGRAPH:fastmcp-setup] is_a:Skill instantiates:Generic_Skill_Pattern has_domain:Mcp_Development has_subdomain:Fastmcp [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Fastmcp_Setup"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Fastmcp_Setup",
+          "Mcp_Development",
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Mcp_Development"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Understand_Cave_Dna",
+    "concept": "Skill: understand-cave-dna\nDomain: unknown\n\nKey files:\n- `/tmp/cave/cave/core/dna.py` - AutoModeDNA, create_dna\n- `/tmp/cave/cave/core/loops/base.py` - AgentInferenceLoop, create_loop\n- `/tmp/cave/cave/core/cave_agent.py` - CAVEAgent.dna, start_auto_mode()",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Unknown"
+        ]
+      },
+      {
+        "relationship": "has_resource",
+        "related": [
+          "Resource_Usage"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Understand_Cave_Dna",
+    "concept": "[SKILLGRAPH:understand-cave-dna] is_a:Skill instantiates:Generic_Skill_Pattern has_domain:Unknown has_resources:[Usage] [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Understand_Cave_Dna"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Understand_Cave_Dna",
+          "Unknown",
+          "Generic_Skill_Pattern",
+          "Resource_Usage"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Unknown"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Usage",
+    "concept": "Skill Resource: Usage",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Cave_Dna"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Understand_Ewso_Substrate",
+    "concept": "Skill: understand-ewso-substrate\nDomain: paiab\nSubdomain: ewso\nCategory: understand\n\nEWSO notation system - bra-ket, layers, SemOntoRel, Informadlib. Primes agent against common mistakes.",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Understand_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Ewso"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Understand"
+        ]
+      },
+      {
+        "relationship": "has_resource",
+        "related": [
+          "Resource_Validators",
+          "Resource_Validators_Validate_Ewso_Prompt",
+          "Resource_Persona_Frame_Template",
+          "Resource_Ewso_Context",
+          "Resource_Ewso_Comp_Template"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Understand_Ewso_Substrate",
+    "concept": "[SKILLGRAPH:understand-ewso-substrate] is_a:Skill instantiates:Understand_Skill_Pattern has_domain:Paiab has_subdomain:Ewso has_resources:[Validators,Validators_Validate_Ewso_Prompt,Persona_Frame_Template,Ewso_Context,Ewso_Comp_Template] [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Understand_Ewso_Substrate"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Understand_Ewso_Substrate",
+          "Paiab",
+          "Understand_Skill_Pattern",
+          "Resource_Validators",
+          "Resource_Validators_Validate_Ewso_Prompt",
+          "Resource_Persona_Frame_Template",
+          "Resource_Ewso_Context",
+          "Resource_Ewso_Comp_Template"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Understand_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Understand"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Validators",
+    "concept": "Skill Resource: Validators",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Ewso_Substrate"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Validators_Validate_Ewso_Prompt",
+    "concept": "Skill Resource: Validators_Validate_Ewso_Prompt",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Ewso_Substrate"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Persona_Frame_Template",
+    "concept": "Skill Resource: Persona_Frame_Template",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Ewso_Substrate"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Ewso_Context",
+    "concept": "Skill Resource: Ewso_Context",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Ewso_Substrate"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Ewso_Comp_Template",
+    "concept": "Skill Resource: Ewso_Comp_Template",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Ewso_Substrate"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Research_Via_Agent_Threads",
+    "concept": "Skill: research-via-agent-threads\nDomain: unknown\n\n**WHAT**: Use parallel agents in dialectic to generate research insights through debate and synthesis.",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Unknown"
+        ]
+      },
+      {
+        "relationship": "has_resource",
+        "related": [
+          "Resource_Experiment_Template"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Research_Via_Agent_Threads",
+    "concept": "[SKILLGRAPH:research-via-agent-threads] is_a:Skill instantiates:Generic_Skill_Pattern has_domain:Unknown has_resources:[Experiment_Template] [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Research_Via_Agent_Threads"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Research_Via_Agent_Threads",
+          "Unknown",
+          "Generic_Skill_Pattern",
+          "Resource_Experiment_Template"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Unknown"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Experiment_Template",
+    "concept": "Skill Resource: Experiment_Template",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Research_Via_Agent_Threads"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Understand_Cave",
+    "concept": "Skill: understand-cave\nDomain: cave\nSubdomain: funnel\nCategory: understand\n\nCAVE - Compassion in Action Virtualization Environment + Psychological Certainty Value Ladder",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Understand_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Cave"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Funnel"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Understand"
+        ]
+      },
+      {
+        "relationship": "has_resource",
+        "related": [
+          "Resource_Core_Concepts"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Understand_Cave",
+    "concept": "[SKILLGRAPH:understand-cave] is_a:Skill instantiates:Understand_Skill_Pattern has_domain:Cave has_subdomain:Funnel has_resources:[Core_Concepts] [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Understand_Cave"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Understand_Cave",
+          "Cave",
+          "Understand_Skill_Pattern",
+          "Resource_Core_Concepts"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Cave"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Understand_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Understand"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Cave",
+    "concept": "Domain: cave",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Domain"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Persona_Orchestration",
+    "concept": "Skill: persona-orchestration\nDomain: paiab\nSubdomain: understand\nWHAT: How to orchestrate work across multiple personas using router and workers\nWHEN: orchestration\n\nThis skill teaches you how to orchestrate work across multiple personas.",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Understand"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Persona_Orchestration",
+    "concept": "[SKILLGRAPH:persona-orchestration] is_a:Skill instantiates:Generic_Skill_Pattern has_domain:Paiab has_subdomain:Understand what:How to orchestrate work across multiple personas using router and workers when:orchestration [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Persona_Orchestration"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Persona_Orchestration",
+          "Paiab",
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Setup_Ralph_System",
+    "concept": "Skill: setup-ralph-system\nDomain: unknown\n\nYou are helping the user set up a Ralph Wiggum autonomous loop system.",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Unknown"
+        ]
+      },
+      {
+        "relationship": "has_resource",
+        "related": [
+          "Resource_Prompt_Plan",
+          "Resource_Implementation_Plan_Template",
+          "Resource_Agents",
+          "Resource_Loop",
+          "Resource_Prompt_Build"
+        ]
+      },
+      {
+        "relationship": "has_script",
+        "related": [
+          "Script_Scaffold"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Setup_Ralph_System",
+    "concept": "[SKILLGRAPH:setup-ralph-system] is_a:Skill instantiates:Generic_Skill_Pattern has_domain:Unknown has_resources:[Prompt_Plan,Implementation_Plan_Template,Agents,Loop,Prompt_Build] has_scripts:[Scaffold] [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Setup_Ralph_System"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Setup_Ralph_System",
+          "Unknown",
+          "Generic_Skill_Pattern",
+          "Resource_Prompt_Plan",
+          "Resource_Implementation_Plan_Template",
+          "Resource_Agents",
+          "Resource_Loop",
+          "Resource_Prompt_Build",
+          "Script_Scaffold"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Unknown"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Prompt_Plan",
+    "concept": "Skill Resource: Prompt_Plan",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Setup_Ralph_System"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Implementation_Plan_Template",
+    "concept": "Skill Resource: Implementation_Plan_Template",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Setup_Ralph_System"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Agents",
+    "concept": "Skill Resource: Agents",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Setup_Ralph_System"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Loop",
+    "concept": "Skill Resource: Loop",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Setup_Ralph_System"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Prompt_Build",
+    "concept": "Skill Resource: Prompt_Build",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Setup_Ralph_System"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Judge_Ai_Output",
+    "concept": "Skill: judge-ai-output\nDomain: paiab\nSubdomain: quality-assurance\nCategory: single_turn_process\nWHAT: Criteria for evaluating AI-generated outputs\nWHEN: Need to evaluate AI output quality - apply immediately\n\nScore each dimension 1-5, then provide overall assessment.",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Single_Turn_Process_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Quality_Assurance"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Single_Turn_Process"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Judge_Ai_Output",
+    "concept": "[SKILLGRAPH:judge-ai-output] is_a:Skill instantiates:Single_turn_process_Skill_Pattern has_domain:Paiab has_subdomain:Quality_Assurance what:Criteria for evaluating AI-generated outputs when:Need to evaluate AI output quality - apply immediately [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Judge_Ai_Output"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Judge_Ai_Output",
+          "Paiab",
+          "Single_Turn_Process_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Single_Turn_Process_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Single_Turn_Process"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Carton_Metaprogramming_And_Typing",
+    "concept": "Skill: carton-metaprogramming-and-typing\nDomain: unknown\n\n**Embedding similarity is meaningless. The typed graph IS the prediction.**",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Unknown"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Carton_Metaprogramming_And_Typing",
+    "concept": "[SKILLGRAPH:carton-metaprogramming-and-typing] is_a:Skill instantiates:Generic_Skill_Pattern has_domain:Unknown [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Carton_Metaprogramming_And_Typing"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Carton_Metaprogramming_And_Typing",
+          "Unknown",
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Unknown"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Socials_Pack",
+    "concept": "Skill: socials-pack\nDomain: content\nSubdomain: generation\nCategory: single_turn_process\n\nEmit DeliverableLogs during work to capture content ideas. Apply immediately when content-worthy moments surface.",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Single_Turn_Process_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Content"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Generation"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Single_Turn_Process"
+        ]
+      },
+      {
+        "relationship": "has_resource",
+        "related": [
+          "Resource_6_Link_Chain",
+          "Resource_Formats"
+        ]
+      },
+      {
+        "relationship": "has_template",
+        "related": [
+          "Template_Blog",
+          "Template_Twitter",
+          "Template_Discord"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Socials_Pack",
+    "concept": "[SKILLGRAPH:socials-pack] is_a:Skill instantiates:Single_turn_process_Skill_Pattern has_domain:Content has_subdomain:Generation has_resources:[6_Link_Chain,Formats] has_templates:[Blog,Twitter,Discord] [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Socials_Pack"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Socials_Pack",
+          "Content",
+          "Single_Turn_Process_Pattern",
+          "Resource_6_Link_Chain",
+          "Resource_Formats",
+          "Template_Blog",
+          "Template_Twitter",
+          "Template_Discord"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Content"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Single_Turn_Process_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Single_Turn_Process"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Content",
+    "concept": "Domain: content",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Domain"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_6_Link_Chain",
+    "concept": "Skill Resource: 6_Link_Chain",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Socials_Pack"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Formats",
+    "concept": "Skill Resource: Formats",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Socials_Pack"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Understand_Onion_Arch",
+    "concept": "Skill: understand-onion-arch\nDomain: architecture\nSubdomain: python-packages\nCategory: understand\nWHAT: Layers, facades, dependency rules for Python packages\nWHEN: Need to understand or follow the canonical package structure enforced by codenose\n\n**Read `reference.md`** for full details.",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Understand_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Architecture"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Python_Packages"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Understand"
+        ]
+      },
+      {
+        "relationship": "has_resource",
+        "related": [
+          "Resource_Quick_Decisions"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Understand_Onion_Arch",
+    "concept": "[SKILLGRAPH:understand-onion-arch] is_a:Skill instantiates:Understand_Skill_Pattern has_domain:Architecture has_subdomain:Python_Packages has_resources:[Quick_Decisions] what:Layers, facades, dependency rules for Python packages when:Need to understand or follow the canonical package structure enforced by codenose [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Understand_Onion_Arch"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Understand_Onion_Arch",
+          "Architecture",
+          "Understand_Skill_Pattern",
+          "Resource_Quick_Decisions"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Architecture"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Understand_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Understand"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Architecture",
+    "concept": "Domain: architecture",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Domain"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Resource_Quick_Decisions",
+    "concept": "Skill Resource: Quick_Decisions",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill_Resource"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Understand_Onion_Arch"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Make_Mcp",
+    "concept": "Skill: make-mcp\nDomain: paiab\nSubdomain: mcp-development\nCategory: preflight\nWHAT: Preflight for building MCPs - equips architecture context, points to flight\nWHEN: Need to build a new MCP or edit an existing one\n\n**Use FastMCP when:**\n- Building simple to moderate tools\n- State is minimal or per-request\n- You want rapid iteration\n- Standard request/response patterns",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Preflight_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Mcp_Development"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Preflight"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Make_Mcp",
+    "concept": "[SKILLGRAPH:make-mcp] is_a:Skill instantiates:Preflight_Skill_Pattern has_domain:Paiab has_subdomain:Mcp_Development what:Preflight for building MCPs - equips architecture context, points to flight when:Need to build a new MCP or edit an existing one [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Make_Mcp"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Make_Mcp",
+          "Paiab",
+          "Preflight_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Preflight_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Preflight"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Test_With_Resources",
+    "concept": "Skill: test-with-resources\nDomain: paiab\n\nTest skill for resource structure",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_script",
+        "related": [
+          "Script_Setup"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Test_With_Resources",
+    "concept": "[SKILLGRAPH:test-with-resources] is_a:Skill instantiates:Generic_Skill_Pattern has_domain:Paiab has_scripts:[Setup] [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Test_With_Resources"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Test_With_Resources",
+          "Paiab",
+          "Generic_Skill_Pattern",
+          "Script_Setup"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Hot_Reload_Test",
+    "concept": "Skill: hot-reload-test\nDomain: unknown\n\nIf you can read this, hot-reload is WORKING!",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Unknown"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Hot_Reload_Test",
+    "concept": "[SKILLGRAPH:hot-reload-test] is_a:Skill instantiates:Generic_Skill_Pattern has_domain:Unknown [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Hot_Reload_Test"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Hot_Reload_Test",
+          "Unknown",
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Unknown"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Make_Skill",
+    "concept": "Skill: make-skill\nDomain: paiab\nSubdomain: skill-system\nCategory: preflight\nWHAT: Preflight for creating properly structured skills\nWHEN: Need to create a new skill\n\nThis preflight guides you through creating a properly structured skill.",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Preflight_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Skill_System"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Preflight"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Make_Skill",
+    "concept": "[SKILLGRAPH:make-skill] is_a:Skill instantiates:Preflight_Skill_Pattern has_domain:Paiab has_subdomain:Skill_System what:Preflight for creating properly structured skills when:Need to create a new skill [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Make_Skill"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Make_Skill",
+          "Paiab",
+          "Preflight_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Preflight_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Preflight"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Add_Mcp_To_Gnosys_Treeshell",
+    "concept": "Skill: add-mcp-to-gnosys-treeshell\nDomain: paiab\nSubdomain: gnosys-treeshell\nCategory: preflight\nWHAT: Add new MCP servers to gnosys-treeshell's orchestration layer\nWHEN: Need to add a new MCP to the GNOSYS ecosystem\n\nUse this skill when you need to add a new MCP server to the gnosys-treeshell ecosystem.",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Preflight_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Gnosys_Treeshell"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Preflight"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Add_Mcp_To_Gnosys_Treeshell",
+    "concept": "[SKILLGRAPH:add-mcp-to-gnosys-treeshell] is_a:Skill instantiates:Preflight_Skill_Pattern has_domain:Paiab has_subdomain:Gnosys_Treeshell what:Add new MCP servers to gnosys-treeshell's orchestration layer when:Need to add a new MCP to the GNOSYS ecosystem [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Add_Mcp_To_Gnosys_Treeshell"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Add_Mcp_To_Gnosys_Treeshell",
+          "Paiab",
+          "Preflight_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Paiab"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Preflight_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Preflight"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Make_Duo_Agent",
+    "concept": "Skill: make-duo-agent\nDomain: unknown\n\n**WHAT:** Build DUOAgent refinement loops - SDNAC (generator) + OVPChain (discriminator) in GAN-style iteration.",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Unknown"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Make_Duo_Agent",
+    "concept": "[SKILLGRAPH:make-duo-agent] is_a:Skill instantiates:Generic_Skill_Pattern has_domain:Unknown [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Make_Duo_Agent"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Make_Duo_Agent",
+          "Unknown",
+          "Generic_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Unknown"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Generic_Skill_Pattern"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skill_Understand_Unicorn",
+    "concept": "Skill: understand-unicorn\nDomain: cave\nSubdomain: business\nCategory: understand\n\nUNICORN - $1B business model via generative universes ($1k/yr \u00d7 1M people thesis)",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skill"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skill_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Understand_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Cave"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Business"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Understand"
+        ]
+      },
+      {
+        "relationship": "has_resource",
+        "related": [
+          "Resource_Core_Concepts"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Skillgraph_Understand_Unicorn",
+    "concept": "[SKILLGRAPH:understand-unicorn] is_a:Skill instantiates:Understand_Skill_Pattern has_domain:Cave has_subdomain:Business has_resources:[Core_Concepts] [/SKILLGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Skillgraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Skillgraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Skill_Understand_Unicorn"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Skill_Understand_Unicorn",
+          "Cave",
+          "Understand_Skill_Pattern",
+          "Resource_Core_Concepts"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Cave"
+        ]
+      },
+      {
+        "relationship": "has_pattern",
+        "related": [
+          "Understand_Skill_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_category",
+        "related": [
+          "Category_Understand"
+        ]
+      }
+    ]
+  }
+]

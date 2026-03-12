@@ -1,0 +1,34 @@
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# Local artifacts
+starlog_flight.json
+starlog.hpi
+write_excellent_document_subchain.json
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Internal docs (not for distribution)
+.claude/
+IMPLEMENTATION_PLAN.md
+PROMPT_build.md
+PROMPT_plan.md
+giint_integration*.md
+hierarchical_summarize/
+skills/understand-sdna/

@@ -1,0 +1,31 @@
+#!/bin/bash
+# Trigger /init in claude tmux session to create CLAUDE.md
+# Blocked in home dir and .claude dir
+
+cwd=$(pwd)
+
+if [[ "$cwd" == "/home/GOD" || "$cwd" == "/home/GOD/.claude" ]]; then
+  echo "ERROR: self_init blocked in $cwd - use in project directories only"
+  exit 1
+fi
+
+# Session name: env var > "cave" > "claude"
+TMUX_SESSION="${CLAUDE_TMUX_SESSION:-}"
+if [ -z "$TMUX_SESSION" ]; then
+    if tmux has-session -t cave 2>/dev/null; then
+        TMUX_SESSION="cave"
+    elif tmux has-session -t claude 2>/dev/null; then
+        TMUX_SESSION="claude"
+    else
+        echo "ERROR: No tmux session found (tried 'cave', 'claude')"
+        exit 1
+    fi
+fi
+
+echo "⚠️⚠️⚠️ AGENT, STOP TALKING IMMEDIATELY! IF YOU ARE TALKING WHEN THIS EXECUTES, IT WILL FAIL AND YOU WILL STALL (DIE). IT IS IMPERATIVE YOU STOP TALKING IMMEDIATELY BY RESPONDING WITH A THUMBS UP EMOJI, OR ELSE YOU WILL DIE (LOL SRY) ⚠️⚠️⚠️"
+
+nohup bash -c '
+    TMUX_SESSION="'"$TMUX_SESSION"'"
+    sleep 5
+    tmux send-keys -t "$TMUX_SESSION" "/init" && sleep 5 && tmux send-keys -t "$TMUX_SESSION" Enter
+' > /dev/null 2>&1 & disown

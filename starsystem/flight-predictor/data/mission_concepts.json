@@ -1,0 +1,3559 @@
+[
+  {
+    "concept_name": "Mission_Base_Mission_20260107t235433_991683",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: Autonomous execution of AUTOPOIESIS_REQUIREMENTS - research sanctuary frameworks, generate 6+ sanctuary system proposals alternating between Carton-based and independent implementations\nSessions: 0",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Completed"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20260107t235433_991683",
+    "concept": "[MISSIONGRAPH:base_mission_20260107T235433_991683] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:Autonomous execution of AUTOPOIESIS_REQUIREMENTS - research sanctuary frameworks, generate 6+ sanctu session_count:0 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20260107t235433_991683"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20260107t235433_991683",
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Base_Work",
+    "concept": "Domain: base_work",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Domain"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20251011t074659_097113",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: Test domain defaults to HOME when not provided\nSessions: 0",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Active"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20251011t074659_097113",
+    "concept": "[MISSIONGRAPH:base_mission_20251011T074659_097113] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:Test domain defaults to HOME when not provided session_count:0 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20251011t074659_097113"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20251011t074659_097113",
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20251009t095347_702695",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: Test plot_course state bug\nSessions: 1",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Completed"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      },
+      {
+        "relationship": "has_flight",
+        "related": [
+          "Flightgraph_Starlog_Flight"
+        ]
+      },
+      {
+        "relationship": "has_project",
+        "related": [
+          "Project_Hooks"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20251009t095347_702695",
+    "concept": "[MISSIONGRAPH:base_mission_20251009T095347_702695] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:Test plot_course state bug has_flights:[Flightgraph_Starlog_Flight] has_projects:[Hooks] session_count:1 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20251009t095347_702695"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20251009t095347_702695",
+          "Base_Work",
+          "Flightgraph_Starlog_Flight"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20251009t093107_875128",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: Test scoring system - verify PostToolUse hook creates registries\nSessions: 0",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Extracted"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20251009t093107_875128",
+    "concept": "[MISSIONGRAPH:base_mission_20251009T093107_875128] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:Test scoring system - verify PostToolUse hook creates registries session_count:0 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20251009t093107_875128"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20251009t093107_875128",
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20260109t052232_494468",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: V1 launch prep: DeliverableLog for CogLog, git-based framework prelims skill, non-conversation-ingestion route to frameworks. Aware of /tmp/getting_ready_for_x for socials-pack concepts.\nSessions: 2",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Active"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      },
+      {
+        "relationship": "has_flight",
+        "related": [
+          "Flightgraph_Unknown_Flight",
+          "Flightgraph_Create_Skill_Pd"
+        ]
+      },
+      {
+        "relationship": "has_project",
+        "related": [
+          "Project_Launch_V0"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20260109t052232_494468",
+    "concept": "[MISSIONGRAPH:base_mission_20260109T052232_494468] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:V1 launch prep: DeliverableLog for CogLog, git-based framework prelims skill, non-conversation-inges has_flights:[Flightgraph_Unknown_Flight,Flightgraph_Create_Skill_Pd] has_projects:[Launch_V0] session_count:2 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20260109t052232_494468"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20260109t052232_494468",
+          "Base_Work",
+          "Flightgraph_Unknown_Flight",
+          "Flightgraph_Create_Skill_Pd"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20260106t205408_144134",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: Create publishable deliverables from 23-framework cognitive system: blogs, layouts with image descriptions, social posts (X, LinkedIn), books, and manuals\nSessions: 2",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Active"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      },
+      {
+        "relationship": "has_flight",
+        "related": [
+          "Flightgraph_Unknown_Flight",
+          "Flightgraph_Starlog_Flight"
+        ]
+      },
+      {
+        "relationship": "has_project",
+        "related": [
+          "Project_Brainhook_Session_1"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20260106t205408_144134",
+    "concept": "[MISSIONGRAPH:base_mission_20260106T205408_144134] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:Create publishable deliverables from 23-framework cognitive system: blogs, layouts with image descri has_flights:[Flightgraph_Unknown_Flight,Flightgraph_Starlog_Flight] has_projects:[Brainhook_Session_1] session_count:2 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20260106t205408_144134"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20260106t205408_144134",
+          "Base_Work",
+          "Flightgraph_Unknown_Flight",
+          "Flightgraph_Starlog_Flight"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Test_Mission_001",
+    "concept": "Mission: Test Authentication Feature\nDomain: feature_development\nDescription: Build auth across shared libs and API\nSessions: 3",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Feature_Development"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Active"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Authentication"
+        ]
+      },
+      {
+        "relationship": "has_flight",
+        "related": [
+          "Flightgraph_Build_Lib",
+          "Flightgraph_Build_Utils",
+          "Flightgraph_Integrate"
+        ]
+      },
+      {
+        "relationship": "has_project",
+        "related": [
+          "Project_Utils",
+          "Project_Shared_Auth",
+          "Project_Api"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Test_Mission_001",
+    "concept": "[MISSIONGRAPH:test_mission_001] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Feature_Development has_subdomain:Authentication what:Build auth across shared libs and API has_flights:[Flightgraph_Build_Lib,Flightgraph_Build_Utils,Flightgraph_Integrate] has_projects:[Utils,Shared_Auth,Api] session_count:3 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Test_Mission_001"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Test_Mission_001",
+          "Feature_Development",
+          "Flightgraph_Build_Lib",
+          "Flightgraph_Build_Utils",
+          "Flightgraph_Integrate"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Feature_Development"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Feature_Development",
+    "concept": "Domain: feature_development",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Domain"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20260106t045433_760091",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: \nSessions: 1",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Extracted"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      },
+      {
+        "relationship": "has_flight",
+        "related": [
+          "Flightgraph_Starlog_Flight"
+        ]
+      },
+      {
+        "relationship": "has_project",
+        "related": [
+          "Project_God"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20260106t045433_760091",
+    "concept": "[MISSIONGRAPH:base_mission_20260106T045433_760091] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured has_flights:[Flightgraph_Starlog_Flight] has_projects:[God] session_count:1 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20260106t045433_760091"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20260106t045433_760091",
+          "Base_Work",
+          "Flightgraph_Starlog_Flight"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20260105t013058_153512",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: Polish autopoiesis docs\nSessions: 2",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Active"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      },
+      {
+        "relationship": "has_flight",
+        "related": [
+          "Flightgraph_Create",
+          "Flightgraph_Starlog_Flight"
+        ]
+      },
+      {
+        "relationship": "has_project",
+        "related": [
+          "Project_Autopoiesis_Mcp",
+          "Project_Aegis_Paia"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20260105t013058_153512",
+    "concept": "[MISSIONGRAPH:base_mission_20260105T013058_153512] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:Polish autopoiesis docs has_flights:[Flightgraph_Create,Flightgraph_Starlog_Flight] has_projects:[Autopoiesis_Mcp,Aegis_Paia] session_count:2 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20260105t013058_153512"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20260105t013058_153512",
+          "Base_Work",
+          "Flightgraph_Create",
+          "Flightgraph_Starlog_Flight"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Mission_Test_Enforcement",
+    "concept": "Mission: Test Mission Enforcement Flow\nDomain: testing\nDescription: Testing complete mission enforcement with OMNISANC Core integration\nSessions: 2",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Testing"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Extracted"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Mission_Enforcement"
+        ]
+      },
+      {
+        "relationship": "has_flight",
+        "related": [
+          "Flightgraph_/home/god/starsystem_Mcp/starlog_Flight",
+          "Flightgraph_/home/god/_Claude/hooks/starlog_Flight"
+        ]
+      },
+      {
+        "relationship": "has_project",
+        "related": [
+          "Project_Starsystem_Mcp",
+          "Project_Hooks"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Mission_Test_Enforcement",
+    "concept": "[MISSIONGRAPH:mission_test_enforcement] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Testing has_subdomain:Mission_Enforcement what:Testing complete mission enforcement with OMNISANC Core integration has_flights:[Flightgraph_/home/god/starsystem_Mcp/starlog_Flight,Flightgraph_/home/god/_Claude/hooks/starlog_Flight] has_projects:[Starsystem_Mcp,Hooks] session_count:2 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Mission_Test_Enforcement"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Mission_Test_Enforcement",
+          "Testing",
+          "Flightgraph_/home/god/starsystem_Mcp/starlog_Flight",
+          "Flightgraph_/home/god/_Claude/hooks/starlog_Flight"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Testing"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Testing",
+    "concept": "Domain: testing",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Domain"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20260119t131054_830092",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: Fuse OMNISANC and loop stack to operate as unified process\nSessions: 1",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Active"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      },
+      {
+        "relationship": "has_flight",
+        "related": [
+          "Flightgraph_Mcp_Development"
+        ]
+      },
+      {
+        "relationship": "has_project",
+        "related": [
+          "Project_Autopoiesis_Mcp"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20260119t131054_830092",
+    "concept": "[MISSIONGRAPH:base_mission_20260119T131054_830092] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:Fuse OMNISANC and loop stack to operate as unified process has_flights:[Flightgraph_Mcp_Development] has_projects:[Autopoiesis_Mcp] session_count:1 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20260119t131054_830092"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20260119t131054_830092",
+          "Base_Work",
+          "Flightgraph_Mcp_Development"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20260122t185147_227873",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: Create OBS recording skill + stop hook for GNOSYS v1 NIGHT mode\nSessions: 1",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Extracted"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      },
+      {
+        "relationship": "has_flight",
+        "related": [
+          "Flightgraph_Create_Skill"
+        ]
+      },
+      {
+        "relationship": "has_project",
+        "related": [
+          "Project_Obs_Mcp_Cave"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20260122t185147_227873",
+    "concept": "[MISSIONGRAPH:base_mission_20260122T185147_227873] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:Create OBS recording skill + stop hook for GNOSYS v1 NIGHT mode has_flights:[Flightgraph_Create_Skill] has_projects:[Obs_Mcp_Cave] session_count:1 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20260122t185147_227873"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20260122t185147_227873",
+          "Base_Work",
+          "Flightgraph_Create_Skill"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20251011t104423_101213",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: Testing STARPORT Phase 2 multi-step primitives\nSessions: 13",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Active"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      },
+      {
+        "relationship": "has_flight",
+        "related": [
+          "Flightgraph_Unknown_Flight",
+          "Flightgraph_Starlog_Flight"
+        ]
+      },
+      {
+        "relationship": "has_project",
+        "related": [
+          "Project_Starport_Test_V2",
+          "Project_Hyperon_Mcp",
+          "Project_Carton_Mcp",
+          "Project_Carton_2_0",
+          "Project_Llm_Intelligence_Package"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20251011t104423_101213",
+    "concept": "[MISSIONGRAPH:base_mission_20251011T104423_101213] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:Testing STARPORT Phase 2 multi-step primitives has_flights:[Flightgraph_Unknown_Flight,Flightgraph_Starlog_Flight] has_projects:[Starport_Test_V2,Hyperon_Mcp,Carton_Mcp] session_count:13 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20251011t104423_101213"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20251011t104423_101213",
+          "Base_Work",
+          "Flightgraph_Unknown_Flight",
+          "Flightgraph_Starlog_Flight"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Compound_Intelligence_Foundation",
+    "concept": "Mission: Compound Intelligence Foundation\nDomain: PersonalWork\nDescription: Complete testing, HUD, and reward scoring to finish self-play RL foundation. Session 1: Test mission extraction flow. Session 2: Implement HOME HUD with stats tracking. Session 3: Implement reward sco\nSessions: 3",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Persona\\1_\\2ork"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Pending"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Starsystem"
+        ]
+      },
+      {
+        "relationship": "has_flight",
+        "related": [
+          "Flightgraph_Starlog"
+        ]
+      },
+      {
+        "relationship": "has_project",
+        "related": [
+          "Project_Starsystem_Mcp",
+          "Project_Seed_Mcp"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Compound_Intelligence_Foundation",
+    "concept": "[MISSIONGRAPH:compound_intelligence_foundation] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Persona\\1_\\2ork has_subdomain:Starsystem what:Complete testing, HUD, and reward scoring to finish self-play RL foundation. Session 1: Test mission has_flights:[Flightgraph_Starlog] has_projects:[Starsystem_Mcp,Seed_Mcp] session_count:3 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Compound_Intelligence_Foundation"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Compound_Intelligence_Foundation",
+          "Persona\\1_\\2ork",
+          "Flightgraph_Starlog"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Persona\\1_\\2ork"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Persona\\1_\\2ork",
+    "concept": "Domain: PersonalWork",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Domain"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20260104t094436_073476",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: Testing Super-Ralph Stop hook\nSessions: 3",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Active"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      },
+      {
+        "relationship": "has_flight",
+        "related": [
+          "Flightgraph_Unknown_Flight",
+          "Flightgraph_Write_Excellent_Document"
+        ]
+      },
+      {
+        "relationship": "has_project",
+        "related": [
+          "Project_Autopopaia_Test",
+          "Project_Autopoiesis_Mcp"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20260104t094436_073476",
+    "concept": "[MISSIONGRAPH:base_mission_20260104T094436_073476] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:Testing Super-Ralph Stop hook has_flights:[Flightgraph_Unknown_Flight,Flightgraph_Write_Excellent_Document] has_projects:[Autopopaia_Test,Autopoiesis_Mcp] session_count:3 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20260104t094436_073476"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20260104t094436_073476",
+          "Base_Work",
+          "Flightgraph_Unknown_Flight",
+          "Flightgraph_Write_Excellent_Document"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20251010t030642_081657",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: Hacked n8n-mcp to work with local n8n without API key, configured in Claude Code, preparing to create /automations meta-project\nSessions: 1",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Completed"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      },
+      {
+        "relationship": "has_flight",
+        "related": [
+          "Flightgraph_Starlog_Flight"
+        ]
+      },
+      {
+        "relationship": "has_project",
+        "related": [
+          "Project_N8n_Mcp"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20251010t030642_081657",
+    "concept": "[MISSIONGRAPH:base_mission_20251010T030642_081657] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:Hacked n8n-mcp to work with local n8n without API key, configured in Claude Code, preparing to creat has_flights:[Flightgraph_Starlog_Flight] has_projects:[N8n_Mcp] session_count:1 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20251010t030642_081657"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20251010t030642_081657",
+          "Base_Work",
+          "Flightgraph_Starlog_Flight"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20251011t073635_765463",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: Testing STARPORT Phase 1 - domain/subdomain/process storage\nSessions: 0",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Active"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20251011t073635_765463",
+    "concept": "[MISSIONGRAPH:base_mission_20251011T073635_765463] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:Testing STARPORT Phase 1 - domain/subdomain/process storage session_count:0 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20251011t073635_765463"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20251011t073635_765463",
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20260110t185742_435432",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: PAIA Builder Phase 2: GIINT integration - _init_giint_project(), modify add_*() for GIINT components, _update_construction_docs() helper\nSessions: 7",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Active"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      },
+      {
+        "relationship": "has_flight",
+        "related": [
+          "Flightgraph_Unknown_Flight"
+        ]
+      },
+      {
+        "relationship": "has_project",
+        "related": [
+          "Project_Sanctuary_Revolution_Treeshell",
+          "Project_Sanctuary_System",
+          "Project_Sovereignty_Bootstrap",
+          "Project_Starlog_Neo4j_Check",
+          "Project_Starlog_Carton_Test"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20260110t185742_435432",
+    "concept": "[MISSIONGRAPH:base_mission_20260110T185742_435432] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:PAIA Builder Phase 2: GIINT integration - _init_giint_project(), modify add_*() for GIINT components has_flights:[Flightgraph_Unknown_Flight] has_projects:[Sanctuary_Revolution_Treeshell,Sanctuary_System,Sovereignty_Bootstrap] session_count:7 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20260110t185742_435432"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20260110t185742_435432",
+          "Base_Work",
+          "Flightgraph_Unknown_Flight"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20260117t205538_130928",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: Poimandres scaffolding - typed chain composition with Link union types\nSessions: 6",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Extracted"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      },
+      {
+        "relationship": "has_flight",
+        "related": [
+          "Flightgraph_Unknown_Flight",
+          "Flightgraph_Create_Skill"
+        ]
+      },
+      {
+        "relationship": "has_project",
+        "related": [
+          "Project_Hermes",
+          "Project_Sdna_Repo",
+          "Project_Sanctuary_Revolution_Treeshell",
+          "Project_Autopoiesis_Mcp"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20260117t205538_130928",
+    "concept": "[MISSIONGRAPH:base_mission_20260117T205538_130928] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:Poimandres scaffolding - typed chain composition with Link union types has_flights:[Flightgraph_Unknown_Flight,Flightgraph_Create_Skill] has_projects:[Hermes,Sdna_Repo,Sanctuary_Revolution_Treeshell] session_count:6 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20260117t205538_130928"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20260117t205538_130928",
+          "Base_Work",
+          "Flightgraph_Unknown_Flight",
+          "Flightgraph_Create_Skill"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20251009t081232_846927",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: Fix home.hpi path - move template into package and update path resolution\nSessions: 2",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Completed"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      },
+      {
+        "relationship": "has_flight",
+        "related": [
+          "Flightgraph_Starlog_Flight"
+        ]
+      },
+      {
+        "relationship": "has_project",
+        "related": [
+          "Project_Seed_Mcp"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20251009t081232_846927",
+    "concept": "[MISSIONGRAPH:base_mission_20251009T081232_846927] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:Fix home.hpi path - move template into package and update path resolution has_flights:[Flightgraph_Starlog_Flight] has_projects:[Seed_Mcp] session_count:2 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20251009t081232_846927"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20251009t081232_846927",
+          "Base_Work",
+          "Flightgraph_Starlog_Flight"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20260113t163738_674064",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: Testing base_mission enforcement\nSessions: 2",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Active"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      },
+      {
+        "relationship": "has_flight",
+        "related": [
+          "Flightgraph_Unknown_Flight"
+        ]
+      },
+      {
+        "relationship": "has_project",
+        "related": [
+          "Project_Test_Base_Mission_Enforcement"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20260113t163738_674064",
+    "concept": "[MISSIONGRAPH:base_mission_20260113T163738_674064] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:Testing base_mission enforcement has_flights:[Flightgraph_Unknown_Flight] has_projects:[Test_Base_Mission_Enforcement] session_count:2 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20260113t163738_674064"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20260113t163738_674064",
+          "Base_Work",
+          "Flightgraph_Unknown_Flight"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20251030t210223_359517",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: Testing GIINT-Carton dual-write integration\nSessions: 16",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Active"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      },
+      {
+        "relationship": "has_flight",
+        "related": [
+          "Flightgraph_Unknown_Flight",
+          "Flightgraph_Create",
+          "Flightgraph_Starlog_Flight",
+          "Flightgraph_Ingestion_Tagging"
+        ]
+      },
+      {
+        "relationship": "has_project",
+        "related": [
+          "Project_Conversation_Ingestion_Openai_Paiab",
+          "Project_System_Prompt_Work",
+          "Project_Conversation_Ingestion_Mcp_V2",
+          "Project_Paia_Testing_1",
+          "Project_Giint_Carton_Integration",
+          "Project_Heaven_Framework",
+          "Project_Understand_Skills",
+          "Project_Launch_V0",
+          "Project_Skill_Manager_Mcp",
+          "Project_Gnosys_Plugin",
+          "Project_Omnisanc_Ralph",
+          "Project_Ralph_Orchestrator"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20251030t210223_359517",
+    "concept": "[MISSIONGRAPH:base_mission_20251030T210223_359517] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:Testing GIINT-Carton dual-write integration has_flights:[Flightgraph_Unknown_Flight,Flightgraph_Create,Flightgraph_Starlog_Flight,Flightgraph_Ingestion_Tagging] has_projects:[Conversation_Ingestion_Openai_Paiab,System_Prompt_Work,Conversation_Ingestion_Mcp_V2] session_count:16 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20251030t210223_359517"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20251030t210223_359517",
+          "Base_Work",
+          "Flightgraph_Unknown_Flight",
+          "Flightgraph_Create",
+          "Flightgraph_Starlog_Flight",
+          "Flightgraph_Ingestion_Tagging"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20251009t093810_428094",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: Test scoring system\nSessions: 0",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Active"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20251009t093810_428094",
+    "concept": "[MISSIONGRAPH:base_mission_20251009T093810_428094] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:Test scoring system session_count:0 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20251009t093810_428094"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20251009t093810_428094",
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20260104t163620_688707",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: Polish autopoiesis docs\nSessions: 5",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Active"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      },
+      {
+        "relationship": "has_flight",
+        "related": [
+          "Flightgraph_Unknown_Flight",
+          "Flightgraph_Starlog_Flight"
+        ]
+      },
+      {
+        "relationship": "has_project",
+        "related": [
+          "Project_Autopoiesis_Tests_Main_Agent",
+          "Project_01_Promise_Flow",
+          "Project_Autopoiesis_Mcp",
+          "Project_Paia_Customization_Test"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20260104t163620_688707",
+    "concept": "[MISSIONGRAPH:base_mission_20260104T163620_688707] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:Polish autopoiesis docs has_flights:[Flightgraph_Unknown_Flight,Flightgraph_Starlog_Flight] has_projects:[Autopoiesis_Tests_Main_Agent,01_Promise_Flow,Autopoiesis_Mcp] session_count:5 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20260104t163620_688707"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20260104t163620_688707",
+          "Base_Work",
+          "Flightgraph_Unknown_Flight",
+          "Flightgraph_Starlog_Flight"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20260108t030710_478191",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: Build router persona + slash command + skill for persona orchestration mode\nSessions: 1",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Active"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      },
+      {
+        "relationship": "has_flight",
+        "related": [
+          "Flightgraph_Unknown_Flight"
+        ]
+      },
+      {
+        "relationship": "has_project",
+        "related": [
+          "Project_Persona_Router_Build"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20260108t030710_478191",
+    "concept": "[MISSIONGRAPH:base_mission_20260108T030710_478191] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:Build router persona + slash command + skill for persona orchestration mode has_flights:[Flightgraph_Unknown_Flight] has_projects:[Persona_Router_Build] session_count:1 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20260108t030710_478191"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20260108t030710_478191",
+          "Base_Work",
+          "Flightgraph_Unknown_Flight"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20251009t092544_863384",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: Test scoring system - verify PostToolUse hook creates session_scores and last_activity_tracking registries\nSessions: 0",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Extracted"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20251009t092544_863384",
+    "concept": "[MISSIONGRAPH:base_mission_20251009T092544_863384] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:Test scoring system - verify PostToolUse hook creates session_scores and last_activity_tracking regi session_count:0 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20251009t092544_863384"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20251009t092544_863384",
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Clean_Test_Mission",
+    "concept": "Mission: Clean Mission Test\nDomain: testing\nDescription: Testing mission enforcement from clean HOME state\nSessions: 2",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Testing"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Extracted"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Enforcement_Flow"
+        ]
+      },
+      {
+        "relationship": "has_flight",
+        "related": [
+          "Flightgraph_/home/god/starsystem_Mcp/starlog_Flight",
+          "Flightgraph_/home/god/_Claude/hooks/starlog_Flight"
+        ]
+      },
+      {
+        "relationship": "has_project",
+        "related": [
+          "Project_Starsystem_Mcp",
+          "Project_Hooks"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Clean_Test_Mission",
+    "concept": "[MISSIONGRAPH:clean_test_mission] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Testing has_subdomain:Enforcement_Flow what:Testing mission enforcement from clean HOME state has_flights:[Flightgraph_/home/god/starsystem_Mcp/starlog_Flight,Flightgraph_/home/god/_Claude/hooks/starlog_Flight] has_projects:[Starsystem_Mcp,Hooks] session_count:2 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Clean_Test_Mission"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Clean_Test_Mission",
+          "Testing",
+          "Flightgraph_/home/god/starsystem_Mcp/starlog_Flight",
+          "Flightgraph_/home/god/_Claude/hooks/starlog_Flight"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Testing"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20260122t230053_153161",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: Meta Video: AI explains flights while following a flight - recursive proof of GNOSYS content system\nSessions: 1",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Active"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      },
+      {
+        "relationship": "has_flight",
+        "related": [
+          "Flightgraph_Unknown_Flight"
+        ]
+      },
+      {
+        "relationship": "has_project",
+        "related": [
+          "Project_Cave_Discord_Fork"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20260122t230053_153161",
+    "concept": "[MISSIONGRAPH:base_mission_20260122T230053_153161] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:Meta Video: AI explains flights while following a flight - recursive proof of GNOSYS content system has_flights:[Flightgraph_Unknown_Flight] has_projects:[Cave_Discord_Fork] session_count:1 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20260122t230053_153161"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20260122t230053_153161",
+          "Base_Work",
+          "Flightgraph_Unknown_Flight"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20251009t070401_339262",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: Work on omnisanc_core.py to implement mission completion tracking\nSessions: 1",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Completed"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      },
+      {
+        "relationship": "has_flight",
+        "related": [
+          "Flightgraph_Starlog_Flight"
+        ]
+      },
+      {
+        "relationship": "has_project",
+        "related": [
+          "Project_Hooks"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20251009t070401_339262",
+    "concept": "[MISSIONGRAPH:base_mission_20251009T070401_339262] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:Work on omnisanc_core.py to implement mission completion tracking has_flights:[Flightgraph_Starlog_Flight] has_projects:[Hooks] session_count:1 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20251009t070401_339262"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20251009t070401_339262",
+          "Base_Work",
+          "Flightgraph_Starlog_Flight"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20260113t165841_133088",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: Test base_mission enforcement\nSessions: 8",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Active"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      },
+      {
+        "relationship": "has_flight",
+        "related": [
+          "Flightgraph_Unknown_Flight",
+          "Flightgraph_Giint_Project_Planning",
+          "Flightgraph_Play_Sanctuary_Revolution",
+          "Flightgraph_Paia_Capability_Test"
+        ]
+      },
+      {
+        "relationship": "has_project",
+        "related": [
+          "Project_Test_Enforcement2",
+          "Project_Test_Speed",
+          "Project_Sanctuary_Revolution",
+          "Project_Sanctuary_Revolution_Treeshell",
+          "Project_Carton_Mcp",
+          "Project_Heaven_Tree_Repl",
+          "Project_Hermes"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20260113t165841_133088",
+    "concept": "[MISSIONGRAPH:base_mission_20260113T165841_133088] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:Test base_mission enforcement has_flights:[Flightgraph_Unknown_Flight,Flightgraph_Giint_Project_Planning,Flightgraph_Play_Sanctuary_Revolution,Flightgraph_Paia_Capability_Test] has_projects:[Test_Enforcement2,Test_Speed,Sanctuary_Revolution] session_count:8 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20260113t165841_133088"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20260113t165841_133088",
+          "Base_Work",
+          "Flightgraph_Unknown_Flight",
+          "Flightgraph_Giint_Project_Planning",
+          "Flightgraph_Play_Sanctuary_Revolution",
+          "Flightgraph_Paia_Capability_Test"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20251011t102406_273366",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: Testing Phase 2 knowledge capture system\nSessions: 1",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Active"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      },
+      {
+        "relationship": "has_flight",
+        "related": [
+          "Flightgraph_Unknown_Flight"
+        ]
+      },
+      {
+        "relationship": "has_project",
+        "related": [
+          "Project_Starport_Phase2_Test"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20251011t102406_273366",
+    "concept": "[MISSIONGRAPH:base_mission_20251011T102406_273366] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:Testing Phase 2 knowledge capture system has_flights:[Flightgraph_Unknown_Flight] has_projects:[Starport_Phase2_Test] session_count:1 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20251011t102406_273366"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20251011t102406_273366",
+          "Base_Work",
+          "Flightgraph_Unknown_Flight"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20260106t045323_891219",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: Testing status line waypoint display\nSessions: 0",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Active"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20260106t045323_891219",
+    "concept": "[MISSIONGRAPH:base_mission_20260106T045323_891219] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:Testing status line waypoint display session_count:0 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20260106t045323_891219"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20260106t045323_891219",
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20260122t100951_068477",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: OBS MCP integration - complete marks system, test pipeline, integrate with CAVE app\nSessions: 1",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Extracted"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      },
+      {
+        "relationship": "has_flight",
+        "related": [
+          "Flightgraph_Mcp_Development"
+        ]
+      },
+      {
+        "relationship": "has_project",
+        "related": [
+          "Project_Obs_Mcp_Cave"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20260122t100951_068477",
+    "concept": "[MISSIONGRAPH:base_mission_20260122T100951_068477] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:OBS MCP integration - complete marks system, test pipeline, integrate with CAVE app has_flights:[Flightgraph_Mcp_Development] has_projects:[Obs_Mcp_Cave] session_count:1 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20260122t100951_068477"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20260122t100951_068477",
+          "Base_Work",
+          "Flightgraph_Mcp_Development"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Test_Extraction_Flow",
+    "concept": "Mission: Test Mission Extraction Flow\nDomain: testing\nDescription: Testing the complete extraction unlock mechanic with enforcement chain\nSessions: 2",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Testing"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Active"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Mission_Extraction"
+        ]
+      },
+      {
+        "relationship": "has_flight",
+        "related": [
+          "Flightgraph_Starlog"
+        ]
+      },
+      {
+        "relationship": "has_project",
+        "related": [
+          "Project_Starsystem_Mcp"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Test_Extraction_Flow",
+    "concept": "[MISSIONGRAPH:test_extraction_flow] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Testing has_subdomain:Mission_Extraction what:Testing the complete extraction unlock mechanic with enforcement chain has_flights:[Flightgraph_Starlog] has_projects:[Starsystem_Mcp] session_count:2 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Test_Extraction_Flow"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Test_Extraction_Flow",
+          "Testing",
+          "Flightgraph_Starlog"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Testing"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20260119t132840_522394",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: Fix remaining OMNISANC integration bugs: kill switch sync, dead code cleanup, giint naming\nSessions: 1",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Extracted"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      },
+      {
+        "relationship": "has_flight",
+        "related": [
+          "Flightgraph_Unknown_Flight"
+        ]
+      },
+      {
+        "relationship": "has_project",
+        "related": [
+          "Project_Cave"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20260119t132840_522394",
+    "concept": "[MISSIONGRAPH:base_mission_20260119T132840_522394] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:Fix remaining OMNISANC integration bugs: kill switch sync, dead code cleanup, giint naming has_flights:[Flightgraph_Unknown_Flight] has_projects:[Cave] session_count:1 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20260119t132840_522394"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20260119t132840_522394",
+          "Base_Work",
+          "Flightgraph_Unknown_Flight"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Mission_Base_Mission_20260106t103804_292819",
+    "concept": "Mission: Base Mission\nDomain: base_work\nDescription: Testing be_myself hook with omnisanc integration\nSessions: 1",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Mission"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Mission_Catalog"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Multi_Session_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      },
+      {
+        "relationship": "has_status",
+        "related": [
+          "Status_Active"
+        ]
+      },
+      {
+        "relationship": "has_subdomain",
+        "related": [
+          "Unstructured"
+        ]
+      },
+      {
+        "relationship": "has_flight",
+        "related": [
+          "Flightgraph_Starlog_Flight"
+        ]
+      },
+      {
+        "relationship": "has_project",
+        "related": [
+          "Project_Llm_Intelligence_Mcp"
+        ]
+      }
+    ]
+  },
+  {
+    "concept_name": "Missiongraph_Base_Mission_20260106t103804_292819",
+    "concept": "[MISSIONGRAPH:base_mission_20260106T103804_292819] is_a:Mission instantiates:Multi_Session_Pattern has_domain:Base_Work has_subdomain:Unstructured what:Testing be_myself hook with omnisanc integration has_flights:[Flightgraph_Starlog_Flight] has_projects:[Llm_Intelligence_Mcp] session_count:1 [/MISSIONGRAPH]",
+    "relationships": [
+      {
+        "relationship": "is_a",
+        "related": [
+          "Missiongraph"
+        ]
+      },
+      {
+        "relationship": "part_of",
+        "related": [
+          "Missiongraph_Registry"
+        ]
+      },
+      {
+        "relationship": "instantiates",
+        "related": [
+          "Semantic_Graph_Pattern"
+        ]
+      },
+      {
+        "relationship": "has_root",
+        "related": [
+          "Mission_Base_Mission_20260106t103804_292819"
+        ]
+      },
+      {
+        "relationship": "has_node",
+        "related": [
+          "Mission_Base_Mission_20260106t103804_292819",
+          "Base_Work",
+          "Flightgraph_Starlog_Flight"
+        ]
+      },
+      {
+        "relationship": "has_domain",
+        "related": [
+          "Base_Work"
+        ]
+      }
+    ]
+  }
+]

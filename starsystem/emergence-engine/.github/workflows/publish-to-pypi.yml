@@ -1,0 +1,89 @@
+name: Public Release
+
+on:
+  push:
+    tags:
+      - "public-*"
+      - "*-public"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+    - name: Check public repo configuration
+      run: |
+        if [ "${{ secrets.PUBLIC_REPO_URL }}" = "" ] || [ "${{ secrets.PUBLIC_REPO_URL }}" = "PUBLIC_REPO_URL_HERE" ]; then
+          echo "❌ PUBLIC_REPO_URL secret not configured"
+          echo "Please add PUBLIC_REPO_URL secret with your public repository URL"
+          exit 1
+        fi
+        if [ "${{ secrets.PUBLIC_REPO_TOKEN }}" = "" ] || [ "${{ secrets.PUBLIC_REPO_TOKEN }}" = "PUBLIC_REPO_TOKEN_HERE" ]; then
+          echo "❌ PUBLIC_REPO_TOKEN secret not configured" 
+          echo "Please add PUBLIC_REPO_TOKEN secret with push access to public repo"
+          exit 1
+        fi
+        echo "✅ Public repo secrets configured"
+    
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Configure git for public repo push
+      run: |
+        git config --global user.email "action@github.com"
+        git config --global user.name "GitHub Action"
+        
+    - name: Create filtered release for public repo
+      run: |
+        # Create clean directory for public release
+        mkdir -p /tmp/public-release
+        cd /tmp/public-release
+        
+        # Clone the current repo and filter out ideas directory
+        git clone ${{ github.server_url }}/${{ github.repository }} .
+        rm -rf ideas/
+        rm -rf .git
+        
+        # Initialize as new git repo
+        git init
+        git add .
+        git commit -m "Public release ${{ github.ref_name }}
+        
+        Filtered release from ${{ github.repository }}
+        Original commit: ${{ github.sha }}
+        
+        🤖 Generated with HEAVEN BML System"
+        
+    - name: Push to public repository
+      run: |
+        cd /tmp/public-release
+        git remote add public https://${{ secrets.PUBLIC_REPO_TOKEN }}@${{ secrets.PUBLIC_REPO_URL#https:// }}
+        git tag ${{ github.ref_name }}
+        git push public main --force
+        git push public ${{ github.ref_name }}
+        
+    - name: Create GitHub release on public repo
+      run: |
+        # Switch to public repo context for release creation
+        cd /tmp/public-release
+        git remote set-url origin https://${{ secrets.PUBLIC_REPO_TOKEN }}@${{ secrets.PUBLIC_REPO_URL#https:// }}
+        
+        gh release create ${{ github.ref_name }} \
+          --title "${{ github.ref_name }}" \
+          --notes "Public release of ${{ github.repository }} ${{ github.ref_name }}
+          
+        Install with: \`pip install heaven-bml\`
+        
+        🤖 Generated with HEAVEN BML System" \
+          --repo ${{ secrets.PUBLIC_REPO_URL }}
+      env:
+        GH_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}

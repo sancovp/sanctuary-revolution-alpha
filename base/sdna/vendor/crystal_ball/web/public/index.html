@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Crystal Ball Space Scryer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="backdrop"></div>
+    <main class="layout">
+      <header class="header panel reveal">
+        <div>
+          <h1>Space Scryer</h1>
+          <p>Pick points, compose coordinate, scry typed candidates.</p>
+        </div>
+        <div class="active-space">
+          <label for="spaceSelect">Space</label>
+          <select id="spaceSelect"></select>
+          <button id="activateSpace">Load</button>
+        </div>
+      </header>
+
+      <section class="panel controls reveal">
+        <h2>Build</h2>
+        <div class="row">
+          <input id="newSpaceName" placeholder="new space name" />
+          <button id="createSpaceBtn">Create Space</button>
+        </div>
+        <div class="row">
+          <select id="parentSelect"></select>
+          <input id="pointLabel" placeholder="point label" />
+          <button id="addPointBtn">Add Point</button>
+        </div>
+        <div class="row">
+          <input id="attrName" placeholder="attribute name" />
+          <input id="attrSpectrum" placeholder="spectrum,comma,separated" />
+          <input id="attrDefault" placeholder="default (optional)" />
+          <button id="addAttrBtn">Add Attr To Selected</button>
+        </div>
+        <div class="row">
+          <input id="bloomCoordinate" placeholder="coord (blank=root)" />
+          <input id="bloomLabel" placeholder="slot label" value="point" />
+          <input id="bloomCount" type="number" min="1" max="24" value="4" />
+          <button id="bloomBtn">Bloom Slots</button>
+        </div>
+      </section>
+
+      <section class="panel visualizer reveal">
+        <div class="section-head">
+          <h2>Space</h2>
+          <p>Hover cards to inspect slots. Click to select. Toggle Include to scry.</p>
+        </div>
+        <div id="spaceCanvas"></div>
+      </section>
+
+      <section class="panel scry reveal">
+        <h2>Scry</h2>
+        <div class="line">
+          <label>Included points</label>
+          <div id="includedPoints" class="chips"></div>
+        </div>
+        <div class="line">
+          <label>Composed coordinate</label>
+          <output id="composedCoordinate">-</output>
+        </div>
+        <div class="line">
+          <label for="manualCoordinate">Manual override</label>
+          <input id="manualCoordinate" placeholder="ex: 12.3 or 0.1" />
+        </div>
+        <div class="row">
+          <button id="runScryBtn">Run Scry</button>
+          <button id="clearIncludeBtn">Clear Included</button>
+        </div>
+        <div class="line">
+          <label>Scry output</label>
+          <pre id="scryOutput">{}</pre>
+        </div>
+      </section>
+
+      <section class="panel detail reveal">
+        <h2>Point Detail</h2>
+        <pre id="pointDetail">Hover or select a point.</pre>
+      </section>
+
+      <section class="panel llm reveal">
+        <h2>LLM Suggest</h2>
+        <textarea id="llmPrompt" rows="4" placeholder="What should the next candidate point optimize?"></textarea>
+        <div class="row">
+          <label><input id="dumpNeighborhood" type="checkbox" checked /> Dump neighborhood</label>
+          <label><input id="autoApply" type="checkbox" /> Auto apply</label>
+          <label><input id="saturate" type="checkbox" /> Saturate</label>
+          <input id="maxActions" type="number" min="1" max="64" value="12" />
+          <input id="perParentCap" type="number" min="0" max="16" value="0" />
+          <input id="maxCycles" type="number" min="1" max="12" value="3" />
+          <input id="retryAttempts" type="number" min="0" max="4" value="2" />
+        </div>
+        <div class="row">
+          <button id="runSuggestBtn">Run Agent Suggest</button>
+        </div>
+        <pre id="llmOutput">{}</pre>
+      </section>
+
+      <section class="panel status reveal">
+        <h2>Status</h2>
+        <pre id="statusLog">ready</pre>
+      </section>
+    </main>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

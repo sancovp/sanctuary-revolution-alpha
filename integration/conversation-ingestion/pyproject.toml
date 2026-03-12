@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "conversation-ingestion-mcp"
+version = "0.1.1"
+description = "Semi-automated OpenAI conversation ingestion system with tagging and bundling"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "GNOSYS Personal Builder License (GPBL) v1.0"}
+authors = [
+    {name = "Isaac Wostrel-Rubin", email = "isaac@sanctuary.systems"}
+]
+dependencies = [
+    "fastmcp>=2.0.0"
+]
+
+[project.scripts]
+conversation-ingestion-server = "conversation_ingestion_mcp.main:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "black",
+    "ruff"
+]

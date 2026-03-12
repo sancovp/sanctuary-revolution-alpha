@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "starship-mcp"
+version = "0.1.10"
+description = "STARSHIP MCP - Experiential Captain Identity Bridge"
+authors = [{name = "Isaac"}]
+requires-python = ">=3.8"
+dependencies = [
+    "fastmcp",
+    "starlog-mcp",
+    "skill-manager-mcp",
+]
+
+[project.scripts]
+starship-mcp = "starship_mcp.starship_mcp:main"

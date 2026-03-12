@@ -1,0 +1,16 @@
+{
+  "family_root": "planetside_home",
+  "parent": null,
+  "domain": "planetside",
+  "description": "Planetside — Active work zone. You're on the planet (repo), working.",
+  "nodes": {
+    "planetside_home": {
+      "type": "Menu",
+      "prompt": "Planetside — Active Session",
+      "options": {
+        "Update Debug Diary": "execute_action.exec {\"server_name\": \"starlog\", \"action_name\": \"update_debug_diary\"}",
+        "Starport Landing": "jump landing_home"
+      }
+    }
+  }
+}
