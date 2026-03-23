@@ -865,8 +865,10 @@ def _apply_predicate_to_concept(
         return
 
     if predicate == "has_msc":
-        concept["has_msc"] = object_
-        properties["hasMSC"] = object_
+        parsed_bool = _parse_bool_literal(object_)
+        val = parsed_bool if parsed_bool is not None else object_
+        concept["has_msc"] = val
+        properties["hasMSC"] = val
         return
 
     if predicate == "justifies":

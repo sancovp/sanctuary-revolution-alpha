@@ -111,14 +111,34 @@ class DerivationRequirements:
         return missing
     
     @staticmethod
-    def for_reifies(concept: Dict) -> List[str]:
-        """L3: What's needed for reifies (structured types)?"""
+    def for_reifies(concept: Dict, cat=None) -> List[str]:
+        """L3: What's needed for reifies (structured types)?
+
+        is_a parents must themselves have typed_depth >= 1.
+        This is the 2-morphism: your parents' relationships
+        must also decompose into foundation predicates.
+        """
         missing = []
-        # is_a targets must themselves be typed
         is_a = concept.get("is_a", [])
-        for parent in is_a:
-            # In real use, we'd check if parent has typed depth >= 1
-            pass  # Placeholder
+        if cat:
+            from .universal_pattern import compute_ses_typed_depth
+            typed_symbols = set(cat.entities.keys()) if cat else set()
+            for parent in is_a:
+                if parent in cat.entities:
+                    parent_entity = cat.entities[parent]
+                    parent_args = {
+                        "is_a": list(parent_entity.is_a),
+                        "part_of": list(parent_entity.part_of),
+                        "has_part": list(parent_entity.has_part),
+                        "produces": list(parent_entity.produces),
+                    }
+                    parent_ses = compute_ses_typed_depth(
+                        constructor_name=parent,
+                        constructor_args=parent_args,
+                        typed_symbols=typed_symbols,
+                    )
+                    if parent_ses.max_typed_depth < 1:
+                        missing.append(f"is_a parent '{parent}' has typed_depth={parent_ses.max_typed_depth} (need >= 1)")
         if not concept.get("part_of"):
             missing.append("part_of: where it belongs in the structure")
         return missing
@@ -152,15 +172,40 @@ class DerivationRequirements:
         return missing
     
     @staticmethod
-    def for_programs(concept: Dict) -> List[str]:
-        """L6: What's needed for programs (codegen)?"""
+    def for_programs(concept: Dict, cat=None) -> List[str]:
+        """L6: What's needed for programs (strengthened)?
+
+        programs = the entire subgraph is typed all the way down.
+        SES typed-depth covers all constructor args with no arbitrary
+        strings remaining. first_arbitrary_string_depth must be None.
+        """
+        from .universal_pattern import compute_ses_typed_depth
+
+        typed_symbols = set(cat.entities.keys()) if cat else set()
+        constructor_args = {
+            "is_a": concept.get("is_a", []),
+            "part_of": concept.get("part_of", []),
+            "has_part": concept.get("has_part", []),
+            "produces": concept.get("produces", []),
+            "justifies": concept.get("justifies") or concept.get("properties", {}).get("justifies"),
+            "msc": (
+                concept.get("has_msc")
+                or concept.get("msc")
+                or concept.get("properties", {}).get("hasMSC")
+                or concept.get("properties", {}).get("msc")
+            ),
+        }
+        report = compute_ses_typed_depth(
+            constructor_name=concept.get("name", "unknown"),
+            constructor_args=constructor_args,
+            typed_symbols=typed_symbols,
+        )
         missing = []
-        # Must have python_class or template (check top-level AND properties)
-        props = concept.get("properties", {})
-        has_python_class = concept.get("python_class") or props.get("python_class")
-        has_template = concept.get("template") or props.get("template")
-        if not has_python_class and not has_template:
-            missing.append("python_class or template: code realization")
+        if report.first_arbitrary_string_depth is not None:
+            missing.append(
+                f"not fully typed: arbitrary string at depth {report.first_arbitrary_string_depth} "
+                f"(typed_depth={report.max_typed_depth}, args={report.arg_count_typed}/{report.arg_count_total})"
+            )
         return missing
 
 
@@ -217,8 +262,8 @@ class DerivationValidator:
             state.whats_missing = missing_l2
             return state
         
-        # L3: reifies (types have structure)
-        missing_l3 = DerivationRequirements.for_reifies(concept)
+        # L3: reifies (types have structure — parents must be typed)
+        missing_l3 = DerivationRequirements.for_reifies(concept, self.cat)
         if not missing_l3:
             state.has_reifies = True
             state.level = DerivationLevel.L3_STRUCT_TYPES
@@ -248,8 +293,8 @@ class DerivationValidator:
             state.whats_missing = missing_l5
             return state
         
-        # L6: programs (Cat-of-Cat witness, codegen)
-        missing_l6 = DerivationRequirements.for_programs(concept)
+        # L6: programs (fully strengthened — SES covers all args)
+        missing_l6 = DerivationRequirements.for_programs(concept, self.cat)
         if not missing_l6:
             state.has_programs = True
             state.level = DerivationLevel.L6_CODEGEN
