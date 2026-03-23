@@ -3,42 +3,32 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+
+# Build/Distribution
+build/
+dist/
 *.egg-info/
 *.egg
-dist/
-build/
-eggs/
-*.whl
-
-# Virtual environments
-.venv/
-venv/
-env/
 
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
-*~
-.DS_Store
 
 # Environment
 .env
-.env.local
-.env.*.local
-
-# Claude Code local
-.claude/
-starlog.hpi
+.venv/
+venv/
 
 # Testing
 .pytest_cache/
 .coverage
 htmlcov/
-.tox/
-.nox/
 
-# Distribution
-*.tar.gz
-*.whl
+# OS
+.DS_Store
+Thumbs.db
+
+# Starlog (local session data)
+starlog.hpi

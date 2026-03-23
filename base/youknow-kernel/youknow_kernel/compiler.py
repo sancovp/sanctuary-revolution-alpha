@@ -1008,7 +1008,7 @@ def _build_abcd_state(parsed: ParsedStatement, cat: Any) -> Dict[str, Any]:
     }
     missing_slots = [name for name, value in slots.items() if value in (None, "")]
     return {
-        "required": not subject_known or not maps_to_known,
+        "required": not maps_to_known,
         "slots": slots,
         "complete": len(missing_slots) == 0,
         "missing_slots": missing_slots,
@@ -1703,6 +1703,31 @@ def _persist_to_soup(
     except Exception:
         # SOUP persistence should not crash the compiler path.
         pass
+
+    # Add to Cat_of_Cat as unbounded so iterative refinement works.
+    # Concept stays in SOUP but is now "known" for future calls.
+    try:
+        from .cat_of_cat import get_cat
+        cat = get_cat()
+        if parsed.subject not in cat.entities:
+            subject_concept = packet.candidate_subgraph.get("subject_concept", {}) if packet else {}
+            is_a = list(subject_concept.get("is_a", []))
+            if not is_a and parsed.predicate == "is_a":
+                is_a = [parsed.object]
+            valid_is_a = [p for p in is_a if p in cat.entities]
+            if valid_is_a:
+                cat.add(
+                    name=parsed.subject,
+                    is_a=valid_is_a,
+                    part_of=[p for p in subject_concept.get("part_of", []) if p in cat.entities],
+                    has_part=list(subject_concept.get("has_part", [])),
+                    produces=[p for p in subject_concept.get("produces", []) if p in cat.entities],
+                    y_layer=subject_concept.get("y_layer"),
+                    description=subject_concept.get("description", ""),
+                    properties=dict(subject_concept.get("properties", {})),
+                )
+    except Exception:
+        pass  # Bootstrap failure should not crash compiler
 
     # Mirror SOUP state into the liquid domain ontology as Hallucination.
     _persist_soup_to_uarl_domain(
