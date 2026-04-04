@@ -450,6 +450,12 @@ def compile_concepts(concepts: list[dict], silenced: bool) -> tuple[list[str], i
         # Inject GIINT types based on naming conventions
         concept, giint_errors = inject_giint_types(concept)
         if giint_errors:
+            blocked = [e for e in giint_errors if "BLOCKED" in e]
+            if blocked:
+                results.extend(blocked)
+                warning_count += len(blocked)
+                logger.warning("BLOCKED %s: %s", concept["concept_name"], blocked)
+                continue  # Do NOT compile — missing required fields
             results.extend(giint_errors)
             warning_count += len(giint_errors)
 
@@ -531,6 +537,18 @@ def compile_concepts(concepts: list[dict], silenced: bool) -> tuple[list[str], i
                 desc_update_mode="append",
                 hide_youknow=silenced and not is_typed_ec,
             )
+
+            # SYSTEM TYPE GATE: Code objects (Skill_, Flight_Config_, Prolog_Rule_)
+            # CANNOT be SOUP. They are generated with full knowledge of all fields.
+            # If youknow returns SOUP for a system type, REJECT — do not persist.
+            _SYSTEM_TYPE_PREFIXES = {"skill_", "flight_config_", "prolog_rule_"}
+            is_system_type = any(name_lower.startswith(p) for p in _SYSTEM_TYPE_PREFIXES)
+            if is_system_type and "SOUP:" in result:
+                results.append(f"❌ [{concept['concept_name']}] REJECTED — system type cannot be SOUP. {result}")
+                warning_count += 1
+                logger.warning("REJECTED system type %s — incomplete: %s", concept["concept_name"], result)
+                continue
+
             if not silenced:
                 results.append(f"✅ [{concept['concept_name']}] {result}")
             compiled_count += 1

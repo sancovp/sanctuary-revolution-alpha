@@ -101,11 +101,16 @@ GIINT_EC_SHAPES = {
         "required_rels": {
             "has_domain", "has_category", "has_what", "has_when", "has_produces",
             "has_personal_domain", "has_subdomain", "has_content",
-            "has_requires", "has_describes_component",
+            "has_requires",
+        },
+        # has_describes_component is required WHEN has_starsystem is present (conditional, checked in inject)
+        "conditional_rels": {
+            "has_starsystem": {"has_describes_component"},
         },
         "optional_rels": {
             "has_allowed_tools", "has_model", "has_context_mode",
             "has_agent_type", "has_user_invocable", "has_starsystem",
+            "has_describes_component",
         },
         "parent_hint": None,
         "instantiates": None,
@@ -188,13 +193,23 @@ def inject_giint_types(concept: dict) -> tuple[dict, list[str]]:
         current_instantiates.append(expected_instantiates)
         logger.info("Injected instantiates=%s for %s", expected_instantiates, name)
 
-# DEAD CODE — Commented out 2026-03-29. All validation (required_rels, target_prefixes, parent_hint, Skill category checks) duplicates SHACL shapes in uarl_shapes.ttl. The reasoner handles this via youknow() at compiler.py line 498-553. Only INJECTION (is_a, instantiates above) is kept.
-    # # 3. Validate required relationships
-    # missing_required = matched_shape["required_rels"] - provided_rels
-    # for rel in missing_required:
-        # errors.append(
-            # f"WARNING: {name} ({expected_isa}) missing required relationship: {rel}"
-        # )
+    # 3. Validate required relationships — HARD BLOCK for system types
+    missing_required = matched_shape["required_rels"] - provided_rels
+    if missing_required:
+        for rel in missing_required:
+            errors.append(
+                f"❌ BLOCKED: {name} ({expected_isa}) missing required relationship: {rel}"
+            )
+
+    # 3b. Conditional requirements — e.g. has_starsystem triggers has_describes_component
+    conditional_rels = matched_shape.get("conditional_rels", {})
+    for trigger_rel, required_when_present in conditional_rels.items():
+        if trigger_rel in provided_rels:
+            missing_conditional = required_when_present - provided_rels
+            for rel in missing_conditional:
+                errors.append(
+                    f"❌ BLOCKED: {name} ({expected_isa}) has {trigger_rel} so it MUST have: {rel}"
+                )
 
     # # 4. Validate target prefixes for relationships that have them
     # target_prefixes = matched_shape.get("target_prefixes", {})
