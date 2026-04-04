@@ -538,17 +538,6 @@ def compile_concepts(concepts: list[dict], silenced: bool) -> tuple[list[str], i
                 hide_youknow=silenced and not is_typed_ec,
             )
 
-            # SYSTEM TYPE GATE: Code objects (Skill_, Flight_Config_, Prolog_Rule_)
-            # CANNOT be SOUP. They are generated with full knowledge of all fields.
-            # If youknow returns SOUP for a system type, REJECT — do not persist.
-            _SYSTEM_TYPE_PREFIXES = {"skill_", "flight_config_", "prolog_rule_"}
-            is_system_type = any(name_lower.startswith(p) for p in _SYSTEM_TYPE_PREFIXES)
-            if is_system_type and "SOUP:" in result:
-                results.append(f"❌ [{concept['concept_name']}] REJECTED — system type cannot be SOUP. {result}")
-                warning_count += 1
-                logger.warning("REJECTED system type %s — incomplete: %s", concept["concept_name"], result)
-                continue
-
             if not silenced:
                 results.append(f"✅ [{concept['concept_name']}] {result}")
             compiled_count += 1
