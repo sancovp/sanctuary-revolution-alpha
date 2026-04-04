@@ -2900,6 +2900,82 @@ def create_phase_summary(
         return f"Error creating phase summary: {str(e)}"
 
 
+@mcp.tool()
+@_throttled
+def flag_hallucination(
+    hallucination_type: str,
+    text_passage: str,
+    evidence: str,
+    severity: str,
+    source_iteration: str,
+    conversation_id: str,
+) -> str:
+    """Flag a hallucination detected during summarization.
+
+    Call this whenever you detect a hallucination in the text being summarized.
+    The hallucination will be logged as a typed CartON concept for later
+    ontologization by the measurer (InclusionMapArgument completion).
+
+    ALL fields are REQUIRED. Use "" for fields with no value.
+
+    Args:
+        hallucination_type: HALO taxonomy type. One of:
+            FactualFabrication - inventing nonexistent facts/entities
+            FactualInconsistency - contradicting known facts
+            ContextInconsistency - ignoring given context
+            InstructionInconsistency - not following instructions
+            LogicalInconsistency - logical/math errors
+            FalseCompletionCatastrophe - "done" asserted without proof
+            BindingDriftCatastrophe - references drift, narrative stays smooth
+            SycophanticAlignmentCatastrophe - aligns to ego not ground truth
+            NarrativeOverwriteCatastrophe - summaries erase causal detail
+            FutamuraFlatteningCatastrophe - projection steps lose semantics
+            ConfidentFabrication - fabrication stated with high confidence
+            PatternOverfitting - pattern applied beyond its valid scope
+            SycophanticAgreement - agreeing when should disagree
+            ContextWindowAmnesia - forgetting earlier context
+            PrematureStrategyExtraction - acting before observation complete
+        text_passage: The text containing the hallucination (quote or paraphrase)
+        evidence: Why this is a hallucination — what contradicts it or what's missing
+        severity: low, medium, high, or critical
+        source_iteration: Iteration ID where hallucination was found, or ""
+        conversation_id: Conversation ID, or ""
+    """
+    try:
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
+        concept_name = f"Hallucination_{hallucination_type}_{timestamp}"
+
+        conv_ref = conversation_id if conversation_id.startswith("Conversation_") else f"Conversation_{conversation_id}" if conversation_id.strip() else ""
+        iter_ref = source_iteration if source_iteration.startswith("Iteration_") else f"Iteration_{source_iteration}" if source_iteration.strip() else ""
+
+        description = f"DETECTED: {hallucination_type}\n\nPASSAGE: {text_passage}\n\nEVIDENCE: {evidence}\n\nSEVERITY: {severity}"
+
+        relationships = [
+            {"relationship": "is_a", "related": [hallucination_type]},
+            {"relationship": "part_of", "related": ["Hallucination_Detection_Log"]},
+            {"relationship": "instantiates", "related": ["Hallucination"]},
+            {"relationship": "has_severity", "related": [severity]},
+        ]
+        if iter_ref:
+            relationships.append({"relationship": "detected_in", "related": [iter_ref]})
+        if conv_ref:
+            relationships.append({"relationship": "part_of_conversation", "related": [conv_ref]})
+
+        raw_result = add_concept_tool_func(
+            concept_name,
+            description,
+            relationships,
+            desc_update_mode="replace",
+            hide_youknow=True,
+            shared_connection=_neo4j_conn,
+        )
+        return _format_concept_result(concept_name, raw_result)
+    except Exception as e:
+        traceback.print_exc()
+        return f"Error flagging hallucination: {str(e)}"
+
+
 def main():
     """Entry point for summarizer-mcp. No daemon — uses existing carton daemon."""
     mcp.run()

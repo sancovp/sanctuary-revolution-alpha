@@ -51,7 +51,7 @@ async def execute(
     try:
         if config.backend == "heaven":
             from .heaven_runner import heaven_agent_step
-            step_result = await heaven_agent_step(config, ctx)
+            step_result = await heaven_agent_step(config, ctx, on_message=on_message)
         else:
             if not os.environ.get("SDNA_ALLOW_CLAUDE_SDK"):
                 warnings.warn(

@@ -1,0 +1,85 @@
+name: Package Inner App Source
+# Packages the inner app SOURCE (not built bundle) for inclusion in shell releases.
+# This is for production "hot mode" — the shell ships with bundled source that
+# gets extracted to a user-writable directory and served via Vite.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate before packaging
+        run: npx tsc --noEmit
+
+      - name: Package inner app source
+        run: |
+          # Create app-source directory with everything needed to run Vite
+          mkdir -p app-source
+          
+          # Copy source files
+          cp -r src/ app-source/src/
+          cp index.html app-source/
+          cp package.json app-source/
+          cp package-lock.json app-source/
+          cp tsconfig.json app-source/
+          cp vite.config.ts app-source/
+          [ -f vite.config.web.ts ] && cp vite.config.web.ts app-source/
+          [ -d public/ ] && cp -r public/ app-source/public/
+          
+          # Remove electron-specific vite config for inner app
+          # The inner app vite config should NOT include electron plugins
+          cat > app-source/vite.config.ts << 'EOF'
+          import { defineConfig } from 'vite'
+          import react from '@vitejs/plugin-react'
+          import path from 'path'
+          
+          export default defineConfig({
+            plugins: [react()],
+            resolve: {
+              alias: {
+                '@': path.resolve(__dirname, './src'),
+              },
+            },
+            server: {
+              host: true,
+              port: 5173,
+            },
+          })
+          EOF
+          
+          # Create tarball
+          VERSION=$(node -p "require('./package.json').version")
+          tar czf "sancrev-app-source-v${VERSION}.tar.gz" app-source/
+          
+          echo "📦 Packaged inner app source (v${VERSION})"
+          ls -lh "sancrev-app-source-v${VERSION}.tar.gz"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-source
+          path: sancrev-app-source-*.tar.gz
+
+      - name: Attach to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: sancrev-app-source-*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

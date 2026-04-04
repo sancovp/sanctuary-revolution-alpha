@@ -8,7 +8,14 @@ from .models import DebugDiaryEntry
 logger = logging.getLogger(__name__)
 
 # Valid filter types for view_debug_diary
-VALID_FILTER_TYPES = ["all", "bug_report", "bug_fix", "has_file", "has_insights"]
+VALID_FILTER_TYPES = [
+    "all", "bug_report", "bug_fix", "has_file", "has_insights",
+    # Entry type filters
+    "observation", "bug", "potential_solution", "skill", "deliverable",
+    "task", "design", "idea", "inclusion_map", "session_start", "session_end", "system_event",
+    # Source filters
+    "from_agent", "from_dragonbones", "from_system",
+]
 
 
 class DebugDiaryMixin:
@@ -61,6 +68,14 @@ class DebugDiaryMixin:
 
     def _filter_diary_entries(self, diary_data: dict, filter_type: str) -> dict:
         """Filter diary entries by type."""
+        # Entry type filters (observation, bug, skill, deliverable, etc.)
+        entry_type_filters = {
+            "observation", "bug", "potential_solution", "skill", "deliverable",
+            "task", "design", "idea", "inclusion_map", "session_start", "session_end", "system_event",
+        }
+        # Source filters
+        source_map = {"from_agent": "agent", "from_dragonbones": "dragonbones", "from_system": "system"}
+
         filtered = {}
         for entry_id, entry_data in diary_data.items():
             if filter_type == "bug_report" and entry_data.get("bug_report"):
@@ -70,6 +85,10 @@ class DebugDiaryMixin:
             elif filter_type == "has_file" and entry_data.get("in_file"):
                 filtered[entry_id] = entry_data
             elif filter_type == "has_insights" and entry_data.get("insights"):
+                filtered[entry_id] = entry_data
+            elif filter_type in entry_type_filters and entry_data.get("entry_type") == filter_type:
+                filtered[entry_id] = entry_data
+            elif filter_type in source_map and entry_data.get("source") == source_map[filter_type]:
                 filtered[entry_id] = entry_data
         return filtered
     

@@ -13,7 +13,7 @@ def make_grug_sdnac(system_prompt: str, model: str = GRUG_MODEL):
 
     Args:
         system_prompt: Full system prompt for Grug.
-        model: Model to use. Default sonnet.
+        model: Model to use. Default MiniMax.
 
     Returns:
         SDNAC with goal template expecting {task} in context.
@@ -24,6 +24,7 @@ def make_grug_sdnac(system_prompt: str, model: str = GRUG_MODEL):
         system_prompt=system_prompt,
         max_turns=10,
         model=model,
+        backend="minimax",
     )
     return sdnac("grug", ariadne("grug_prep"), config)
 
@@ -33,7 +34,7 @@ def make_researcher_sdnac(system_prompt: str, model: str = RESEARCHER_MODEL):
 
     Args:
         system_prompt: Full system prompt for Researcher.
-        model: Model to use. Default opus.
+        model: Model to use. Default MiniMax.
 
     Returns:
         SDNAC with goal template expecting {phase_prompt} in context.
@@ -44,5 +45,6 @@ def make_researcher_sdnac(system_prompt: str, model: str = RESEARCHER_MODEL):
         system_prompt=system_prompt,
         max_turns=10,
         model=model,
+        backend="minimax",
     )
     return sdnac("researcher", ariadne("researcher_prep"), config)

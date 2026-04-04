@@ -89,6 +89,31 @@ def _get_observation_deck(path: str) -> str:
         except:
             deck_parts.append("🎯 HEALTH: unavailable")
 
+    # Flight progress — skills as flight steps
+    try:
+        from carton_mcp.carton_utils import CartOnUtils
+        utils = CartOnUtils()
+        flight_query = (
+            "MATCH (s:Wiki)-[:HAS_FLIGHT_STEP]->(step:Wiki) "
+            "MATCH (s)-[:PART_OF]->(f:Wiki) "
+            "WHERE f.n STARTS WITH 'Flight_Config_' "
+            "RETURN f.n AS flight, count(s) AS steps_done "
+            "ORDER BY f.n"
+        )
+        flight_result = utils.query_wiki_graph(flight_query)
+        if flight_result and flight_result.get("success"):
+            flight_data = flight_result.get("data", [])
+            if flight_data:
+                available = sum(1 for f in flight_data if f.get("steps_done", 0) >= 3)
+                partial = len(flight_data) - available
+                deck_parts.append(f"🛫 Flights: {available} available, {partial} partial")
+                for fd in flight_data[:5]:  # Show top 5
+                    fname = fd.get("flight", "?").replace("Flight_Config_", "")
+                    steps = fd.get("steps_done", 0)
+                    deck_parts.append(f"      {fname}: {steps} steps")
+    except Exception as e:
+        logger.debug(f"Flight progress query failed (non-critical): {e}")
+
     if not deck_parts:
         return ""
 
@@ -370,7 +395,7 @@ def _sync_kardashev_to_carton(kmap: dict) -> list[str]:
 
             relationships = [
                 {"relationship": "is_a", "related": ["Navy_Starship"]},
-                {"relationship": "part_of", "related": ["Kardashev_Map"]},
+                {"relationship": "part_of", "related": ["Seed_Ship_Kardashev_Map"]},
                 {"relationship": "has_kardashev_level", "related": [f"Kardashev_{kardashev}"]}
             ]
 
@@ -396,7 +421,7 @@ def _sync_kardashev_to_carton(kmap: dict) -> list[str]:
 
             relationships = [
                 {"relationship": "is_a", "related": ["Navy_Squadron"]},
-                {"relationship": "part_of", "related": ["Kardashev_Map"]}
+                {"relationship": "part_of", "related": ["Seed_Ship_Kardashev_Map"]}
             ]
             # Add HAS_MEMBER for each starship (parent → child)
             if members:
@@ -420,7 +445,7 @@ def _sync_kardashev_to_carton(kmap: dict) -> list[str]:
 
             relationships = [
                 {"relationship": "is_a", "related": ["Navy_Fleet"]},
-                {"relationship": "part_of", "related": ["Kardashev_Map"]}
+                {"relationship": "part_of", "related": ["Seed_Ship_Kardashev_Map"]}
             ]
             # Add HAS_SQUADRON (parent → child)
             if sq_list:
@@ -442,12 +467,26 @@ def _sync_kardashev_to_carton(kmap: dict) -> list[str]:
         try:
             for concept in concepts:
                 add_concept_tool_func(
-                    concept["name"], concept["description"], concept["relationships"], hide_youknow=True
+                    concept["name"], concept["description"], concept["relationships"], hide_youknow=False
                 )
         except Exception as e:
             errors.append(f"Failed to sync to CartON: {e}")
 
     return errors
+
+
+def _get_seed_ship_stats() -> dict:
+    """Read Seed Ship stats from score compiler cache."""
+    _default = {"state": "Wasteland", "starsystems": 0, "active_hcs": 0,
+                "completed_hcs": 0, "completed_tasks": 0, "total_concepts": 0, "learnings": 0}
+    try:
+        from starlog_mcp.score_compiler import read_cache
+        cache = read_cache()
+        if cache:
+            return cache.get("seed_ship", _default)
+    except Exception:
+        pass
+    return _default
 
 
 def _get_home_dashboard() -> str:
@@ -511,8 +550,18 @@ def _get_home_dashboard() -> str:
     if not kmap.get("starships"):
         return INSTRUCTIONS
 
-    # Sync to CartON - this validates AND persists to knowledge graph
-    sync_errors = _sync_kardashev_to_carton(kmap)
+    # All heavy computation done by score_compiler daemon — just read cache
+    from starlog_mcp.score_compiler import read_cache
+    cache = read_cache()
+    if not cache:
+        return ("============================================================\n"
+                "  COMPILING SCORES. CHECK BACK IN ~2M\n"
+                "  (Background compiler running — first launch takes a moment)\n"
+                "============================================================\n"
+                f"\n💡 Run: python3 -m starlog_mcp.score_compiler")
+
+    # Check for sync errors from last compilation
+    sync_errors = cache.get("sync_errors", [])
     if sync_errors:
         error_lines = ["🏠 HOME DASHBOARD", "", "❌ KARDASHEV MAP VALIDATION ERRORS:"]
         for err in sync_errors:
@@ -525,66 +574,16 @@ def _get_home_dashboard() -> str:
     squadrons = kmap.get("squadrons", {})
     fleets = kmap.get("fleets", {})
 
-    # Batch compute health for ALL starships in one UNWIND query
-    valid_paths = [ss.get("path", "") for ss in starships.values()
-                   if ss.get("path") and os.path.isdir(ss.get("path", ""))]
-    try:
-        from starsystem.reward_system import get_fleet_health
-        fleet_health = get_fleet_health(valid_paths)
-    except ImportError:
-        fleet_health = {}
-
-    # XP computed from batch health — NOT flat counter
-    fleet_xp = _compute_fleet_xp(starships, health_cache=fleet_health)
+    fleet_health = cache.get("fleet_health", {})
+    fleet_xp = cache.get("fleet_xp", {"xp": 0, "level": 0})
     xp = fleet_xp["xp"]
 
-    # Compute Kardashev levels for each starship
-    # 3-level completeness model (Isaac canonical, Mar 2 2026)
-    def _compute_kardashev(path: str) -> str:
-        if not path or not os.path.isdir(path):
-            return "Unterraformed"
-
-        # K1 (Planetary): Has GIINT project — tracked and structured
-        hpi_path = os.path.join(path, "starlog.hpi")
-        has_giint = False
-        if os.path.exists(hpi_path):
-            try:
-                with open(hpi_path, 'r') as _hf:
-                    hpi_data = json.load(_hf)
-                if hpi_data.get("metadata", {}).get("giint_project_id"):
-                    has_giint = True
-            except Exception:
-                pass
-
-        if not has_giint:
-            return "Unterraformed"
-
-        # K2 (Stellar): Has .claude/ with rules AND skills — properly set up
-        claude_dir = os.path.join(path, ".claude")
-        has_rules_and_skills = False
-        if os.path.isdir(claude_dir):
-            rules_dir = os.path.join(claude_dir, "rules")
-            skills_dir = os.path.join(claude_dir, "skills")
-            try:
-                has_rules = os.path.isdir(rules_dir) and bool(list(os.scandir(rules_dir)))
-                has_skills = os.path.isdir(skills_dir) and bool(list(os.scandir(skills_dir)))
-                has_rules_and_skills = has_rules and has_skills
-            except Exception:
-                pass
-
-        if not has_rules_and_skills:
-            return "Planetary"
-
-        # K3 (Galactic): Completed measurable % — health threshold met
-        # Uses pre-computed fleet_health from batch UNWIND query
-        if path in fleet_health:
-            health_score = fleet_health[path].get("health", 0)
-            if health_score >= 0.6:
-                return "Galactic"
-
-        return "Stellar"
-
-    computed_levels = {name: _compute_kardashev(ss.get("path", "")) for name, ss in starships.items()}
+    # Kardashev levels from cache (computed by score_compiler)
+    computed_levels = cache.get("kardashev_levels", {})
+    # Fill in any missing starships as Unterraformed
+    for name in starships:
+        if name not in computed_levels:
+            computed_levels[name] = "Unterraformed"
 
     # Calculate title and type from computed levels (3-level Kardashev)
     galactics = sum(1 for lvl in computed_levels.values() if lvl == "Galactic")
@@ -618,11 +617,24 @@ def _get_home_dashboard() -> str:
         "Planetary": "🌍 PLANETARY", "Unterraformed": "⚫ UNTERRAFORMED"
     }
 
+    # Query Seed Ship stats from CartON
+    seed_ship_stats = _get_seed_ship_stats()
+    ss_state = seed_ship_stats.get("state", "Wasteland")
+    state_icon = "🏛️" if ss_state == "Sanctuary" else "🏚️"
+
     # Build display
     lines = [
         "=" * 60,
+        f"  {state_icon} SEED SHIP  |  State: {ss_state}",
         f"  ⚓ TITLE: {title}  |  TYPE: {type_n}  |  LEVEL: {level}",
         f"  ⭐ XP: {xp:,} / {(level + 1) * 1000:,}",
+        "-" * 60,
+        f"  📊 Starsystems: {seed_ship_stats.get('starsystems', len(starships))}  |  "
+        f"Tasks Done: {seed_ship_stats.get('completed_tasks', 0)}  |  "
+        f"Concepts: {seed_ship_stats.get('total_concepts', '?')}",
+        f"  📦 Active HCs: {seed_ship_stats.get('active_hcs', 0)}  |  "
+        f"Completed HCs: {seed_ship_stats.get('completed_hcs', 0)}  |  "
+        f"Learnings: {seed_ship_stats.get('learnings', 0)}",
         "=" * 60,
     ]
 
@@ -809,42 +821,150 @@ def view_debug_diary(path: str, filter_type: str = "all", last_n: int = None) ->
     return starlog.view_debug_diary(path, filter_type, last_n)
 
 @app.tool()
-def update_debug_diary(path: str, diary_entry: DebugDiaryEntry = None, entry: DebugDiaryEntry = None, debug_diary: DebugDiaryEntry = None) -> str:
+def update_debug_diary(path: str = None, diary_entry: DebugDiaryEntry = None, entry: DebugDiaryEntry = None, debug_diary: DebugDiaryEntry = None) -> str:
     """Log real-time discoveries, bugs, insights during work. Use this frequently during your work session to track progress and issues.
 
+    Path is optional — if omitted, routes based on .course_state context.
+    If the entry references files in multiple starsystems, a joint starlog is auto-created.
+
     Args:
-        path: Project path
+        path: Project path (optional — auto-detected from context if omitted)
         diary_entry: The diary entry (also accepts 'entry' or 'debug_diary')
         entry: Alias for diary_entry
         debug_diary: Alias for diary_entry
     """
+    from starlog_mcp.starlog_sessions import (
+        detect_starsystems_for_entry, get_joint_starlog_name,
+        resolve_starsystem_for_file, COURSE_STATE_PATH,
+    )
+
     # Accept any of the parameter name variations
     the_entry = diary_entry or entry or debug_diary
     if not the_entry:
         return "❌ Must provide diary_entry, entry, or debug_diary parameter"
 
-    logger.debug(f"update_debug_diary called with path={path}")
-    project_name = starlog._get_project_name_from_path(path)
+    # --- Resolve target project(s) ---
+    # 1. Detect starsystems from file paths in the entry
+    detected = detect_starsystems_for_entry(
+        the_entry.content or "", getattr(the_entry, "in_file", None)
+    )
 
-    # Check if there's an active session
-    if not _has_active_session(project_name):
-        return f"❌ Debug diary entries can only be added during active sessions. Use start_starlog() first."
+    # 2. If path provided, include it too
+    if path:
+        caller_name = starlog._get_project_name_from_path(path)
+        detected[caller_name] = os.path.abspath(path)
+    elif not detected:
+        # No path, no files detected — fall back to .course_state
+        try:
+            if os.path.exists(COURSE_STATE_PATH):
+                with open(COURSE_STATE_PATH, "r") as f:
+                    cs = json.load(f)
+                fallback_project = cs.get("active_starlog_project")
+                fallback_path = cs.get("last_oriented")
+                if fallback_project:
+                    detected[fallback_project] = fallback_path or ""
+                elif fallback_path:
+                    name = starlog._get_project_name_from_path(fallback_path)
+                    detected[name] = fallback_path
+        except Exception:
+            pass
 
-    # Log WARPCORE work phase
-    _log_warpcore_work_phase(project_name)
+    if not detected:
+        # Zone-aware fallback: HOME mode → seed_ship diary
+        try:
+            if os.path.exists(COURSE_STATE_PATH):
+                with open(COURSE_STATE_PATH, "r") as f:
+                    cs = json.load(f)
+                zone = cs.get("zone", "")
+                if zone == "HOME":
+                    detected["seed_ship"] = ""
+        except Exception:
+            pass
 
+    if not detected:
+        return "❌ Cannot determine target starlog. Provide path, or mention file paths in the entry."
+
+    project_names = list(detected.keys())
+    joint_info = ""
+
+    if len(project_names) == 1:
+        # Single starsystem — normal behavior
+        project_name = project_names[0]
+    else:
+        # Multiple starsystems — JIT joint starlog
+        joint_name = get_joint_starlog_name(project_names)
+        project_name = joint_name
+
+        # Ensure joint starlog registry exists + mirror to CartON
+        try:
+            from heaven_base.tools.registry_tool import registry_util_func
+            registry_util_func("create_registry", registry_name=f"{joint_name}_debug_diary")
+            registry_util_func("create_registry", registry_name=f"{joint_name}_starlog")
+        except Exception:
+            pass  # Already exists
+
+        # Create joint starlog project in CartON — part_of both Starsystem_ concepts
+        starsystem_concepts = [f"Starsystem_{n.replace('-', '_').title()}" for n in project_names]
+        starlog.mirror_to_carton(
+            concept_name=joint_name,
+            description=f"Joint starlog project spanning {' and '.join(starsystem_concepts)}. "
+                        f"Created JIT when a diary entry referenced files in multiple starsystems.",
+            relationships=[
+                {"relationship": "is_a", "related": ["Starlog_Project"]},
+                {"relationship": "part_of", "related": starsystem_concepts},
+                {"relationship": "instantiates", "related": ["Project_Tracking_Instance"]},
+            ],
+        )
+
+        # Inject reference entries into each member starsystem's diary
+        stardate = starlog._generate_stardate()
+        for member_name in project_names:
+            ref_entry = DebugDiaryEntry(
+                content=f"Captain's Log, stardate {stardate}: Cross-system entry made in {joint_name}. "
+                        f"Starsystems involved: {', '.join(project_names)}. "
+                        f"View full entry in {joint_name} debug diary."
+            )
+            try:
+                starlog._save_debug_diary_entry(member_name, ref_entry)
+            except Exception as e:
+                logger.warning(f"Failed to inject reference into {member_name}: {e}")
+
+        joint_info = (
+            f"\n🔗 **Joint starlog created: `{joint_name}`**\n"
+            f"   Starsystems: {', '.join(project_names)}\n"
+            f"   Reference entries added to each member starlog.\n"
+            f"   Use `{joint_name}` for future cross-system entries."
+        )
+
+    # Check if there's an active session (relaxed — allow entries without active session)
+    has_session = _has_active_session(project_name) if len(project_names) == 1 else True
+    if has_session and len(project_names) == 1:
+        _log_warpcore_work_phase(project_name)
+
+    logger.debug(f"update_debug_diary routing to project={project_name}")
     result = starlog._save_debug_diary_entry(project_name, the_entry)
 
-    # Mirror to CartON - use timestamp for chronological sorting
+    # Mirror to CartON
     ts = the_entry.timestamp.strftime('%Y%m%d_%H%M%S')
+    rels = [{"relationship": "is_a", "related": ["Debug_Diary_Entry"]}]
+    if len(project_names) > 1:
+        rels.append({"relationship": "references_starsystem", "related":
+                     [f"Starlog_Project_{n}" for n in project_names]})
+    ss_path = detected.get(project_names[0], "") if len(project_names) == 1 else None
     starlog.mirror_to_carton(
         concept_name=f"Debug_Diary_{ts}",
         description=the_entry.content,
-        relationships=[{"relationship": "is_a", "related": ["Debug_Diary_Entry"]}],
-        project_name=project_name
+        relationships=rels,
+        project_name=project_name,
+        starsystem_path=ss_path,
     )
 
-    return "✅ Updated debug diary\n💡 Hint: Mark all bug finds (bug_report=True) and fixes (bug_fix=True)"
+    msg = "✅ Updated debug diary"
+    if not has_session and len(project_names) == 1:
+        msg += " (no active session — entry stored but not linked to a session)"
+    msg += "\n💡 Hint: Mark all bug finds (bug_report=True) and fixes (bug_fix=True)"
+    msg += joint_info
+    return msg
 
 @app.tool()
 def view_starlog(path: str, last_n: int = 5) -> str:
@@ -933,7 +1053,7 @@ def start_starlog(session_title: str, start_content: str, session_goals: List[st
                 # Waypoint state is stored as /tmp/waypoint_state_{project_basename}.json
                 project_name = os.path.basename(path)
                 waypoint_state_file = f"/tmp/waypoint_state_{project_name}.json"
-                flight_config = "unknown_flight"
+                flight_config = None
                 if os.path.exists(waypoint_state_file):
                     try:
                         with open(waypoint_state_file, 'r') as wf:
@@ -944,9 +1064,12 @@ def start_starlog(session_title: str, start_content: str, session_goals: List[st
                     except Exception as e:
                         logger.warning(f"Failed to read waypoint state: {e}")
 
-                # Auto-inject step into mission
-                from starsystem.mission import inject_step
-                inject_step(mission_id, path, flight_config)
+                # Only inject if we have a real flight config — never inject "unknown_flight"
+                if flight_config:
+                    from starsystem.mission import inject_step
+                    inject_step(mission_id, path, flight_config)
+                else:
+                    logger.warning(f"Skipping mission step injection: no waypoint state found for {project_name}")
                 logger.info(f"Auto-injected session into mission {mission_id}: {path} with {flight_config}")
         except Exception as e:
             logger.error(f"Failed to auto-inject mission step: {e}")
@@ -991,7 +1114,39 @@ def end_starlog(end_content: str, path: str,
     return result
 
 @app.tool()
-def retrieve_starlog(project: str, session_id: str = None, 
+def start_joint_session(session_title: str, member_projects: List[str],
+                        session_goals: List[str], start_content: str) -> str:
+    """Start a joint session spanning multiple starsystems.
+
+    Creates a joint starlog project, starts child sessions in each member,
+    injects reference entries, and writes joint session ID to .course_state.
+
+    Args:
+        session_title: Title for the joint session
+        member_projects: List of project names (starsystem names) to join
+        session_goals: Goals for this joint session
+        start_content: START content describing what this joint work is about
+    """
+    logger.debug(f"start_joint_session called: {session_title}, members={member_projects}")
+    return starlog.start_joint_session(session_title, member_projects, session_goals, start_content)
+
+
+@app.tool()
+def end_joint_session(end_content: str) -> str:
+    """End the active joint session and all its child sessions.
+
+    Reads .course_state to find the active joint session, ends all children,
+    clears .course_state.
+
+    Args:
+        end_content: Summary of what was accomplished in this joint session
+    """
+    logger.debug(f"end_joint_session called")
+    return starlog.end_joint_session(end_content)
+
+
+@app.tool()
+def retrieve_starlog(project: str, session_id: str = None,
                     date_range: str = None, paths: bool = False) -> str:
     """Selective historical retrieval."""
     logger.debug(f"retrieve_starlog called with project={project}, session_id={session_id}, date_range={date_range}, paths={paths}")

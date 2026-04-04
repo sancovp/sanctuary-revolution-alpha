@@ -61,7 +61,7 @@ TIER_TO_VALIDATION = {
     AchievementTier.UNCOMMON: ValidationLevel.MANIFESTS,  # Works correctly
     AchievementTier.RARE: ValidationLevel.REIFIES,        # Battle-tested
     AchievementTier.EPIC: ValidationLevel.REIFIES,        # Used by others
-    AchievementTier.LEGENDARY: ValidationLevel.INSTANTIATES,  # Generates revenue
+    AchievementTier.LEGENDARY: ValidationLevel.PRODUCES,  # Generates revenue
 }
 
 

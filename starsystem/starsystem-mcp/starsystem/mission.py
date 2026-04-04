@@ -28,7 +28,9 @@ MISSION_DIR.mkdir(parents=True, exist_ok=True)
 class MissionSession:
     """Represents a single session in a mission sequence"""
     project_path: str
-    flight_config: str
+    flight_config: str = ""
+    mission_ref: Optional[str] = None  # mission_type ref — flattened at creation time
+    mission_ref_domain: Optional[str] = None
     status: str = "pending"  # pending, in_progress, completed, aborted
     notes: Optional[str] = None
     started_at: Optional[str] = None
@@ -102,6 +104,42 @@ def load_mission(mission_id: str) -> Optional[Mission]:
         data = json.load(f)
 
     return Mission.from_dict(data)
+
+
+def _flatten_mission_refs(session_sequence: List[Dict], variables: Optional[Dict] = None) -> List[Dict]:
+    """Flatten mission_ref entries into their constituent flights.
+
+    If a session has mission_ref instead of flight_config, resolve the
+    mission type and splice its flights into the sequence.
+    """
+    flattened = []
+    for session in session_sequence:
+        mission_ref = session.get("mission_ref")
+        mission_ref_domain = session.get("mission_ref_domain")
+
+        if mission_ref and mission_ref_domain:
+            # Resolve the sub-mission's flights
+            render_result = mission_types.render_mission_type(
+                mission_type_id=mission_ref,
+                domain=mission_ref_domain,
+                variables=variables or {}
+            )
+            if render_result.get("success"):
+                sub_sessions = render_result["rendered_mission"]["session_sequence"]
+                for sub in sub_sessions:
+                    # Inherit project_path from parent if not set
+                    if not sub.get("project_path"):
+                        sub["project_path"] = session.get("project_path", "")
+                    sub["notes"] = f"[from {mission_ref}] {sub.get('notes', '')}"
+                    flattened.append(sub)
+                logger.info("Flattened mission_ref %s/%s into %d flights", mission_ref_domain, mission_ref, len(sub_sessions))
+            else:
+                logger.warning("Failed to resolve mission_ref %s/%s: %s", mission_ref_domain, mission_ref, render_result.get("error"))
+                flattened.append(session)  # Keep as-is if resolution fails
+        else:
+            flattened.append(session)
+
+    return flattened
 
 
 def create_mission(
@@ -182,6 +220,9 @@ def create_mission(
                     "success": False,
                     "error": "Manual mode requires: name, description, domain, subdomain, session_sequence"
                 }
+
+        # Flatten any mission_ref entries into their flights
+        session_sequence = _flatten_mission_refs(session_sequence, variables)
 
         # Create MissionSession objects
         sessions = [MissionSession(**s) for s in session_sequence]
@@ -583,6 +624,11 @@ def inject_step(
         notes: Optional notes
     """
     try:
+        # Only inject into base missions (auto-created, named base_mission_*)
+        if not mission_id.startswith("base_mission_"):
+            logger.info(f"Auto-inject skipped: '{mission_id}' is a template mission, not a base mission")
+            return
+
         mission = load_mission(mission_id)
         if not mission:
             logger.warning(f"Auto-inject failed: Mission '{mission_id}' not found")

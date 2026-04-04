@@ -11,7 +11,20 @@
       "type": "Menu",
       "options": {
         "1": "config",
-        "2": "utils"
+        "2": "utils",
+        "3": "system_prompts",
+        "4": "tools",
+        "5": "system_provider",
+        "6": "model",
+        "7": "temperature",
+        "8": "max_tokens",
+        "9": "prompt_blocks",
+        "10": "thinking_budget",
+        "11": "mcp_servers",
+        "12": "mcp_set",
+        "13": "persona",
+        "14": "skillset",
+        "15": "carton_identity"
       }
     }
   }

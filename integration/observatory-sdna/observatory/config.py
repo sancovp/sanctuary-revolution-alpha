@@ -3,4 +3,4 @@
 PHASES = ["observe", "hypothesize", "proposal", "experiment", "analyze"]
 
 # Default model — MiniMax via Anthropic-compatible API
-DEFAULT_MODEL = "minimax"
+DEFAULT_MODEL = "MiniMax-M2.7-highspeed"

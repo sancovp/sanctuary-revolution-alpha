@@ -56,24 +56,54 @@ class Starlog(DebugDiaryMixin, StarlogSessionsMixin, RulesMixin, HpiSystemMixin)
         
         logger.info("Initialized STARLOG singleton with HEAVEN registry system")
 
-    def mirror_to_carton(self, concept_name: str, description: str, relationships: list, project_name: str = None, shared_connection=None) -> str:
-        """Mirror starlog data to CartON knowledge graph. Fails silently if CartON unavailable.
+    @staticmethod
+    def _normalize_concept_name(name: str) -> str:
+        """Normalize to Title_Case_With_Underscores. No hyphens, no paths, no dots."""
+        # Strip leading path separators and replace path/hyphen/dot with underscore
+        name = name.strip("/").replace("/", "_").replace("-", "_").replace(".", "_")
+        # Title case each segment
+        return "_".join(seg.title() if seg.islower() else seg for seg in name.split("_"))
 
-        Uses observation batch pattern for consistency with GIINT sync.
-        """
+    def _ensure_starlog_project_linked(self, starlog_project_name: str, starsystem_path: str = None) -> None:
+        """Ensure a Starlog_Project_ concept exists and is linked to its Starsystem_."""
+        if not starsystem_path:
+            return
+        try:
+            path_slug = starsystem_path.strip("/").replace("/", "_").replace("-", "_").title()
+            starsystem_name = f"Starsystem_{path_slug}"
+            add_concept_tool_func(
+                concept_name=starlog_project_name,
+                description=f"Starlog project for {starsystem_path}",
+                relationships=[
+                    {"relationship": "is_a", "related": ["Starlog_Project"]},
+                    {"relationship": "part_of", "related": [starsystem_name]},
+                    {"relationship": "instantiates", "related": ["Project_Tracking_Instance"]},
+                ],
+                hide_youknow=False,
+                desc_update_mode="append",
+            )
+        except Exception as e:
+            logger.debug(f"Starlog project link ensure failed (non-fatal): {e}")
+
+    def mirror_to_carton(self, concept_name: str, description: str, relationships: list, project_name: str = None, starsystem_path: str = None, shared_connection=None) -> str:
+        """Mirror starlog data to CartON knowledge graph. Fails silently if CartON unavailable."""
         if not CARTON_AVAILABLE:
             return "CartON not available"
         try:
-            # Add project relationship if provided
-            if project_name:
-                relationships.append({"relationship": "part_of", "related": [f"Starlog_Project_{project_name}"]})
+            concept_name = self._normalize_concept_name(concept_name)
 
-            # Use add_concept_tool_func (raw_concept=True, no observation wrapper)
+            if project_name:
+                normalized_project = self._normalize_concept_name(project_name)
+                starlog_project_name = f"Starlog_Project_{normalized_project}"
+                relationships.append({"relationship": "part_of", "related": [starlog_project_name]})
+                # Ensure the starlog project is linked to its starsystem
+                self._ensure_starlog_project_linked(starlog_project_name, starsystem_path)
+
             result = add_concept_tool_func(
                 concept_name=concept_name,
                 description=description,
                 relationships=relationships,
-                hide_youknow=True
+                hide_youknow=False
             )
             logger.debug(f"Mirrored to CartON: {concept_name}")
             return str(result)
@@ -112,10 +142,10 @@ class Starlog(DebugDiaryMixin, StarlogSessionsMixin, RulesMixin, HpiSystemMixin)
             if has_git:
                 starsystem_desc += " [Git repo detected]"
 
-            project_concept_name = f"Starlog_Project_{name}"
+            project_concept_name = f"Starlog_Project_{self._normalize_concept_name(name)}"
             starsystem_relationships = [
                 {"relationship": "is_a", "related": ["STARSYSTEM"]},
-                {"relationship": "part_of", "related": ["STARSYSTEM_Collection"]},
+                {"relationship": "part_of", "related": ["Seed_Ship_Starsystems"]},
                 {"relationship": "instantiates", "related": ["Starsystem_Instance"]},
                 {"relationship": "has_project", "related": [project_concept_name]},
             ]
@@ -162,7 +192,7 @@ class Starlog(DebugDiaryMixin, StarlogSessionsMixin, RulesMixin, HpiSystemMixin)
                     concept_name=concept["name"],
                     description=concept["description"],
                     relationships=concept["relationships"],
-                    hide_youknow=True
+                    hide_youknow=False
                 )
             logger.info(f"Created STARSYSTEM entity: {starsystem_name} with {len(concepts)} concepts")
 

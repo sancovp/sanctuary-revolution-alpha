@@ -1,7 +1,7 @@
 {
   "victory_chain": {
     "type": "jump",
-    "coordinate": "0.0.2.1"
+    "coordinate": "save_var"
   },
   "navigate": {
     "type": "jump",
@@ -13,27 +13,17 @@
   },
   "quick_agent": {
     "type": "chain",
-    "template": "chain 0.2.2.4.1 {\\\"provider\\\": \\\"$provider\\\"} -> 0.2.2.7.1 {\\\"model\\\": \\\"$model\\\"} -> 0.2.2.8.1 {\\\"tool_name\\\": \\\"$tool\\\"} -> 0.2.2.1.1 {\\\"prompt\\\": \\\"$prompt\\\"} -> 0.3.1 {\\\"title\\\": \\\"$title\\\", \\\"message\\\": \\\"$message\\\", \\\"tags\\\": \\\"$tags\\\"}",
+    "template": "agent_management.agent_management_equipment.agent_management_equipment_system_provider.equip {\"provider\": \"$provider\"} -> agent_management.agent_management_equipment.agent_management_equipment_model.equip {\"model\": \"$model\"} -> agent_management.agent_management_equipment.agent_management_equipment_system_prompts.equip {} -> agent_management.agent_management_equipment.agent_management_equipment_persona.equip {\"persona_name\": \"$persona\"} -> agent_management.agent_management_equipment.agent_management_equipment_skillset.equip {\"skillset_name\": \"$skillset\"} -> agent_management.agent_management_equipment.agent_management_equipment_mcp_set.equip {\"set_name\": \"$mcp_set\"} -> agent_management.agent_management_equipment.agent_management_equipment_config.save {\"name\": \"$name\"}",
     "analysis": {
       "type": "constrained",
-      "entry_args": [
-        "provider",
-        "message",
-        "tags",
-        "prompt",
-        "title",
-        "tool",
-        "model"
-      ],
-      "total_variables": [
-        "provider",
-        "message",
-        "tags",
-        "prompt",
-        "title",
-        "tool",
-        "model"
-      ]
-    }
+      "entry_args": ["provider", "model", "persona", "skillset", "mcp_set", "name"],
+      "total_variables": ["provider", "model", "persona", "skillset", "mcp_set", "name"]
+    },
+    "description": "Configure agent: provider, model, system prompt, persona, skillset, mcp_set, then save"
+  },
+  "agent_menu": {
+    "type": "jump",
+    "coordinate": "agent_management_equipment",
+    "description": "Jump to agent management equipment menu"
   }
 }

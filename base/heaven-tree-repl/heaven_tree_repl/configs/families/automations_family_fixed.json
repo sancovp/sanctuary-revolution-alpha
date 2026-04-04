@@ -1,0 +1,126 @@
+{
+  "family_root": "automations",
+  "parent": null,
+  "domain": "automations",
+  "description": "Manage scheduled automations — trigger + process pairs",
+  "nodes": {
+    "automations": {
+      "type": "Menu",
+      "prompt": "⚡ Automations",
+      "description": "Automations = trigger + process. A process is any Python function (code_pointer like 'my_module.my_func') or a prompt_template string. A trigger is a cron schedule (e.g. '0 */4 * * *').\n\nWorkflow:\n1. Write your script/function somewhere importable\n2. create_automation — set name, code_pointer, schedule\n3. fire_automation — test it immediately\n4. The CAVE scheduler fires due automations automatically\n\nTo automate a saved agent config: export_agent_as_automation bridges agent_management → automations.\n\nExamples:\n  create_automation.exec {\"name\": \"nightly_sync\", \"code_pointer\": \"my_scripts.sync.run\", \"schedule\": \"0 2 * * *\"}\n  fire_automation.exec {\"name\": \"nightly_sync\"}",
+      "options": {
+        "1": "list_automations",
+        "2": "view_automation",
+        "3": "create_automation",
+        "4": "delete_automation",
+        "5": "enable_automation",
+        "6": "disable_automation",
+        "7": "fire_automation",
+        "8": "export_agent_as_automation"
+      }
+    },
+    "list_automations": {
+      "type": "Callable",
+      "prompt": "List Automations",
+      "description": "Show all automations with schedule and process",
+      "import_path": "sanctuary_revolution_treeshell.automation_treeshell_functions",
+      "import_object": "list_automations",
+      "function_name": "list_automations",
+      "is_async": false,
+      "args_schema": {}
+    },
+    "view_automation": {
+      "type": "Callable",
+      "prompt": "View Automation",
+      "description": "View full details of an automation",
+      "import_path": "sanctuary_revolution_treeshell.automation_treeshell_functions",
+      "import_object": "view_automation",
+      "function_name": "view_automation",
+      "is_async": false,
+      "args_schema": {
+        "name": "str"
+      }
+    },
+    "create_automation": {
+      "type": "Callable",
+      "prompt": "Create Automation",
+      "description": "Create a new automation. Provide code_pointer (module.func) or prompt_template, and optionally a cron schedule.",
+      "import_path": "sanctuary_revolution_treeshell.automation_treeshell_functions",
+      "import_object": "create_automation",
+      "function_name": "create_automation",
+      "is_async": false,
+      "args_schema": {
+        "name": "str",
+        "description": "str",
+        "schedule": "str",
+        "code_pointer": "str",
+        "code_args": "str",
+        "prompt_template": "str",
+        "tags": "str"
+      }
+    },
+    "delete_automation": {
+      "type": "Callable",
+      "prompt": "Delete Automation",
+      "description": "Remove an automation",
+      "import_path": "sanctuary_revolution_treeshell.automation_treeshell_functions",
+      "import_object": "delete_automation",
+      "function_name": "delete_automation",
+      "is_async": false,
+      "args_schema": {
+        "name": "str"
+      }
+    },
+    "enable_automation": {
+      "type": "Callable",
+      "prompt": "Enable Automation",
+      "description": "Enable a disabled automation",
+      "import_path": "sanctuary_revolution_treeshell.automation_treeshell_functions",
+      "import_object": "enable_automation",
+      "function_name": "enable_automation",
+      "is_async": false,
+      "args_schema": {
+        "name": "str"
+      }
+    },
+    "disable_automation": {
+      "type": "Callable",
+      "prompt": "Disable Automation",
+      "description": "Disable an automation without deleting it",
+      "import_path": "sanctuary_revolution_treeshell.automation_treeshell_functions",
+      "import_object": "disable_automation",
+      "function_name": "disable_automation",
+      "is_async": false,
+      "args_schema": {
+        "name": "str"
+      }
+    },
+    "fire_automation": {
+      "type": "Callable",
+      "prompt": "Fire Automation",
+      "description": "Execute an automation immediately (ignore schedule)",
+      "import_path": "sanctuary_revolution_treeshell.automation_treeshell_functions",
+      "import_object": "fire_automation",
+      "function_name": "fire_automation",
+      "is_async": false,
+      "args_schema": {
+        "name": "str"
+      }
+    },
+    "export_agent_as_automation": {
+      "type": "Callable",
+      "prompt": "Export Agent → Automation",
+      "description": "Create an automation from a saved agent config. Bridges agent_management → automations.",
+      "import_path": "sanctuary_revolution_treeshell.automation_treeshell_functions",
+      "import_object": "export_agent_as_automation",
+      "function_name": "export_agent_as_automation",
+      "is_async": false,
+      "args_schema": {
+        "agent_name": "str",
+        "schedule": "str",
+        "prompt": "str",
+        "automation_name": "str"
+      }
+    }
+  }
+}

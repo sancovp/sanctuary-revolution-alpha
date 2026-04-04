@@ -13,7 +13,7 @@ class SancrevTreeShell(TreeShell):
     """Sanctuary Revolution TreeShell - game interface."""
     def __init__(self, user_config_path: str = None):
         # Store on self so base get_shortcuts() can find it
-        self.system_config_loader = SystemConfigLoader(config_types=["base", "base_zone_config", "base_shortcuts"])
+        self.system_config_loader = SystemConfigLoader(config_types=["base", "base_zone_config", "base_shortcuts", "user_shortcuts"])
         self.dev_config_path = SANCREV_CONFIGS_DIR
         final_config = self.system_config_loader.load_and_validate_configs(dev_config_path=SANCREV_CONFIGS_DIR)
 

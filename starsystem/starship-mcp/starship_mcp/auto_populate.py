@@ -393,6 +393,24 @@ starlog.update_flight_config(
             ],
             "entry_point": "01_define_purpose.md"
         }
+    },
+    "starlog_default_flight_config": {
+        "category": "starlog",
+        "description": "Default STARLOG session flight - the base 5-step session flow (check, init/orient, start, work loop, end). Every other flight extends this.",
+        "payload_discovery": {
+            "domain": "starlog_session",
+            "version": "1.0.0",
+            "description": "Default STARLOG session management - the base flight that all other flights extend",
+            "directories": {},
+            "root_files": [
+                {"sequence_number": 1, "filename": "01_check.md", "title": "Check STARLOG Project", "content": "STARLOG System - Development Session Tracking Flow\n\nStep 1: Check if directory is a STARLOG project\nUse: check(path)\n\nThis verifies if the current directory is already set up as a STARLOG project.", "piece_type": "instruction", "dependencies": []},
+                {"sequence_number": 2, "filename": "02_init_or_orient.md", "title": "Initialize or Orient", "content": "Step 2: Setup project context\n\nIf NOT a STARLOG project:\n→ Use: init_project(path, name, description) - Creates project structure with registries and HPI template\n\nIf IS a STARLOG project:\n→ Use: orient(path) - Returns full Captain's Log XML context for existing projects", "piece_type": "instruction", "dependencies": [1]},
+                {"sequence_number": 3, "filename": "03_start_session.md", "title": "Start STARLOG Session", "content": "Step 3: Begin tracked development session\nUse: start_starlog(session_data, path)\n\nBegin tracked development session with goals and context. This starts the formal logging process.", "piece_type": "instruction", "dependencies": [2]},
+                {"sequence_number": 4, "filename": "04_work_loop.md", "title": "Work Loop - Development Activities", "content": "Step 4: Work Loop - Choose tools as needed during development:\n\n• update_debug_diary(entry, path) - Log real-time discoveries, bugs, insights during work\n• view_debug_diary(path) - Check current project status and recent entries\n• view_starlog(path) - Review session history and past work\n• rules(path) - View project guidelines and standards\n• add_rule(rule, path) - Create new project guideline or standard\n\nUse these tools throughout your development work to track progress and maintain documentation.\n\nPBML DONE SIGNALS: When you complete a GIINT task, emit a Done_Signal via Dragonbones entity chain:\n✅⛓️ Done_Signal_{TaskName}_{Date} {is_a=Done_Signal, part_of=GIINT_Task_{TaskName}, desc='''DONE_SIGNAL: what changed, what was tested, what artifact produced'''}\n+{instantiates=Done_Signal_Pattern}\nThis triggers PBML auto-ratchet: CartON daemon detects Done_Signal → GIINT update_task_status(is_done=True) → TK card moves build→measure.", "piece_type": "instruction", "dependencies": [3]},
+                {"sequence_number": 5, "filename": "05_end_session.md", "title": "End STARLOG Session", "content": "Step 5: Complete session with summary\nUse: end_starlog(session_id, summary, path)\n\nComplete session with summary and outcomes. This formally closes the development session and saves all context.", "piece_type": "instruction", "dependencies": [4]}
+            ],
+            "entry_point": "01_check.md"
+        }
     }
 }
 

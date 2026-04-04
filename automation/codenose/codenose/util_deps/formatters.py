@@ -23,12 +23,10 @@ def format_smell_table(smells: list[Smell], theme: Optional[ThemeConfig] = None)
     rows = ["| Smell | Location | Info |", "|-------|----------|------|"]
     for smell_type, type_smells in by_type.items():
         emoji = theme.get_emoji(smell_type)
-        for smell in type_smells[:3]:
+        for smell in type_smells:
             loc = f"L{smell.line}" if smell.line else "file"
-            msg = (smell.msg or "")[:40]
+            msg = smell.msg or ""
             rows.append(f"| {emoji} | {loc} | {msg} |")
-        if len(type_smells) > 3:
-            rows.append(f"| {emoji} | ... | +{len(type_smells) - 3} more |")
 
     critical_label = theme.severity_names.get("critical", "CRITICAL")
     critical_str = f"\U0001f6a8 {critical_label}" if has_critical else ""

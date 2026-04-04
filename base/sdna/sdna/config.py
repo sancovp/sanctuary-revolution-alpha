@@ -41,10 +41,21 @@ class HeavenAgentArgs(BaseModel):
     tools: List[Any] = Field(default_factory=list)  # Heaven tools (BaseHeavenTool subclasses or MCP strings)
     extra_model_kwargs: Optional[Dict[str, Any]] = None  # Set by adaptor if None: anthropic_api_url + default_headers
     use_uni_api: bool = False  # False = ChatAnthropic path (required for MiniMax anthropic_api_url)
+    duo_enabled: bool = False  # DUO challenger sidechain — always off unless explicitly enabled
     enable_compaction: bool = False  # Enable auto-compaction when transcript exceeds threshold
     # HEAVEN extraction: capture fenced/XML blocks into agent_status.extracted_content
     additional_kws: List[str] = Field(default_factory=list)
     additional_kw_instructions: str = ""
+    # HeavenAgentConfig fields — first-class so callers don't need extra_agent_kwargs
+    skillset: Optional[str] = None  # Skillset name for per-agent skill injection
+    persona: Optional[str] = None  # Persona name — resolves frame, skillset, mcp_set, carton_identity
+    hook_registry: Optional[Any] = None  # HookRegistry instance for lifecycle hooks
+    carton_identity: Optional[str] = None  # CartON identity for agent observations
+    mcp_set: Optional[str] = None  # MCP set name from strata
+    state_machine: Optional[Any] = None  # State machine config
+    min_sm_cycles: Optional[int] = None  # Minimum state machine cycles
+    # Pass-through: any OTHER field HeavenAgentConfig accepts
+    extra_agent_kwargs: Dict[str, Any] = Field(default_factory=dict)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -110,7 +121,7 @@ class HermesConfig(BaseModel):
     # Cross-container execution: if set, Hermes routes via Docker exec to this container.
     # Empty string = local execution (default). Set to e.g. "repo-lord" for remote.
     target_container: str = ""
-    source_container: str = "mind_of_god"
+    source_container: str = ""
 
     # Brain integration
     brain_query: Optional[str] = None

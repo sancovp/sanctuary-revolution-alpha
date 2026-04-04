@@ -81,6 +81,19 @@ class PersonaManager:
 
         return report
 
+    async def restore_on_startup(self) -> Optional[Dict[str, Any]]:
+        """Restore persisted persona on MCP startup.
+
+        Checks _active_persona.json. If a persona was active, re-activates it
+        fully (skillset + MCP set + mirror to Claude skills dir).
+        Called from sancrev treeshell mcp_server.py on first init.
+        """
+        if not self.skillmanager.active_persona:
+            return None
+
+        persona_name = self.skillmanager.active_persona.name
+        return await self.activate_persona(persona_name)
+
     def get_active_persona(self) -> Optional[str]:
         """Get currently active persona name."""
         if self.skillmanager.active_persona:

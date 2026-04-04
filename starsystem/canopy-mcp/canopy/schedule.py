@@ -157,6 +157,9 @@ def add_to_schedule(
             value_dict=item
         )
 
+        # Mirror to CartON
+        _mirror_to_carton(item, event="created")
+
         return {
             "success": True,
             "item_id": item_id,
@@ -170,6 +173,113 @@ def add_to_schedule(
             "success": False,
             "error": str(e)
         }
+
+
+def _mirror_to_carton(item: Dict[str, Any], event: str = "created") -> None:
+    """Mirror a Canopy schedule item to CartON via carton_queue.
+
+    Writes a concept to carton_queue/ for the observation worker daemon
+    to process into Neo4j. This makes Canopy items queryable in the
+    knowledge graph alongside GIINT hierarchy concepts.
+
+    Args:
+        item: The schedule item dict
+        event: "created" or "completed"
+    """
+    try:
+        import json
+        import uuid
+        from pathlib import Path
+
+        heaven_data = os.environ.get("HEAVEN_DATA_DIR", "/tmp/heaven_data") if 'os' in dir() else "/tmp/heaven_data"
+        try:
+            import os as _os
+            heaven_data = _os.environ.get("HEAVEN_DATA_DIR", "/tmp/heaven_data")
+        except Exception:
+            pass
+
+        queue_dir = Path(heaven_data) / "carton_queue"
+        queue_dir.mkdir(parents=True, exist_ok=True)
+
+        item_id = item.get("item_id", "unknown")
+        concept_name = f"Canopy_Item_{item_id}"
+        status = item.get("status", "pending")
+        item_type = item.get("type", "AI-Only")
+        description = item.get("description", "")
+        project_name = item.get("variables", {}).get("project_name", "")
+
+        if event == "completed":
+            desc = f"[COMPLETED] {item_type}: {description}"
+        else:
+            desc = f"[{status.upper()}] {item_type}: {description}"
+
+        # Build relationships
+        rels = [
+            {"relationship": "is_a", "related": ["Canopy_Schedule_Item"]},
+            {"relationship": "instantiates", "related": ["Canopy_Item_Template"]},
+        ]
+
+        if project_name:
+            rels.append({"relationship": "part_of", "related": [f"Giint_Project_{project_name}"]})
+        else:
+            rels.append({"relationship": "part_of", "related": ["Canopy_Master_Schedule"]})
+
+        if item.get("source_operadic_flow_id"):
+            rels.append({"relationship": "has_source_flow", "related": [item["source_operadic_flow_id"]]})
+
+        queue_data = {
+            "raw_concept": True,
+            "concept_name": concept_name,
+            "description": desc,
+            "relationships": rels,
+            "desc_update_mode": "replace",
+            "hide_youknow": False,
+            "is_soup": False,
+            "soup_reason": None,
+            "source": "canopy_schedule_mirror",
+        }
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        unique_id = str(uuid.uuid4())[:8]
+        queue_file = queue_dir / f"{timestamp}_{unique_id}_canopy.json"
+
+        with open(queue_file, "w") as f:
+            json.dump(queue_data, f, indent=2)
+
+        logger.info(f"Mirrored Canopy item {item_id} to CartON ({event})")
+
+    except Exception as e:
+        logger.warning(f"Failed to mirror Canopy item to CartON: {e}")
+
+
+def _set_active_hc_from_item(item: Dict[str, Any]) -> None:
+    """Set active hypercluster from a schedule item's project context.
+
+    Checks variables.project_name and metadata.giint_project for the
+    starsystem/project name, then writes the corresponding Hypercluster_
+    name to /tmp/active_hypercluster.txt so memory compilation shows
+    the right context.
+    """
+    try:
+        from pathlib import Path
+
+        project_name = None
+        # Check variables first (mission template substitution)
+        variables = item.get("variables", {})
+        if variables.get("project_name"):
+            project_name = variables["project_name"]
+        # Check metadata
+        elif item.get("metadata", {}).get("giint_project"):
+            project_name = item["metadata"]["giint_project"]
+
+        if project_name:
+            # Normalize: strip Giint_Project_ prefix if present
+            hc_name = project_name.replace("Giint_Project_", "").replace("GIINT_Project_", "")
+            hc_concept = f"Hypercluster_{hc_name}"
+            Path("/tmp/active_hypercluster.txt").write_text(hc_concept)
+            logger.info(f"Active HC set to {hc_concept} from schedule item {item.get('item_id')}")
+    except Exception as e:
+        logger.warning(f"Failed to set active HC from item: {e}")
 
 
 def get_next_item(item_type: Optional[str] = None) -> Dict[str, Any]:
@@ -215,9 +325,16 @@ def get_next_item(item_type: Optional[str] = None) -> Dict[str, Any]:
         # Sort by priority (highest first)
         pending_items.sort(key=lambda x: x["priority"], reverse=True)
 
+        next_item = pending_items[0]
+
+        # AUTO-SET ACTIVE HYPERCLUSTER from item's project context
+        # This wires get_next → memory compilation: pulling a task
+        # automatically sets the active HC so MEMORY.md shows the right context
+        _set_active_hc_from_item(next_item)
+
         return {
             "success": True,
-            "next_item": pending_items[0],
+            "next_item": next_item,
             "pending_count": len(pending_items)
         }
 
@@ -335,6 +452,9 @@ def mark_complete(item_id: str) -> Dict[str, Any]:
 
         # Auto-record to operadic_ledger
         _record_execution(item)
+
+        # Mirror completion to CartON
+        _mirror_to_carton(item, event="completed")
 
         return {
             "success": True,

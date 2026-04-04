@@ -266,6 +266,28 @@ def _map_filenames_to_sequence_numbers(pd: PayloadDiscovery, completed_filenames
     return completed_numbers
 
 
+def _load_guru_reminder() -> str:
+    """Load guru vow reminder if guru loop is active.
+
+    During SESSION, the guru loop doesn't fire in the stop hook (only STARPORT).
+    But the agent should still see their vow while working. This reads the guru
+    file and appends a compressed reminder to work step prompts.
+    """
+    guru_path = Path("/tmp/guru_loop.md")
+    try:
+        if guru_path.exists():
+            content = guru_path.read_text().strip()
+            # Check if paused
+            if content.startswith('---'):
+                parts = content.split('---', 2)
+                if len(parts) >= 3 and 'status: paused' in parts[1]:
+                    return ""
+            return f"\n\n---\n**GURU VOW ACTIVE** — You are bound by a bodhisattva vow for this starsystem. Your work must include emanation (skill/flight/persona that can do this work without you). Remember: disingenuousness is death.\n"
+    except Exception:
+        pass
+    return ""
+
+
 def _count_total_pieces(pd: PayloadDiscovery) -> int:
     """Count total pieces in PayloadDiscovery."""
     total = len(pd.root_files)
@@ -675,8 +697,12 @@ def _get_next_prompt_with_notes(starlog_path: str, notes: str = "") -> str:
     # NOT on: Steps 1-3 (ceremony) or Step N (end session)
     total = _count_total_pieces(pd)
     if piece.sequence_number == 4 or (piece.sequence_number >= 5 and piece.sequence_number < total):
-        autopoiesis_reminder = "\n\n---\n**Autopoiesis**: Consider what promises you need to make for this step. Use `be_autopoietic(\"promise\")` to commit to completing this step before moving to the next."
-        return piece.content + autopoiesis_reminder
+        autopoiesis_reminder = "\n\n---\n**REQUIRED: AUTOPOIESIS CHECK** — Is this a sufficiently complex task or amount of work that subtasks need to be broken out with quality gates? Usually yes, sometimes no. Generally, if not a quick thing then need to `be_autopoietic(\"promise\")` to make sure it gets accomplished in the right way. This is important to the user. Start your next response with 'Now I have to do a quick complexity analysis. This task might need be_autopoietic() because {reasons}, and if any qualities aren't directly testable it DOES need it, so my answer is {answer}.' Then act accordingly."
+
+        # Inject guru vow reminder if guru loop is active during SESSION
+        guru_reminder = _load_guru_reminder()
+
+        return piece.content + autopoiesis_reminder + guru_reminder
 
     return piece.content
 

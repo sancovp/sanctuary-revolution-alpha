@@ -125,7 +125,9 @@ def _find_duplicates(blocks: list[tuple[str, int]]) -> list[Smell]:
         normalized = re.sub(r'\s+', ' ', text.strip())
         if len(normalized) > 30:
             counts[normalized].append(line)
-    return [Smell(type="dup", lines=lns, count=len(lns)) for lns in counts.values() if len(lns) > 1]
+    return [Smell(type="dup", line=lns[0], lines=lns, count=len(lns),
+                  msg=f"Duplicate block at lines {', '.join(str(l) for l in lns)} ({len(lns)}x)")
+            for lns in counts.values() if len(lns) > 1]
 
 
 def check_logging(content: str, file_path: str, min_lines: int = DEFAULT_MIN_LOG_LINES) -> list[Smell]:
@@ -320,8 +322,7 @@ def check_test_coverage(content: str, file_path: str,
     return [Smell(
         type="coverage",
         line=0,
-        msg=f"Test coverage: {covered}/{total} ({pct}%). Missing: {', '.join(missing[:5])}" +
-            (f" +{len(missing)-5} more" if len(missing) > 5 else ""),
+        msg=f"Test coverage: {covered}/{total} ({pct}%). Missing: {', '.join(missing)}",
         critical=False
     )]
 

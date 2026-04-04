@@ -371,7 +371,7 @@ Create one with create_mission_type() using domain='{domain}'"""
 
         output.append(f"""
 To create mission from type:
-  create_mission(
+  mission_create(
     mission_id='my_mission',
     mission_type='{page_types[0][0]}',
     variables={{'project_path': '/path', ...}}

@@ -147,7 +147,7 @@ class DiscordEventForwarder:
                 elif etype == "TOOL_RESULT":
                     output = str(data.get("output", ""))
                     if output:
-                        self._send(f"📋 `[{self._tool_count}]` result:\n```\n{output}\n```")
+                        self._send(f"📋 `[{self._tool_count}]` result:\n{output}")
                         self._last_send = time.time()
 
                 elif etype == "AGENT_MESSAGE":
@@ -182,7 +182,7 @@ class DiscordEventForwarder:
         elif hasattr(msg, 'type') and msg.type == 'tool':
             content = str(getattr(msg, 'content', ''))
             if content:
-                self._send(f"📋 `[{self._tool_count}]` result:\n```\n{content}\n```")
+                self._send(f"📋 `[{self._tool_count}]` result:\n{content}")
                 self._last_send = time.time()
         # AIMessage with text content (no tool calls) — intermediate text response
         elif hasattr(msg, 'type') and msg.type == 'ai' and not getattr(msg, 'tool_calls', None):
@@ -284,8 +284,26 @@ def _build_agent_config(system_prompt: str):
                 "args": ["-m", "sanctuary_revolution_treeshell.mcp_server"],
                 "transport": "stdio",
             },
+            "sanctuary": {
+                "command": "python",
+                "args": ["-m", "sanctuary_system.mcp_server"],
+                "transport": "stdio",
+            },
+            "compoctopus": {
+                "command": "python",
+                "args": ["/home/GOD/gnosys-plugin-v2/application/compoctopus/mcp_server.py"],
+                "transport": "stdio",
+            },
+            "observatory": {
+                "command": "python",
+                "args": ["/home/GOD/gnosys-plugin-v2/integration/observatory-sdna/mcp_server.py"],
+                "transport": "stdio",
+            },
         },
         prompt_suffix_blocks=[
+            "path=/tmp/heaven_data/conductor_prompt_blocks/role_card.md",
+            "path=/tmp/heaven_data/conductor_prompt_blocks/sanctum_daily.md",
+            "path=/tmp/heaven_data/conductor_prompt_blocks/treekanban.md",
             "path=/tmp/heaven_data/conductor_dynamic/memory.txt",
             "path=/tmp/heaven_data/conductor_dynamic/skill_info.txt",
             "path=/tmp/heaven_data/conductor_memory/MEMORY.md",
@@ -450,6 +468,69 @@ class Conductor:
         self._transcript_chars = 0
         self._save_conversation_state()
         logger.info("Started new conversation (cleared state)")
+
+    def prune_turns(self, n: int = 1) -> Dict[str, Any]:
+        """Remove last N turn pairs (human+assistant) from conversation history.
+
+        Uses same iteration-popping pattern as _run_with_context_guard.
+        Pops from the END of history (most recent turns).
+        """
+        if not self.history_id:
+            return {"status": "error", "reason": "no conversation history"}
+
+        try:
+            from heaven_base.baseheavenagent import BaseHeavenAgent
+            from heaven_base.unified_chat import UnifiedChat
+            from langchain_core.messages import HumanMessage
+
+            agent = BaseHeavenAgent(
+                config=self._agent_config,
+                unified_chat=UnifiedChat(),
+                history_id=self.history_id,
+            )
+
+            if not agent.history or not hasattr(agent.history, 'messages'):
+                return {"status": "error", "reason": "no history messages"}
+
+            messages = agent.history.messages
+            turns_removed = 0
+            msgs_removed = 0
+
+            for _ in range(n):
+                if len(messages) <= 2:  # Keep system prompt + at least one message
+                    break
+
+                # Pop from END: remove last message, then keep removing until we hit a HumanMessage
+                while len(messages) > 2 and not isinstance(messages[-1], HumanMessage):
+                    messages.pop()
+                    msgs_removed += 1
+
+                # Pop the HumanMessage that started this turn
+                if len(messages) > 2 and isinstance(messages[-1], HumanMessage):
+                    messages.pop()
+                    msgs_removed += 1
+                    turns_removed += 1
+
+            self._notify_discord(f"✂️ Pruned {turns_removed} turns ({msgs_removed} messages)")
+            logger.info("Pruned %d turns (%d messages) from history %s", turns_removed, msgs_removed, self.history_id)
+            return {"status": "pruned", "turns": turns_removed, "messages": msgs_removed}
+
+        except Exception as e:
+            logger.exception("Prune failed")
+            return {"status": "error", "reason": str(e)}
+
+    def edit_heartbeat(self, content: str) -> Dict[str, Any]:
+        """Edit HEARTBEAT.md — update standing orders for heartbeat prompts."""
+        try:
+            hb_path = Path(HEAVEN_DATA / "HEARTBEAT.md")
+            hb_path.parent.mkdir(parents=True, exist_ok=True)
+            hb_path.write_text(content)
+            self._notify_discord(f"📝 HEARTBEAT.md updated ({len(content)} chars)")
+            logger.info("HEARTBEAT.md updated: %s", content[:100])
+            return {"status": "updated", "path": str(hb_path), "chars": len(content)}
+        except Exception as e:
+            logger.exception("Failed to edit HEARTBEAT.md")
+            return {"status": "error", "reason": str(e)}
 
     def register(self, cave_agent) -> Dict[str, Any]:
         """Register Conductor in CAVE and get anatomy access."""
@@ -790,13 +871,13 @@ class Conductor:
             agent = BaseHeavenAgent(**agent_kwargs)
 
             # Callback captures events + broadcasts to registered channels
-            from .event_broadcaster import EventBroadcaster, ConductorDiscordChannel
+            from .event_broadcaster import EventBroadcaster, ConductorDiscordChannel, SSEChannel
             capture = BackgroundEventCapture()
-            broadcaster = EventBroadcaster([
-                ConductorDiscordChannel(),
-                # SSEChannel(queue),     # Future: frontend
-                # FileLogChannel(path),  # Future: event log
-            ])
+            channels = [ConductorDiscordChannel()]
+            sse_queue = metadata.get("sse_queue")
+            if sse_queue is not None:
+                channels.append(SSEChannel(queue=sse_queue))
+            broadcaster = EventBroadcaster(channels)
             composite = CompositeCallback([capture, broadcaster])
 
             # Agent loops internally on tool calls — wrapped in context guard for overflow protection

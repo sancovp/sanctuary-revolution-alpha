@@ -1,0 +1,22 @@
+# SANCREV OPERA Configuration
+# Controls CI/CD behavior for the two-layer meta-frontend
+# Docs: https://github.com/sancovp/sancrev-cicd
+
+sancrev:
+  version: 1
+  
+  shell:
+    electron-dir: electron/
+    meta-shell: meta-shell.html
+    build-targets: [mac]           # Currently macOS only
+  
+  inner-app:
+    source-dir: src/
+    entry: index.html
+    vite-config: vite.config.ts
+    vite-port: 5173
+  
+  versioning:
+    strategy: semver
+    side-by-side: true              # Install new shell versions alongside old ones
+    auto-update: false              # Don't auto-switch; let user choose when to upgrade

@@ -78,6 +78,8 @@ from .tags import extract_tags, match_tags, has_tag, tag_equals, tag_contains, A
 # code_agent removed - hooks now in CAVE
 from . import poimandres
 from .defaults import get_default_mcp_servers, get_default_hermes_config, default_config
+from .cron import CronJob, CronScheduler, DeliveryTarget, DeliveryType, SessionTarget
+from .selfbot import SelfBot, get_tmux_session
 
 __all__ = [
     # State (LangGraph substrate)
@@ -230,4 +232,13 @@ __all__ = [
     "start_slinky",
     "stop_slinky",
     "get_slinky_status",
+    # Cron (scheduled execution with delivery)
+    "CronJob",
+    "CronScheduler",
+    "DeliveryTarget",
+    "DeliveryType",
+    "SessionTarget",
+    # SelfBot (tmux agent control)
+    "SelfBot",
+    "get_tmux_session",
 ]

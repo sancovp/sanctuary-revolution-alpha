@@ -15,7 +15,7 @@ import asyncio
 from typing import Any, Callable, Dict, List, Optional
 
 # Re-export everything from SDNA's chain_ontology
-from sdna.sdna.sdna.chain_ontology import (
+from sdna.chain_ontology import (
     Link,
     Chain,
     EvalChain,

@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Optional, List, Dict, Any
 
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.responses import StreamingResponse
 from pydantic import BaseModel
 
 # === CAVE base — imports the app with all CAVE routes + CAVEAgent startup ===
@@ -56,6 +57,7 @@ app.add_middleware(
 
 # === Sancrev globals ===
 _event_queue: asyncio.Queue = asyncio.Queue()
+print(f"[SSE-DEBUG] _event_queue created at module level, id={id(_event_queue)}", flush=True)
 
 # Domain builder instances
 _cave_builder: Optional[CAVEBuilder] = None
@@ -2014,6 +2016,8 @@ async def _conductor_inbox_loop():
                                 preview = user_msg[:10] + ("..." if len(user_msg) > 10 else "")
                                 await _send_discord_notify(f"🏃 **{_deg}:** {preview}")
 
+                            metadata["sse_queue"] = _event_queue
+                            print(f"[SSE-DEBUG] inbox loop passing queue id={id(_event_queue)} to handle_message", flush=True)
                             result = await _conductor_instance.handle_message(
                                 user_msg, metadata,
                             )
@@ -2212,6 +2216,7 @@ async def conductor_process():
             return {"status": "success", "response": cmd_response}
         preview = content[:100] + ("..." if len(content) > 100 else "")
         await _send_discord_notify(f"\U0001F3C3 **WakingDreamer processing:** {preview}")
+        metadata["sse_queue"] = _event_queue
         result = await _conductor_instance.handle_message(content, metadata)
         # Response already sent in real-time by DiscordEventForwarder
         return result
@@ -2293,6 +2298,211 @@ async def conductor_ack_message(message_id: str):
             del agent._inbox[i]
             return {"acknowledged": message_id}
     return {"error": f"Message {message_id} not found"}
+
+
+# === SSE Events (Conductor + system events streamed to frontend) ===
+@app.get("/conductor/events")
+async def conductor_events():
+    """Stream Conductor events to frontend via Server-Sent Events.
+
+    Conductor events (tool use, tool result, agent message) are pushed
+    to _event_queue by SSEChannel via EventBroadcaster. This endpoint
+    reads from the queue and streams them as SSE.
+    """
+    async def generate():
+        # Drain any existing events first
+        while not _event_queue.empty():
+            event = _event_queue.get_nowait()
+            yield f"data: {json.dumps(event)}\n\n"
+        # Then wait for new events
+        while True:
+            try:
+                event = await asyncio.wait_for(_event_queue.get(), timeout=15.0)
+                yield f"data: {json.dumps(event)}\n\n"
+            except asyncio.TimeoutError:
+                yield ": keepalive\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+# === Conversation Management ===
+
+@app.get("/conversations")
+async def list_conversations(limit: int = 20):
+    """List all conversations, newest first."""
+    from heaven_base.memory.conversations import list_chats
+    return {"conversations": list_chats(limit=limit)}
+
+
+@app.get("/conversations/search")
+async def search_conversations(q: str):
+    """Search conversations by title or tags."""
+    from heaven_base.memory.conversations import search_chats
+    return {"conversations": search_chats(q)}
+
+
+@app.get("/conversations/{conversation_id}")
+async def get_conversation(conversation_id: str):
+    """Load a specific conversation."""
+    from heaven_base.memory.conversations import load_chat
+    conv = load_chat(conversation_id)
+    if not conv:
+        return {"error": f"Conversation {conversation_id} not found"}
+    return conv
+
+
+@app.get("/conversations/{conversation_id}/histories")
+async def get_conversation_histories(conversation_id: str):
+    """Get all history IDs from a conversation."""
+    from heaven_base.memory.conversations import ConversationManager
+    histories = ConversationManager.get_conversation_histories(conversation_id)
+    return {"conversation_id": conversation_id, "histories": histories}
+
+
+@app.get("/conversations/{conversation_id}/latest")
+async def get_conversation_latest(conversation_id: str):
+    """Get the latest history ID (most complete snapshot)."""
+    from heaven_base.memory.conversations import get_latest_history
+    history_id = get_latest_history(conversation_id)
+    if not history_id:
+        return {"error": f"Conversation {conversation_id} not found or empty"}
+    return {"conversation_id": conversation_id, "latest_history_id": history_id}
+
+
+@app.delete("/conversations/{conversation_id}")
+async def delete_conversation(conversation_id: str):
+    """Delete a conversation."""
+    from heaven_base.memory.conversations import ConversationManager
+    deleted = ConversationManager.delete_conversation(conversation_id)
+    if not deleted:
+        return {"error": f"Conversation {conversation_id} not found"}
+    return {"deleted": conversation_id}
+
+
+@app.post("/conversations")
+async def create_conversation(data: Dict[str, Any]):
+    """Start a new conversation."""
+    from heaven_base.memory.conversations import start_chat
+    title = data.get("title", "")
+    first_history_id = data.get("first_history_id", "")
+    agent_name = data.get("agent_name", "")
+    tags = data.get("tags", [])
+    if not title or not first_history_id or not agent_name:
+        return {"error": "title, first_history_id, and agent_name required"}
+    return start_chat(title, first_history_id, agent_name, tags)
+
+
+@app.post("/conversations/{conversation_id}/continue")
+async def continue_conversation(conversation_id: str, data: Dict[str, Any]):
+    """Add a new history_id to an existing conversation's chain."""
+    from heaven_base.memory.conversations import continue_chat
+    new_history_id = data.get("history_id", "")
+    if not new_history_id:
+        return {"error": "history_id required"}
+    try:
+        return continue_chat(conversation_id, new_history_id)
+    except FileNotFoundError:
+        return {"error": f"Conversation {conversation_id} not found"}
+
+
+# === History Content ===
+
+@app.get("/histories/{history_id}")
+async def get_history(history_id: str):
+    """Load a history's full content (messages, metadata) by ID."""
+    from heaven_base.memory.history import History
+    try:
+        hist = History._load_history_file(history_id)
+        return hist.to_json()
+    except FileNotFoundError:
+        return {"error": f"History {history_id} not found"}
+
+
+@app.get("/histories/{history_id}/markdown")
+async def get_history_markdown(history_id: str):
+    """Load a history rendered as human-readable markdown."""
+    from heaven_base.memory.history import History
+    try:
+        hist = History._load_history_file(history_id)
+        return {"history_id": history_id, "markdown": hist.to_markdown()}
+    except FileNotFoundError:
+        return {"error": f"History {history_id} not found"}
+
+
+@app.get("/conversations/{conversation_id}/content")
+async def get_conversation_content(conversation_id: str):
+    """Load a conversation's latest history content (full messages)."""
+    from heaven_base.memory.conversations import get_latest_history
+    from heaven_base.memory.history import History
+    history_id = get_latest_history(conversation_id)
+    if not history_id:
+        return {"error": f"Conversation {conversation_id} not found or empty"}
+    try:
+        hist = History._load_history_file(history_id)
+        return {"conversation_id": conversation_id, "history_id": history_id, **hist.to_json()}
+    except FileNotFoundError:
+        return {"error": f"History {history_id} not found on disk"}
+
+
+# === Conductor Conversation Control ===
+
+@app.post("/conductor/conversation/new")
+async def conductor_new_conversation():
+    """Start a fresh Conductor conversation (clear history)."""
+    if not _conductor_instance:
+        return {"error": "Conductor not initialized"}
+    _conductor_instance.new_conversation()
+    return {"status": "new_conversation", "conversation_id": None, "history_id": None}
+
+
+@app.post("/conductor/conversation/load")
+async def conductor_load_conversation(data: Dict[str, Any]):
+    """Load a prior Conductor conversation by ID.
+
+    Looks up the conversation, gets the latest history_id,
+    and sets the Conductor to continue from that point.
+    """
+    if not _conductor_instance:
+        return {"error": "Conductor not initialized"}
+    conversation_id = data.get("conversation_id", "")
+    if not conversation_id:
+        return {"error": "conversation_id required"}
+
+    from heaven_base.memory.conversations import load_chat, get_latest_history
+    conv = load_chat(conversation_id)
+    if not conv:
+        return {"error": f"Conversation {conversation_id} not found"}
+
+    latest = get_latest_history(conversation_id)
+    if not latest:
+        return {"error": f"Conversation {conversation_id} has no histories"}
+
+    _conductor_instance.conversation_id = conversation_id
+    _conductor_instance.history_id = latest
+    _conductor_instance._transcript_chars = 0
+    _conductor_instance._compaction_count = 0
+    _conductor_instance._save_conversation_state()
+
+    return {
+        "status": "loaded",
+        "conversation_id": conversation_id,
+        "history_id": latest,
+        "title": conv.get("title", ""),
+        "history_count": len(conv.get("history_chain", [])),
+    }
+
+
+@app.get("/conductor/conversation")
+async def conductor_current_conversation():
+    """Get Conductor's current conversation state."""
+    if not _conductor_instance:
+        return {"error": "Conductor not initialized"}
+    return {
+        "conversation_id": _conductor_instance.conversation_id,
+        "history_id": _conductor_instance.history_id,
+        "transcript_chars": _conductor_instance._transcript_chars,
+        "compaction_count": _conductor_instance._compaction_count,
+    }
 
 
 def main():

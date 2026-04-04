@@ -5,10 +5,9 @@
   "description": "Human interface for managing AI agents and workflows",
   "nodes": {
     "agent_management": {
-      "id": "agent_management",
-      "title": "\ud83c\udfae Agent Management Hub",
-      "description": "Human interface for managing AI agents and workflows",
       "type": "Menu",
+      "prompt": "🤖 Agent Management Hub",
+      "description": "Human interface for managing AI agents and workflows",
       "options": {
         "1": "equipment",
         "2": "system",
@@ -17,16 +16,549 @@
       }
     },
     "system": {
-      "id": "agent_management.system",
-      "title": "\u2699\ufe0f System",
-      "description": "System settings and monitoring",
-      "type": "Callable"
+      "type": "Callable",
+      "prompt": "⚙️ System",
+      "description": "System settings and monitoring"
     },
     "sessions": {
-      "id": "agent_management.sessions",
-      "title": "\ud83d\udcca Sessions",
-      "description": "Manage active and historical sessions",
-      "type": "Callable"
+      "type": "Callable",
+      "prompt": "💊 Sessions",
+      "description": "Manage active and historical sessions"
+    },
+    "equipment": {
+      "type": "Menu",
+      "prompt": "🤖 Agent Management",
+      "description": "Configure and manage AI agents",
+      "options": {
+        "1": "config",
+        "2": "utils",
+        "3": "system_prompts",
+        "4": "tools",
+        "5": "system_provider",
+        "6": "model",
+        "7": "temperature",
+        "8": "max_tokens",
+        "9": "prompt_blocks",
+        "10": "thinking_budget",
+        "11": "mcp_servers",
+        "12": "mcp_set",
+        "13": "persona",
+        "14": "skillset",
+        "15": "carton_identity"
+      }
+    },
+    "config": {
+      "type": "Menu",
+      "prompt": "💾 Config Management",
+      "description": "Save and load agent configurations",
+      "options": {
+        "1": "config_list",
+        "2": "config_save",
+        "3": "config_copy"
+      }
+    },
+    "config_list": {
+      "type": "Callable",
+      "prompt": "List Saved Configs",
+      "description": "Show all saved configurations",
+      "function_name": "list_saved_configs",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "list_saved_configs"
+    },
+    "config_save": {
+      "type": "Callable",
+      "prompt": "Save Config As",
+      "description": "Save current config to file",
+      "function_name": "save_config_as",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "save_config_as",
+      "args_schema": {"name": "str"}
+    },
+    "config_copy": {
+      "type": "Callable",
+      "prompt": "Copy Existing",
+      "description": "Load existing config into dynamic config",
+      "function_name": "copy_existing",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "copy_existing",
+      "args_schema": {"name": "str"}
+    },
+    "utils": {
+      "type": "Menu",
+      "prompt": "🔧 Reset & Utils",
+      "description": "Reset config and utility functions",
+      "options": {
+        "1": "utils_reset"
+      }
+    },
+    "utils_reset": {
+      "type": "Callable",
+      "prompt": "Reset Dynamic Config",
+      "description": "Clear current dynamic configuration",
+      "function_name": "reset_dynamic_config",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "reset_dynamic_config"
+    },
+    "system_prompts": {
+      "type": "Menu",
+      "prompt": "📝 System Prompts",
+      "description": "Manage system prompts",
+      "options": {
+        "1": "system_prompts_equip",
+        "2": "system_prompts_unequip",
+        "3": "system_prompts_list"
+      }
+    },
+    "system_prompts_equip": {
+      "type": "Callable",
+      "prompt": "Equip System Prompt",
+      "description": "Add or replace system prompt",
+      "function_name": "equip_system_prompt",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "equip_system_prompt"
+    },
+    "system_prompts_unequip": {
+      "type": "Callable",
+      "prompt": "Unequip System Prompt",
+      "description": "Remove current system prompt",
+      "function_name": "unequip_system_prompt",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "unequip_system_prompt"
+    },
+    "system_prompts_list": {
+      "type": "Callable",
+      "prompt": "List System Prompts",
+      "description": "Show current system prompt",
+      "function_name": "list_system_prompts",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "list_system_prompts"
+    },
+    "tools": {
+      "type": "Menu",
+      "prompt": "🛠️ Tools",
+      "description": "Manage agent tools",
+      "options": {
+        "1": "tools_equip",
+        "2": "tools_unequip",
+        "3": "tools_list"
+      }
+    },
+    "tools_equip": {
+      "type": "Callable",
+      "prompt": "Equip Tool",
+      "description": "Add a tool to the agent",
+      "function_name": "equip_tool",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "equip_tool"
+    },
+    "tools_unequip": {
+      "type": "Callable",
+      "prompt": "Unequip Tool",
+      "description": "Remove a tool from the agent",
+      "function_name": "unequip_tool",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "unequip_tool"
+    },
+    "tools_list": {
+      "type": "Callable",
+      "prompt": "List Tools",
+      "description": "Show available and equipped tools",
+      "function_name": "list_tools",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "list_tools"
+    },
+    "system_provider": {
+      "type": "Menu",
+      "prompt": "🤖 Provider",
+      "description": "Manage AI provider",
+      "options": {
+        "1": "system_provider_equip",
+        "2": "system_provider_unequip",
+        "3": "system_provider_list"
+      }
+    },
+    "system_provider_equip": {
+      "type": "Callable",
+      "prompt": "Equip Provider",
+      "description": "Set AI provider (anthropic, openai, google)",
+      "function_name": "equip_provider",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "equip_provider"
+    },
+    "system_provider_unequip": {
+      "type": "Callable",
+      "prompt": "Unequip Provider",
+      "description": "Remove current provider",
+      "function_name": "unequip_provider",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "unequip_provider"
+    },
+    "system_provider_list": {
+      "type": "Callable",
+      "prompt": "List Providers",
+      "description": "Show all available providers",
+      "function_name": "list_providers",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "list_providers"
+    },
+    "model": {
+      "type": "Menu",
+      "prompt": "🧠 Model",
+      "description": "Manage AI model",
+      "options": {
+        "1": "model_equip",
+        "2": "model_unequip",
+        "3": "model_list"
+      }
+    },
+    "model_equip": {
+      "type": "Callable",
+      "prompt": "Equip Model",
+      "description": "Set AI model",
+      "function_name": "equip_model",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "equip_model"
+    },
+    "model_unequip": {
+      "type": "Callable",
+      "prompt": "Unequip Model",
+      "description": "Remove current model",
+      "function_name": "unequip_model",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "unequip_model"
+    },
+    "model_list": {
+      "type": "Callable",
+      "prompt": "List Models",
+      "description": "Show available models for current provider",
+      "function_name": "list_models",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "list_models"
+    },
+    "temperature": {
+      "type": "Menu",
+      "prompt": "🌡️ Temperature",
+      "description": "Manage temperature setting",
+      "options": {
+        "1": "temperature_equip",
+        "2": "temperature_unequip",
+        "3": "temperature_list"
+      }
+    },
+    "temperature_equip": {
+      "type": "Callable",
+      "prompt": "Equip Temperature",
+      "description": "Set temperature (0.0-1.0)",
+      "function_name": "equip_temperature",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "equip_temperature",
+      "args_schema": {"temperature": "float"}
+    },
+    "temperature_unequip": {
+      "type": "Callable",
+      "prompt": "Unequip Temperature",
+      "description": "Remove temperature setting",
+      "function_name": "unequip_temperature",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "unequip_temperature"
+    },
+    "temperature_list": {
+      "type": "Callable",
+      "prompt": "List Temperature",
+      "description": "Show current temperature setting",
+      "function_name": "list_temperature",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "list_temperature"
+    },
+    "max_tokens": {
+      "type": "Menu",
+      "prompt": "📏 Max Tokens",
+      "description": "Manage max tokens setting",
+      "options": {
+        "1": "max_tokens_equip",
+        "2": "max_tokens_unequip",
+        "3": "max_tokens_list"
+      }
+    },
+    "max_tokens_equip": {
+      "type": "Callable",
+      "prompt": "Equip Max Tokens",
+      "description": "Set maximum tokens",
+      "function_name": "equip_max_tokens",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "equip_max_tokens",
+      "args_schema": {"max_tokens": "int"}
+    },
+    "max_tokens_unequip": {
+      "type": "Callable",
+      "prompt": "Unequip Max Tokens",
+      "description": "Remove max tokens setting",
+      "function_name": "unequip_max_tokens",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "unequip_max_tokens"
+    },
+    "max_tokens_list": {
+      "type": "Callable",
+      "prompt": "List Max Tokens",
+      "description": "Show current max tokens setting",
+      "function_name": "list_max_tokens",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "list_max_tokens"
+    },
+    "prompt_blocks": {
+      "type": "Menu",
+      "prompt": "📦 Prompt Blocks",
+      "description": "Manage prompt suffix blocks",
+      "options": {
+        "1": "prompt_blocks_equip",
+        "2": "prompt_blocks_unequip",
+        "3": "prompt_blocks_list"
+      }
+    },
+    "prompt_blocks_equip": {
+      "type": "Callable",
+      "prompt": "Equip Prompt Block",
+      "description": "Add a prompt suffix block",
+      "function_name": "equip_prompt_block",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "equip_prompt_block"
+    },
+    "prompt_blocks_unequip": {
+      "type": "Callable",
+      "prompt": "Unequip Prompt Block",
+      "description": "Remove a prompt suffix block",
+      "function_name": "unequip_prompt_block",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "unequip_prompt_block"
+    },
+    "prompt_blocks_list": {
+      "type": "Callable",
+      "prompt": "List Prompt Blocks",
+      "description": "Show available and equipped prompt blocks",
+      "function_name": "list_prompt_blocks",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "list_prompt_blocks"
+    },
+    "thinking_budget": {
+      "type": "Menu",
+      "prompt": "💭 Thinking Budget",
+      "description": "Extended thinking tokens (Claude 3.7+)",
+      "options": {
+        "1": "thinking_budget_equip",
+        "2": "thinking_budget_unequip",
+        "3": "thinking_budget_list"
+      }
+    },
+    "thinking_budget_equip": {
+      "type": "Callable",
+      "prompt": "Equip Thinking Budget",
+      "description": "Set thinking budget (token count)",
+      "function_name": "equip_thinking_budget",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "equip_thinking_budget",
+      "args_schema": {"thinking_budget": "int"}
+    },
+    "thinking_budget_unequip": {
+      "type": "Callable",
+      "prompt": "Unequip Thinking Budget",
+      "description": "Remove thinking budget setting",
+      "function_name": "unequip_thinking_budget",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "unequip_thinking_budget"
+    },
+    "thinking_budget_list": {
+      "type": "Callable",
+      "prompt": "List Thinking Budget",
+      "description": "Show current thinking budget",
+      "function_name": "list_thinking_budget",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "list_thinking_budget"
+    },
+    "mcp_servers": {
+      "type": "Menu",
+      "prompt": "🚀 MCP Servers",
+      "description": "Configure MCP servers for the agent",
+      "options": {
+        "1": "mcp_servers_equip",
+        "2": "mcp_servers_unequip",
+        "3": "mcp_servers_list"
+      }
+    },
+    "mcp_servers_equip": {
+      "type": "Callable",
+      "prompt": "Add MCP Server",
+      "description": "Add an MCP server to the agent",
+      "function_name": "equip_mcp_server",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "equip_mcp_server"
+    },
+    "mcp_servers_unequip": {
+      "type": "Callable",
+      "prompt": "Remove MCP Server",
+      "description": "Remove an MCP server by name",
+      "function_name": "unequip_mcp_server",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "unequip_mcp_server"
+    },
+    "mcp_servers_list": {
+      "type": "Callable",
+      "prompt": "List MCP Servers",
+      "description": "Show equipped MCP servers",
+      "function_name": "list_mcp_servers",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "list_mcp_servers"
+    },
+    "mcp_set": {
+      "type": "Menu",
+      "prompt": "🚀 MCP Set",
+      "description": "Strata MCP set (resolved at agent startup)",
+      "options": {
+        "1": "mcp_set_equip",
+        "2": "mcp_set_unequip",
+        "3": "mcp_set_list"
+      }
+    },
+    "mcp_set_equip": {
+      "type": "Callable",
+      "prompt": "Equip MCP Set",
+      "description": "Set strata MCP set name",
+      "function_name": "equip_mcp_set",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "equip_mcp_set"
+    },
+    "mcp_set_unequip": {
+      "type": "Callable",
+      "prompt": "Unequip MCP Set",
+      "description": "Remove MCP set",
+      "function_name": "unequip_mcp_set",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "unequip_mcp_set"
+    },
+    "mcp_set_list": {
+      "type": "Callable",
+      "prompt": "Show MCP Set",
+      "description": "Show current MCP set",
+      "function_name": "list_mcp_set",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "list_mcp_set"
+    },
+    "persona": {
+      "type": "Menu",
+      "prompt": "🎭 Persona",
+      "description": "Manage agent persona",
+      "options": {
+        "1": "persona_equip",
+        "2": "persona_unequip",
+        "3": "persona_list"
+      }
+    },
+    "persona_equip": {
+      "type": "Callable",
+      "prompt": "Equip Persona",
+      "description": "Set persona name",
+      "function_name": "equip_persona",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "equip_persona"
+    },
+    "persona_unequip": {
+      "type": "Callable",
+      "prompt": "Unequip Persona",
+      "description": "Remove persona",
+      "function_name": "unequip_persona",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "unequip_persona"
+    },
+    "persona_list": {
+      "type": "Callable",
+      "prompt": "List Persona",
+      "description": "Show current persona",
+      "function_name": "list_persona",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "list_persona"
+    },
+    "skillset": {
+      "type": "Menu",
+      "prompt": "🎒 Skillset",
+      "description": "Per-agent skill injection via skillset name",
+      "options": {
+        "1": "skillset_equip",
+        "2": "skillset_unequip",
+        "3": "skillset_list"
+      }
+    },
+    "skillset_equip": {
+      "type": "Callable",
+      "prompt": "Equip Skillset",
+      "description": "Set skillset name",
+      "function_name": "equip_skillset",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "equip_skillset"
+    },
+    "skillset_unequip": {
+      "type": "Callable",
+      "prompt": "Unequip Skillset",
+      "description": "Remove skillset",
+      "function_name": "unequip_skillset",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "unequip_skillset"
+    },
+    "skillset_list": {
+      "type": "Callable",
+      "prompt": "Show Skillset",
+      "description": "Show current skillset",
+      "function_name": "list_skillset",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "list_skillset"
+    },
+    "carton_identity": {
+      "type": "Menu",
+      "prompt": "📦 CartON Identity",
+      "description": "CartON identity for agent observations",
+      "options": {
+        "1": "carton_identity_equip",
+        "2": "carton_identity_unequip",
+        "3": "carton_identity_list"
+      }
+    },
+    "carton_identity_equip": {
+      "type": "Callable",
+      "prompt": "Equip CartON Identity",
+      "description": "Set CartON identity name",
+      "function_name": "equip_carton_identity",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "equip_carton_identity"
+    },
+    "carton_identity_unequip": {
+      "type": "Callable",
+      "prompt": "Unequip CartON Identity",
+      "description": "Remove CartON identity",
+      "function_name": "unequip_carton_identity",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "unequip_carton_identity"
+    },
+    "carton_identity_list": {
+      "type": "Callable",
+      "prompt": "Show CartON Identity",
+      "description": "Show current CartON identity",
+      "function_name": "list_carton_identity",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "list_carton_identity"
+    },
+    "approvals": {
+      "type": "Menu",
+      "prompt": "✅ Workflow Approvals",
+      "description": "Review and approve agent-generated workflows",
+      "options": {
+        "1": "approvals_view"
+      }
+    },
+    "approvals_view": {
+      "type": "Callable",
+      "prompt": "View Pending Approvals",
+      "description": "Show all workflows awaiting human approval",
+      "function_name": "view_pending_approvals",
+      "import_path": "heaven_tree_repl.agent_config_management",
+      "import_object": "view_pending_approvals"
     }
   }
 }

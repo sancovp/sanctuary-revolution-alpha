@@ -1,0 +1,213 @@
+name: Build Shell
+# Builds the Electron shell (meta-frontend + toolbar + process manager).
+# Only triggers when shell-related files change. Produces versioned .app/.dmg/.exe.
+
+on:
+  push:
+    paths:
+      - 'electron/**'
+      - 'meta-shell.html'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/build-shell.yml'
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: 'Version bump type'
+        required: false
+        default: 'patch'
+        type: choice
+        options: [patch, minor, major]
+
+permissions:
+  contents: write
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ─── Version ────────────────────────────────────────
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.bump.outputs.version }}
+      tag: ${{ steps.bump.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get current version
+        id: current
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Bump version
+        id: bump
+        run: |
+          BUMP_TYPE="${{ inputs.version_bump || 'patch' }}"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "${{ steps.current.outputs.version }}"
+          
+          case "$BUMP_TYPE" in
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
+          esac
+          
+          VERSION="$MAJOR.$MINOR.$PATCH"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Building SANCREV v$VERSION"
+
+      - name: Update package.json version
+        run: |
+          npm version ${{ steps.bump.outputs.version }} --no-git-tag-version
+          git config user.name "SANCREV CI"
+          git config user.email "ci@sancrev.dev"
+          git add package.json
+          git commit -m "chore: bump shell to v${{ steps.bump.outputs.version }}"
+          git push
+
+  # ─── Build macOS ────────────────────────────────────
+  build-mac:
+    needs: version
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Electron app (macOS)
+        run: npx electron-builder --mac --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_LINK: ${{ secrets.MAC_CERT_P12 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+
+      - name: Rename with version suffix
+        run: |
+          VERSION="${{ needs.version.outputs.version }}"
+          for f in dist/*.dmg; do
+            mv "$f" "${f%.dmg}_v${VERSION}.dmg"
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sancrev-mac-${{ needs.version.outputs.version }}
+          path: dist/*.dmg
+
+  # ─── Build Windows ─────────────────────────────────
+  build-win:
+    needs: version
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Electron app (Windows)
+        run: npx electron-builder --win --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Rename with version suffix
+        shell: bash
+        run: |
+          VERSION="${{ needs.version.outputs.version }}"
+          for f in dist/*.exe; do
+            mv "$f" "${f%.exe}_v${VERSION}.exe"
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sancrev-win-${{ needs.version.outputs.version }}
+          path: dist/*.exe
+
+  # ─── Build Linux ────────────────────────────────────
+  build-linux:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Electron app (Linux)
+        run: npx electron-builder --linux --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Rename with version suffix
+        run: |
+          VERSION="${{ needs.version.outputs.version }}"
+          for f in dist/*.AppImage; do
+            mv "$f" "${f%.AppImage}_v${VERSION}.AppImage"
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sancrev-linux-${{ needs.version.outputs.version }}
+          path: dist/*.AppImage
+
+  # ─── Release ────────────────────────────────────────
+  release:
+    needs: [version, build-mac, build-win, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.version.outputs.tag }}
+          name: "SANCREV OPERA ${{ needs.version.outputs.tag }}"
+          body: |
+            ## Shell Update ${{ needs.version.outputs.tag }}
+            
+            This updates the Electron shell (toolbar, process manager, webview container).
+            Your inner app (React source) is **not affected** — it runs from your local source via Vite.
+            
+            ### Install
+            Download and install alongside your current version. Both versions will work.
+            The new version will automatically connect to your existing inner app at `localhost:5173`.
+            
+            ### What changed
+            See commit history for shell changes since the last release.
+          files: |
+            artifacts/**/*.dmg
+            artifacts/**/*.exe
+            artifacts/**/*.AppImage
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

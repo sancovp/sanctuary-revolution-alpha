@@ -15,7 +15,7 @@ Fields are sourced from:
 """
 
 import logging
-from typing import Optional, Dict, Any, Union
+from typing import Optional, Dict, Any, Union, Callable
 
 from .config import HermesConfig, HeavenInputs, HeavenAgentArgs, HeavenHermesArgs
 from .runner import StepResult, StepStatus
@@ -91,7 +91,8 @@ def _build_heaven_agent_config(config: HermesConfig) -> "HeavenAgentConfig":
     tools = list(agent_args.tools)
     translated_mcps = _translate_mcp_servers(config.mcp_servers) if config.mcp_servers else None
 
-    return HeavenAgentConfig(
+    # Build base kwargs from explicitly mapped fields
+    agent_kwargs = dict(
         name=config.name or "sdna_agent",
         system_prompt=config.system_prompt or "",
         model=model,
@@ -100,13 +101,35 @@ def _build_heaven_agent_config(config: HermesConfig) -> "HeavenAgentConfig":
         max_tokens=agent_args.max_tokens,
         thinking_budget=agent_args.thinking_budget,
         tools=tools,
-        mcp_servers=translated_mcps,  # Direct passthrough like Conductor
+        mcp_servers=translated_mcps,
         extra_model_kwargs=extra_model_kwargs,
         use_uni_api=agent_args.use_uni_api,
         enable_compaction=agent_args.enable_compaction,
         additional_kws=agent_args.additional_kws,
         additional_kw_instructions=agent_args.additional_kw_instructions,
     )
+
+    # Add first-class optional fields (only if set, so defaults don't override)
+    if agent_args.skillset is not None:
+        agent_kwargs["skillset"] = agent_args.skillset
+    if agent_args.persona is not None:
+        agent_kwargs["persona"] = agent_args.persona
+    if agent_args.hook_registry is not None:
+        agent_kwargs["hook_registry"] = agent_args.hook_registry
+    if agent_args.carton_identity is not None:
+        agent_kwargs["carton_identity"] = agent_args.carton_identity
+    if agent_args.mcp_set is not None:
+        agent_kwargs["mcp_set"] = agent_args.mcp_set
+    if agent_args.state_machine is not None:
+        agent_kwargs["state_machine"] = agent_args.state_machine
+    if agent_args.min_sm_cycles is not None:
+        agent_kwargs["min_sm_cycles"] = agent_args.min_sm_cycles
+
+    # Merge extra_agent_kwargs — pass through any OTHER HeavenAgentConfig field
+    if hasattr(agent_args, 'extra_agent_kwargs') and agent_args.extra_agent_kwargs:
+        agent_kwargs.update(agent_args.extra_agent_kwargs)
+
+    return HeavenAgentConfig(**agent_kwargs)
 
 
 def _build_heaven_hermes_config(
@@ -145,6 +168,7 @@ async def heaven_agent_step(
     config: Union[HermesConfig, Dict[str, Any]],
     variable_inputs: Optional[Dict[str, Any]] = None,
     agent_constructor_kwargs: Optional[Dict[str, Any]] = None,
+    on_message: Optional[Callable] = None,
 ) -> StepResult:
     """
     Execute a single agent step via Heaven's hermes_step.
@@ -210,6 +234,7 @@ async def heaven_agent_step(
             source_container=config.source_container,
             hermes_config=heaven_hermes,
             agent_constructor_kwargs=constructor_kwargs,
+            heaven_main_callback=on_message,
         )
 
         # hermes_step returns str on error, dict on success,

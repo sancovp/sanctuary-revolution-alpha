@@ -8,6 +8,7 @@ Dual-write pattern: GIINT entities are mirrored to Carton knowledge graph.
 """
 
 import logging
+import os
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 
@@ -48,324 +49,170 @@ def get_task_concept_name(project_id: str, feature_name: str, component_name: st
 # ============================================================================
 
 def project_to_concept(project: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Convert GIINT Project to Carton concept format.
-
-    Args:
-        project: Project dict from Pydantic model
-
-    Returns:
-        Carton concept data (concept_name, concept, relationships)
-    """
+    """Convert GIINT Project to Carton concept format. All model fields → typed relationships."""
     concept_name = get_project_concept_name(project["project_id"])
+    concept = f"GIINT Project: {project['project_id']}. Location: {project['project_dir']}."
 
-    # Build description
-    description_parts = [
-        f"# GIINT Project: {project['project_id']}",
-        "",
-        f"**Type**: {project.get('project_type', 'single')}",
-        f"**Location**: {project['project_dir']}",
-        f"**Mode**: {project.get('mode', 'planning')}",
-        f"**Created**: {project.get('created_at', 'Unknown')}",
-        f"**Updated**: {project.get('updated_at', 'Unknown')}",
-        ""
-    ]
-
-    if project.get('starlog_path'):
-        description_parts.append(f"**STARLOG**: {project['starlog_path']}")
-
-    if project.get('github_repo_url'):
-        description_parts.append(f"**GitHub**: {project['github_repo_url']}")
-
-    # Add feature summary
     features = project.get('features', {})
-    if features:
-        description_parts.extend(["", "## Features"])
-        for feature_name in features.keys():
-            description_parts.append(f"- {feature_name}")
-
-    # Add sub-projects for composite type
     sub_projects = project.get('sub_projects', [])
-    if sub_projects:
-        description_parts.extend(["", "## Sub-Projects"])
-        for sub_project_id in sub_projects:
-            description_parts.append(f"- {sub_project_id}")
 
-    concept = "\n".join(description_parts)
-
-    # Build relationships
     relationships = [
         {"relationship": "is_a", "related": ["GIINT_Project"]},
-        {"relationship": "has_personal_domain", "related": ["frameworks"]},
-        {"relationship": "has_actual_domain", "related": ["Project_Management"]}
+        {"relationship": "has_project_type", "related": [project.get('project_type', 'single')]},
+        {"relationship": "has_mode", "related": [project.get('mode', 'planning')]},
+        {"relationship": "has_path", "related": [project['project_dir']]},
     ]
 
-    # Add relationships to sub-projects (for composite projects)
-    for sub_project_id in sub_projects:
-        relationships.append({
-            "relationship": "has_sub_project",
-            "related": [get_project_concept_name(sub_project_id)]
-        })
+    # Sub-projects
+    for sub_id in sub_projects:
+        relationships.append({"relationship": "has_sub_project", "related": [get_project_concept_name(sub_id)]})
 
-    # Add relationship to STARLOG project (typological link)
+    # Starlog project link
     if project.get('starlog_path'):
-        # Use the path as the starlog project identifier
-        starlog_project_name = f"Starlog_Project_{project['starlog_path']}"
-        relationships.append({
-            "relationship": "has_starlog_project",
-            "related": [starlog_project_name]
-        })
+        _raw = os.path.basename(project['starlog_path'].rstrip("/"))
+        _norm = _raw.replace("-", "_").replace(".", "_")
+        _norm = "_".join(s.title() if s.islower() else s for s in _norm.split("_"))
+        relationships.append({"relationship": "has_starlog_project", "related": [f"Starlog_Project_{_norm}"]})
 
-    # Add PART_OF relationship to STARSYSTEM (for scoring queries)
-    # STARSYSTEM naming convention: Starsystem_{path_slug} with Title_Case
+    # GitHub repo
+    if project.get('github_repo_url'):
+        relationships.append({"relationship": "has_github_repo", "related": [project['github_repo_url']]})
+
+    # Starsystem
     project_dir = project.get('project_dir', '')
     if project_dir:
         path_slug = project_dir.strip("/").replace("/", "_").replace("-", "_").title()
-        starsystem_name = f"Starsystem_{path_slug}"
-        relationships.append({
-            "relationship": "part_of",
-            "related": [starsystem_name]
-        })
+        relationships.append({"relationship": "part_of", "related": [f"Starsystem_{path_slug}"]})
 
-    return {
-        "concept_name": concept_name,
-        "concept": concept,
-        "relationships": relationships
-    }
+    return {"concept_name": concept_name, "concept": concept, "relationships": relationships}
 
 
 def feature_to_concept(project_id: str, feature_name: str, feature: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Convert GIINT Feature to Carton concept format.
-
-    Args:
-        project_id: Parent project ID
-        feature_name: Feature name
-        feature: Feature dict from Pydantic model
-
-    Returns:
-        Carton concept data
-    """
+    """Convert GIINT Feature to Carton concept format. All model fields → typed relationships."""
     concept_name = get_feature_concept_name(project_id, feature_name)
+    concept = f"GIINT Feature: {feature_name} in project {project_id}."
 
-    # Build description
-    description_parts = [
-        f"# GIINT Feature: {feature_name}",
-        "",
-        f"**Project**: {project_id}",
-        f"**Created**: {feature.get('created_at', 'Unknown')}",
-        ""
-    ]
-
-    # Add spec info if exists
-    spec = feature.get('spec')
-    if spec:
-        description_parts.extend([
-            "## Specification",
-            f"**File**: {spec.get('spec_file_path', 'None')}",
-            f"**Status**: {spec.get('status', 'draft')}",
-            f"**Created**: {spec.get('created_at', 'Unknown')}",
-            ""
-        ])
-
-    # Add component summary
-    components = feature.get('components', {})
-    if components:
-        description_parts.extend(["## Components"])
-        for component_name in components.keys():
-            description_parts.append(f"- {component_name}")
-
-    concept = "\n".join(description_parts)
-
-    # Build relationships
     relationships = [
         {"relationship": "is_a", "related": ["GIINT_Feature"]},
         {"relationship": "part_of", "related": [get_project_concept_name(project_id)]},
-        {"relationship": "has_personal_domain", "related": ["frameworks"]},
-        {"relationship": "has_actual_domain", "related": ["Feature_Development"]}
     ]
 
-    return {
-        "concept_name": concept_name,
-        "concept": concept,
-        "relationships": relationships
-    }
+    if feature.get('path'):
+        relationships.append({"relationship": "has_path", "related": [feature['path']]})
+
+    spec = feature.get('spec')
+    if spec:
+        relationships.append({"relationship": "has_spec", "related": [spec.get('spec_file_path', 'unknown')]})
+        relationships.append({"relationship": "has_spec_status", "related": [spec.get('status', 'draft')]})
+
+    return {"concept_name": concept_name, "concept": concept, "relationships": relationships}
 
 
 def component_to_concept(project_id: str, feature_name: str, component_name: str, component: Dict[str, Any]) -> Dict[str, Any]:
-    """Convert GIINT Component to Carton concept format."""
+    """Convert GIINT Component to Carton concept format. All model fields → typed relationships."""
     concept_name = get_component_concept_name(project_id, feature_name, component_name)
-
-    description_parts = [
-        f"# GIINT Component: {component_name}",
-        "",
-        f"**Project**: {project_id}",
-        f"**Feature**: {feature_name}",
-        f"**Created**: {component.get('created_at', 'Unknown')}",
-        ""
-    ]
-
-    spec = component.get('spec')
-    if spec:
-        description_parts.extend([
-            "## Specification",
-            f"**File**: {spec.get('spec_file_path', 'None')}",
-            f"**Status**: {spec.get('status', 'draft')}",
-            ""
-        ])
-
-    deliverables = component.get('deliverables', {})
-    if deliverables:
-        description_parts.extend(["## Deliverables"])
-        for deliverable_name in deliverables.keys():
-            description_parts.append(f"- {deliverable_name}")
-
-    concept = "\n".join(description_parts)
+    concept = f"GIINT Component: {component_name} in feature {feature_name}, project {project_id}."
 
     relationships = [
         {"relationship": "is_a", "related": ["GIINT_Component"]},
         {"relationship": "part_of", "related": [get_feature_concept_name(project_id, feature_name)]},
-        {"relationship": "has_personal_domain", "related": ["frameworks"]},
-        {"relationship": "has_actual_domain", "related": ["Component_Design"]}
     ]
 
-    return {
-        "concept_name": concept_name,
-        "concept": concept,
-        "relationships": relationships
-    }
+    if component.get('path'):
+        relationships.append({"relationship": "has_path", "related": [component['path']]})
+        # OWL requires hasCodeEntity — use path as code file reference
+        relationships.append({"relationship": "has_code_entity", "related": [component['path']]})
+
+    spec = component.get('spec')
+    if spec:
+        relationships.append({"relationship": "has_spec", "related": [spec.get('spec_file_path', 'unknown')]})
+        relationships.append({"relationship": "has_spec_status", "related": [spec.get('status', 'draft')]})
+
+    return {"concept_name": concept_name, "concept": concept, "relationships": relationships}
 
 
 def deliverable_to_concept(project_id: str, feature_name: str, component_name: str, deliverable_name: str, deliverable: Dict[str, Any]) -> Dict[str, Any]:
-    """Convert GIINT Deliverable to Carton concept format."""
+    """Convert GIINT Deliverable to Carton concept format. All model fields → typed relationships."""
     concept_name = get_deliverable_concept_name(project_id, feature_name, component_name, deliverable_name)
-
-    description_parts = [
-        f"# GIINT Deliverable: {deliverable_name}",
-        "",
-        f"**Project**: {project_id}",
-        f"**Feature**: {feature_name}",
-        f"**Component**: {component_name}",
-        f"**Created**: {deliverable.get('created_at', 'Unknown')}",
-        ""
-    ]
-
-    spec = deliverable.get('spec')
-    if spec:
-        description_parts.extend([
-            "## Specification",
-            f"**File**: {spec.get('spec_file_path', 'None')}",
-            f"**Status**: {spec.get('status', 'draft')}",
-            ""
-        ])
-
-    tasks = deliverable.get('tasks', {})
-    if tasks:
-        description_parts.extend(["## Tasks"])
-        for task_id, task_data in tasks.items():
-            status = task_data.get('status', 'ready')
-            assignee = task_data.get('assignee', 'UNKNOWN')
-            description_parts.append(f"- {task_id} ({status}, {assignee})")
-
-    operadic_flow_ids = deliverable.get('operadic_flow_ids', [])
-    if operadic_flow_ids:
-        description_parts.extend(["", "## Vendored OperadicFlows"])
-        for flow_id in operadic_flow_ids:
-            description_parts.append(f"- {flow_id}")
-
-    concept = "\n".join(description_parts)
+    concept = f"GIINT Deliverable: {deliverable_name} in component {component_name}, feature {feature_name}, project {project_id}."
 
     relationships = [
         {"relationship": "is_a", "related": ["GIINT_Deliverable"]},
         {"relationship": "part_of", "related": [get_component_concept_name(project_id, feature_name, component_name)]},
-        {"relationship": "has_personal_domain", "related": ["frameworks"]},
-        {"relationship": "has_actual_domain", "related": ["Deliverable_Planning"]}
     ]
 
-    return {
-        "concept_name": concept_name,
-        "concept": concept,
-        "relationships": relationships
-    }
+    spec = deliverable.get('spec')
+    if spec:
+        relationships.append({"relationship": "has_spec", "related": [spec.get('spec_file_path', 'unknown')]})
+        relationships.append({"relationship": "has_spec_status", "related": [spec.get('status', 'draft')]})
+
+    # Covers component link
+    if deliverable.get('covers_component'):
+        relationships.append({"relationship": "covers_component", "related": [deliverable['covers_component']]})
+
+    # OperadicFlow links
+    for flow_id in deliverable.get('operadic_flow_ids', []):
+        relationships.append({"relationship": "has_operadic_flow", "related": [flow_id]})
+
+    return {"concept_name": concept_name, "concept": concept, "relationships": relationships}
 
 
 def task_to_concept(project_id: str, feature_name: str, component_name: str, deliverable_name: str, task_id: str, task: Dict[str, Any]) -> Dict[str, Any]:
-    """Convert GIINT Task to Carton concept format."""
+    """Convert GIINT Task to Carton concept format. All model fields → typed relationships."""
     concept_name = get_task_concept_name(project_id, feature_name, component_name, deliverable_name, task_id)
+    concept = f"GIINT Task: {task_id} in deliverable {deliverable_name}, component {component_name}."
 
-    description_parts = [
-        f"# GIINT Task: {task_id}",
-        "",
-        f"**Project**: {project_id}",
-        f"**Feature**: {feature_name}",
-        f"**Component**: {component_name}",
-        f"**Deliverable**: {deliverable_name}",
-        "",
-        f"**Status**: {task.get('status', 'ready')}",
-        f"**Assignee**: {task.get('assignee', 'UNKNOWN')}",
-        f"**Ready**: {task.get('is_ready', False)}",
-        f"**Blocked**: {task.get('is_blocked', False)}",
-        ""
-    ]
-
-    if task.get('agent_id'):
-        description_parts.append(f"**Agent ID**: {task['agent_id']}")
-    if task.get('human_name'):
-        description_parts.append(f"**Human**: {task['human_name']}")
-    if task.get('blocked_description'):
-        description_parts.append(f"**Block Reason**: {task['blocked_description']}")
-
-    description_parts.append("")
-
-    spec = task.get('spec')
-    if spec:
-        description_parts.extend([
-            "## Specification (Rollup)",
-            f"**File**: {spec.get('spec_file_path', 'None')}",
-            f"**Status**: {spec.get('status', 'draft')}",
-            ""
-        ])
-
-    if task.get('github_issue_id'):
-        description_parts.extend([
-            "## GitHub Integration",
-            f"**Issue ID**: {task['github_issue_id']}",
-            f"**Issue URL**: {task.get('github_issue_url', 'None')}",
-            ""
-        ])
-
-    description_parts.extend([
-        f"**Created**: {task.get('created_at', 'Unknown')}",
-        f"**Updated**: {task.get('updated_at', 'Unknown')}"
-    ])
-
-    concept = "\n".join(description_parts)
+    # Status mapping
+    status_map = {
+        'ready': 'Task_Ready', 'in_progress': 'Task_In_Progress',
+        'in_review': 'Task_In_Review', 'done': 'Task_Done', 'blocked': 'Task_Blocked',
+    }
+    status = task.get('status', 'ready')
 
     relationships = [
         {"relationship": "is_a", "related": ["GIINT_Task"]},
         {"relationship": "part_of", "related": [get_deliverable_concept_name(project_id, feature_name, component_name, deliverable_name)]},
-        {"relationship": "has_personal_domain", "related": ["frameworks"]},
-        {"relationship": "has_actual_domain", "related": ["Task_Execution"]}
+        {"relationship": "has_status", "related": [status_map.get(status, "Task_Ready")]},
+        {"relationship": "has_assignee", "related": [task.get('assignee', 'UNKNOWN')]},
     ]
 
-    # Add status-specific relationships
-    status = task.get('status', 'ready')
-    if status == 'ready':
-        relationships.append({"relationship": "has_status", "related": ["Task_Ready"]})
-    elif status == 'in_progress':
-        relationships.append({"relationship": "has_status", "related": ["Task_In_Progress"]})
-    elif status == 'in_review':
-        relationships.append({"relationship": "has_status", "related": ["Task_In_Review"]})
-    elif status == 'done':
-        relationships.append({"relationship": "has_status", "related": ["Task_Done"]})
-    elif status == 'blocked':
-        relationships.append({"relationship": "has_status", "related": ["Task_Blocked"]})
+    # Agent/human identity
+    if task.get('agent_id'):
+        relationships.append({"relationship": "has_agent_id", "related": [task['agent_id']]})
+    if task.get('human_name'):
+        relationships.append({"relationship": "has_human_name", "related": [task['human_name']]})
 
-    return {
-        "concept_name": concept_name,
-        "concept": concept,
-        "relationships": relationships
-    }
+    # Blocked info
+    if task.get('is_blocked') and task.get('blocked_description'):
+        relationships.append({"relationship": "has_blocked_reason", "related": [task['blocked_description']]})
+
+    # Spec
+    spec = task.get('spec')
+    if spec:
+        relationships.append({"relationship": "has_spec", "related": [spec.get('spec_file_path', 'unknown')]})
+        relationships.append({"relationship": "has_spec_status", "related": [spec.get('status', 'draft')]})
+
+    # GitHub integration
+    if task.get('github_issue_id'):
+        relationships.append({"relationship": "has_github_issue", "related": [task['github_issue_id']]})
+    if task.get('github_issue_url'):
+        relationships.append({"relationship": "has_github_issue_url", "related": [task['github_issue_url']]})
+
+    # Claude Code bridge
+    if task.get('claude_task_id'):
+        relationships.append({"relationship": "has_claude_task_id", "related": [task['claude_task_id']]})
+
+    # Context metadata
+    if task.get('files_touched'):
+        relationships.append({"relationship": "has_files_touched", "related": task['files_touched']})
+    if task.get('lines_that_matter'):
+        relationships.append({"relationship": "has_lines_that_matter", "related": [task['lines_that_matter']]})
+    if task.get('context_deps'):
+        relationships.append({"relationship": "has_context_deps", "related": task['context_deps']})
+    if task.get('key_insight'):
+        relationships.append({"relationship": "has_key_insight", "related": [task['key_insight']]})
+
+    return {"concept_name": concept_name, "concept": concept, "relationships": relationships}
 
 
 # ============================================================================
@@ -519,7 +366,7 @@ def sync_project_to_carton(project: Dict[str, Any]) -> Dict[str, Any]:
                 concept_name=concept["name"],
                 description=concept["description"],
                 relationships=concept["relationships"],
-                hide_youknow=True
+                hide_youknow=False
             )
 
         logger.info(f"Successfully synced project {project_id} to Carton with {len(concepts)} concepts")
@@ -622,7 +469,7 @@ def sync_feature_to_carton(project_id: str, feature_name: str, feature: Dict[str
         # Submit all concepts (each queued with raw_concept=True, no observation wrapper)
         from carton_mcp.add_concept_tool import add_concept_tool_func
         for concept in concepts:
-            add_concept_tool_func(concept["name"], concept["description"], concept["relationships"], hide_youknow=True)
+            add_concept_tool_func(concept["name"], concept["description"], concept["relationships"], hide_youknow=False)
 
         return {"success": True, "feature_name": feature_name, "concepts_synced": len(concepts)}
 
@@ -696,7 +543,7 @@ def sync_component_to_carton(project_id: str, feature_name: str, component_name:
         # Submit all concepts (each queued with raw_concept=True, no observation wrapper)
         from carton_mcp.add_concept_tool import add_concept_tool_func
         for concept in concepts:
-            add_concept_tool_func(concept["name"], concept["description"], concept["relationships"], hide_youknow=True)
+            add_concept_tool_func(concept["name"], concept["description"], concept["relationships"], hide_youknow=False)
 
         return {"success": True, "component_name": component_name, "concepts_synced": len(concepts)}
 
@@ -750,7 +597,7 @@ def sync_deliverable_to_carton(project_id: str, feature_name: str, component_nam
         # Submit all concepts (each queued with raw_concept=True, no observation wrapper)
         from carton_mcp.add_concept_tool import add_concept_tool_func
         for concept in concepts:
-            add_concept_tool_func(concept["name"], concept["description"], concept["relationships"], hide_youknow=True)
+            add_concept_tool_func(concept["name"], concept["description"], concept["relationships"], hide_youknow=False)
 
         return {"success": True, "deliverable_name": deliverable_name, "concepts_synced": len(concepts)}
 
@@ -775,7 +622,7 @@ def sync_task_to_carton(project_id: str, feature_name: str, component_name: str,
             task_concept["concept_name"],
             task_concept["concept"],
             task_concept["relationships"],
-            hide_youknow=True
+            hide_youknow=False
         )
 
         return {"success": True, "task_id": task_id, "concepts_synced": 1}
@@ -802,7 +649,7 @@ def update_task_in_carton(project_id: str, feature_name: str, component_name: st
             task_concept["concept"],
             task_concept["relationships"],
             desc_update_mode="replace",
-            hide_youknow=True
+            hide_youknow=False
         )
 
         logger.info(f"Updated task {task_id} in Carton")

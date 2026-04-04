@@ -1,152 +1,274 @@
-"""Runner: orchestrates scientific method phases using connector + researcher SDNAC.
+"""Observatory research queue runner.
 
-Three execution modes (same as original Observatory):
-- run_one_step: Execute single phase, advance
-- run_with_proposal_gate: Run until PROPOSAL, pause for human approval
-- run_autonomous: Full cycle, auto-approve proposals
+The missing piece between the factory (make_researcher_compoctopus) and CAVE.
+This module owns ALL queue logic. CAVE's ResearcherAgent DIs this as its runtime.
+
+Queue entries have two types:
+- START (status=pending): new investigation, runs full chain OBSERVE→EXPERIMENT, pauses
+- RESUME (queue_type=resume): grug callback wrote data, runs ANALYZE with grug context
 """
 
-from typing import Any, Dict
+import asyncio
+import json
+import logging
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Callable, Dict, Optional
 
-from .connector import GrugConnector
-from .state_machine import StateMachine
+from .agents import make_researcher_compoctopus
+from .config import PHASES
+
+logger = logging.getLogger(__name__)
+
+QUEUE_DIR = Path("/tmp/heaven_data/observatory")
+QUEUE_FILE = QUEUE_DIR / "research_queue.json"
 
 
-class Runner:
-    """Orchestrates the research loop.
+# =============================================================================
+# Queue I/O
+# =============================================================================
 
-    Researcher SDNAC does thinking (per phase).
-    Connector handles code execution (when experiment phase needs Grug).
-    State machine tracks phase transitions.
+def load_queue() -> list:
+    if QUEUE_FILE.exists():
+        return json.loads(QUEUE_FILE.read_text())
+    return []
+
+
+def save_queue(queue: list):
+    QUEUE_DIR.mkdir(parents=True, exist_ok=True)
+    QUEUE_FILE.write_text(json.dumps(queue, indent=2))
+
+
+def write_resume(grug_result: dict) -> bool:
+    """Write grug callback data into the queue on the matching investigation.
+
+    Called by the HTTP endpoint when grug POSTs back with results.
+    Returns True if the investigation was found and updated.
     """
+    investigation_name = grug_result.get("investigation_name", "")
+    if not investigation_name:
+        logger.error("write_resume: no investigation_name in grug_result")
+        return False
 
-    def __init__(self, connector: GrugConnector, researcher_sdnac, state: StateMachine):
-        self.connector = connector
-        self.researcher = researcher_sdnac
-        self.state = state
+    queue = load_queue()
+    for entry in queue:
+        if entry["investigation_name"] == investigation_name:
+            entry["grug_history_id"] = grug_result.get("history_id", "")
+            entry["grug_history_path"] = grug_result.get("grug_history_path", "")
+            entry["grug_status"] = grug_result.get("status", "")
+            entry["queue_type"] = "resume"
+            logger.info("Wrote RESUME data to queue for %s: path=%s",
+                        investigation_name, entry["grug_history_path"])
+            save_queue(queue)
+            return True
 
-    async def run_one_step(self, hint: str = "") -> Dict[str, Any]:
-        """Execute single phase and advance state machine.
+    logger.error("write_resume: investigation %s not found in queue", investigation_name)
+    return False
 
-        Returns dict with completed phase, next phase, and result context.
-        """
-        phase_prompt = self._build_phase_prompt(hint)
-        ctx = {
-            "phase": self.state.phase,
-            "iteration": self.state.iteration,
-            "hint": hint,
-            "phase_prompt": phase_prompt,
-            "phase_data": self.state.data,
+
+def recover_interrupted() -> int:
+    """Find in_progress items and prepare them for resumption. Returns count."""
+    queue = load_queue()
+    changed = False
+
+    for entry in queue:
+        if entry.get("status") != "in_progress":
+            continue
+        if entry.get("last_completed_phase") is not None:
+            # Items paused after EXPERIMENT are waiting for grug callback — don't auto-resume
+            if "experiment" in entry.get("last_completed_phase_name", "").lower() and entry.get("queue_type") != "resume":
+                logger.info("Awaiting grug callback (not resuming): %s", entry["investigation_name"])
+                continue
+            logger.info("Resumable: %s (completed through phase %d: %s)",
+                        entry["investigation_name"],
+                        entry["last_completed_phase"],
+                        entry.get("last_completed_phase_name", "?"))
+        else:
+            entry["status"] = "pending"
+            changed = True
+            logger.info("Reset to pending (no progress): %s", entry["investigation_name"])
+
+    if changed:
+        save_queue(queue)
+
+    return len([e for e in queue if e.get("status") == "in_progress"])
+
+
+# =============================================================================
+# Runner — the function that CAVE DIs as the runtime
+# =============================================================================
+
+_run_lock = asyncio.Lock()
+
+
+async def run_research(on_notify: Optional[Callable] = None, on_message: Optional[Callable] = None) -> Dict[str, Any]:
+    """Process next queue item. Only ONE research runs at a time.
+
+    This is the function that CAVE's ResearcherAgent.run() calls.
+    It owns all queue logic, chain building, and execution.
+
+    Args:
+        on_notify: Optional callback for phase/status notifications.
+        on_message: Optional callback for SDNAC turn-by-turn output (EventBroadcaster).
+    """
+    if _run_lock.locked():
+        logger.warning("run_research called but already running — rejecting")
+        return {"status": "busy", "message": "Researcher is already running."}
+
+    async with _run_lock:
+        return await _run_research_locked(on_notify=on_notify, on_message=on_message)
+
+
+async def _run_research_locked(on_notify: Optional[Callable] = None, on_message: Optional[Callable] = None) -> Dict[str, Any]:
+    """Internal: process one queue item. Caller MUST hold _run_lock."""
+
+    def notify(text: str):
+        if on_notify:
+            try:
+                on_notify(text)
+            except Exception as e:
+                logger.error("Notify error: %s", e)
+
+    queue = load_queue()
+
+    # Priority 1: RESUME entries (grug called back)
+    resume_entries = [e for e in queue if e.get("queue_type") == "resume" and e.get("status") == "in_progress"]
+    # Priority 2: in_progress with phase progress (crash recovery) — NOT experiment-paused
+    resumable = [e for e in queue if e.get("status") == "in_progress"
+                 and e.get("last_completed_phase") is not None
+                 and e.get("queue_type") != "resume"
+                 and "experiment" not in e.get("last_completed_phase_name", "").lower()]
+    # Priority 3: pending (new investigations)
+    pending = [e for e in queue if e.get("status") == "pending"]
+
+    if resume_entries:
+        entry = resume_entries[0]
+        is_resume = True
+    elif resumable:
+        entry = resumable[0]
+        is_resume = True
+    elif pending:
+        entry = pending[0]
+        is_resume = False
+    else:
+        return {"status": "empty", "message": "No research items to process"}
+
+    entry["status"] = "in_progress"
+    save_queue(queue)
+
+    action = "Resuming" if is_resume else "Starting"
+    notify(
+        f"🔬 **Research {action.lower()}:** {entry['topic']}\n"
+        f"Investigation: {entry['investigation_name']}\n"
+        f"Pattern: CompoctopusAgent (Chain of SDNACs)"
+    )
+
+    # Build CompoctopusAgent
+    compoctopus = make_researcher_compoctopus(
+        topic=entry["topic"],
+        domain=entry["domain"],
+        investigation_name=entry["investigation_name"],
+        hint=entry.get("hint", ""),
+    )
+
+    # Phase progress callback
+    def _on_phase_complete(phase_index, phase_name):
+        q = load_queue()
+        for e in q:
+            if e["investigation_name"] == entry["investigation_name"]:
+                e["last_completed_phase"] = phase_index
+                e["last_completed_phase_name"] = phase_name
+        save_queue(q)
+        logger.info("Research progress saved: phase %d (%s) complete", phase_index, phase_name)
+
+    # Resume from last completed phase
+    last_phase = entry.get("last_completed_phase")
+    start_from = (last_phase if last_phase is not None else -1) + 1
+
+    try:
+        context = {
+            "topic": entry["topic"],
+            "domain": entry["domain"],
+            "investigation_name": entry["investigation_name"],
+            "hint": entry.get("hint", ""),
         }
 
-        result = await self.researcher.execute(ctx)
+        # Read grug data from queue entry (written by write_resume)
+        if entry.get("grug_history_path"):
+            context["grug_history_id"] = entry.get("grug_history_id", "")
+            context["grug_history_path"] = entry["grug_history_path"]
+            context["grug_status"] = entry.get("grug_status", "")
 
-        if self._needs_grug(result):
-            experiment_spec = result.context.get("experiment_spec", "")
-            grug_output = await self.connector.send_and_wait(experiment_spec, result.context)
-            # Forward Grug results back to researcher for analysis
-            analysis_prompt = (
-                f"Analyze the experiment results:\n\n{grug_output.get('text', '')}\n\n"
-                f"Original spec: {experiment_spec}"
-            )
-            ctx = {
-                **result.context,
-                "grug_output": grug_output,
-                "phase_prompt": analysis_prompt,
-            }
-            result = await self.researcher.execute(ctx)
+        if start_from > 0:
+            notify(f"🔄 Resuming from phase {start_from} (skipping {start_from} completed phases)")
 
-        completed_phase = self.state.phase
-        # Store any result data the researcher produced
-        if result.context.get("phase_data"):
-            for k, v in result.context["phase_data"].items():
-                self.state.set_data(k, v)
-
-        next_phase = self.state.next()
-
-        return {
-            "completed_phase": completed_phase,
-            "next_phase": next_phase,
-            "iteration": self.state.iteration,
-            "result": result.context,
-            "status": result.status.value,
-        }
-
-    async def run_with_proposal_gate(self, hint: str = "") -> Dict[str, Any]:
-        """Run phases until PROPOSAL, then pause for human approval.
-
-        At PROPOSAL phase:
-        - hint="accept" → advance to EXPERIMENT
-        - hint="retry:feedback" → stay at PROPOSAL, regenerate
-        - hint="quit" → reset to OBSERVE
-        """
-        if self.state.phase == "proposal":
-            if hint.startswith("accept"):
-                return await self.run_one_step(hint="accept")
-            elif hint.startswith("retry"):
-                feedback = hint.split(":", 1)[1] if ":" in hint else ""
-                return await self.run_one_step(hint=f"retry:{feedback}")
-            elif hint == "quit":
-                self.state.phase = "observe"
-                self.state.data = {}
-                return {"phase": "observe", "status": "quit"}
-
-        # Run phases until we hit proposal
-        while self.state.phase != "proposal":
-            step_result = await self.run_one_step(hint)
-            if step_result["status"] != "success":
-                return step_result
-
-        # At proposal — return for human review
-        return {
-            "phase": "proposal",
-            "awaiting_approval": True,
-            "proposal": self.state.get_data("proposal"),
-            "iteration": self.state.iteration,
-        }
-
-    async def run_autonomous(self, max_cycles: int = 1) -> Dict[str, Any]:
-        """Full cycle(s), auto-approve proposals.
-
-        Runs observe→hypothesize→proposal(auto)→experiment→analyze
-        for max_cycles iterations.
-        """
-        target_iteration = self.state.iteration + max_cycles
-
-        while self.state.iteration < target_iteration:
-            result = await self.run_one_step(hint="auto_approve")
-            if result["status"] not in ("success", "blocked"):
-                return result
-
-        return {
-            "status": "cycles_complete",
-            "iterations_completed": max_cycles,
-            "final_iteration": self.state.iteration,
-        }
-
-    def _needs_grug(self, result) -> bool:
-        """Check if researcher wants code execution."""
-        return (
-            self.state.phase == "experiment"
-            and result.context.get("needs_grug", False)
+        result = await compoctopus.chain.execute(
+            context, start_from=start_from,
+            on_phase_complete=_on_phase_complete,
+            on_message=on_message,
         )
 
-    def _build_phase_prompt(self, hint: str) -> str:
-        """Build phase-specific prompt for researcher."""
-        phase = self.state.phase
-        iteration = self.state.iteration
+        # Check for AWAITING_INPUT (chain paused after EXPERIMENT)
+        is_awaiting = hasattr(result, 'status') and 'awaiting' in str(result.status).lower()
+        if is_awaiting:
+            notify(
+                f"⏸️ **Research paused:** {entry['investigation_name']}\n"
+                f"Waiting for grug to complete experiment. Will resume ANALYZE on callback."
+            )
+            return {
+                "status": "awaiting_grug",
+                "investigation": entry["investigation_name"],
+                "last_phase": entry.get("last_completed_phase_name"),
+            }
 
-        base = f"You are in the {phase.upper()} phase (iteration {iteration}).\n\n"
+        # Check for errors
+        is_error = False
+        if hasattr(result, 'status'):
+            is_error = str(result.status) not in ("success", "LinkStatus.SUCCESS")
+        if hasattr(result, 'error') and result.error:
+            is_error = True
 
-        prompts = {
-            "observe": "Survey the current state. What do you see? What patterns emerge? Record observations.",
-            "hypothesize": "Based on observations, form a testable hypothesis. What do you predict?",
-            "proposal": "Write a research proposal for testing this hypothesis. Include methodology and expected results.",
-            "experiment": "Design and specify the experiment. Set needs_grug=True in phase_data if code execution is needed.",
-            "analyze": "Analyze the results. What worked? What didn't? What's next?",
-        }
+        if is_error:
+            error_msg = getattr(result, 'error', 'Unknown error')
+            queue = load_queue()
+            for e in queue:
+                if e["investigation_name"] == entry["investigation_name"]:
+                    e["status"] = "error"
+                    e["error"] = str(error_msg)
+            save_queue(queue)
+            notify(f"❌ **Research FAILED:** {entry['investigation_name']}\nError: {error_msg}")
+            return {"status": "error", "investigation": entry["investigation_name"], "error": str(error_msg)}
 
-        prompt = base + prompts.get(phase, "")
-        if hint:
-            prompt += f"\n\nHint: {hint}"
-        return prompt
+        # Success
+        completed_at = datetime.now().strftime("%Y%m%d_%H%M%S")
+        queue = load_queue()
+        for e in queue:
+            if e["investigation_name"] == entry["investigation_name"]:
+                e["status"] = "completed"
+                e["completed_at"] = completed_at
+                e.pop("queue_type", None)
+        save_queue(queue)
+        notify(f"✅ **Research completed:** {entry['investigation_name']}")
+        return {"status": "completed", "investigation": entry["investigation_name"], "topic": entry["topic"]}
+
+    except Exception as e:
+        logger.error("Research failed: %s — %s", entry["investigation_name"], e, exc_info=True)
+        queue = load_queue()
+        for qe in queue:
+            if qe["investigation_name"] == entry["investigation_name"]:
+                qe["status"] = "error"
+                qe["error"] = str(e)
+        save_queue(queue)
+        notify(f"❌ **Research failed:** {entry['investigation_name']}\nError: {e}")
+        return {"status": "error", "investigation": entry["investigation_name"], "error": str(e)}
+
+
+def get_status() -> Dict[str, Any]:
+    """Current queue status."""
+    queue = load_queue()
+    return {
+        "queue_pending": len([e for e in queue if e.get("status") == "pending"]),
+        "queue_in_progress": len([e for e in queue if e.get("status") == "in_progress"]),
+        "queue_resume": len([e for e in queue if e.get("queue_type") == "resume"]),
+        "queue_total": len(queue),
+    }

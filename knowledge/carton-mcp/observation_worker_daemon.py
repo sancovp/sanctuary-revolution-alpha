@@ -171,9 +171,17 @@ def batch_create_concepts_neo4j(concepts_data: list, shared_connection) -> dict:
         MERGE (n:Wiki {n: c.name})
         ON CREATE SET n.c = c.canonical, n.linked = false
         SET n.d = CASE
-            WHEN c.update_mode = 'append' AND n.d IS NOT NULL AND n.d <> ''
+            WHEN n.d IS NULL OR n.d = ''
+                THEN c.description
+            WHEN n.d = c.description
+                THEN n.d
+            WHEN c.description CONTAINS n.d
+                THEN c.description
+            WHEN n.d CONTAINS c.description
+                THEN n.d
+            WHEN c.update_mode = 'append'
                 THEN n.d + '\n\n---\n\n' + c.description
-            WHEN c.update_mode = 'prepend' AND n.d IS NOT NULL AND n.d <> ''
+            WHEN c.update_mode = 'prepend'
                 THEN c.description + '\n\n---\n\n' + n.d
             ELSE c.description
         END
@@ -289,18 +297,52 @@ def check_and_promote_soup_items(graph, new_concept_names: list) -> int:
             name = record.get('name') if isinstance(record, dict) else record['name']
             reason = record.get('reason') if isinstance(record, dict) else record['reason']
 
-            # TODO: Re-validate via YOUKNOW to confirm chain now completes
-            # For now, just check if the mentioned concept exists
-            # Full re-validation would call youknow(original_statement)
+            # Re-validate via YOUKNOW — the reasoner confirms chain now completes
+            try:
+                from youknow_kernel.compiler import youknow as youknow_validate
+                # Reconstruct statement from concept's relationships in Neo4j
+                rel_query = """
+                MATCH (c:Wiki {n: $name})-[r]->(t:Wiki)
+                WHERE type(r) IN ['IS_A', 'PART_OF', 'PRODUCES']
+                RETURN type(r) as rel, t.n as target
+                """
+                rels = graph.execute_query(rel_query, {'name': name})
+                if rels:
+                    # Build statement: "Name is_a X, part_of Y, produces Z"
+                    triples = []
+                    for rel_rec in rels:
+                        rel_type = (rel_rec.get('rel') if isinstance(rel_rec, dict) else rel_rec['rel']).lower()
+                        target = rel_rec.get('target') if isinstance(rel_rec, dict) else rel_rec['target']
+                        if target:
+                            triples.append(f"{rel_type} {target}")
+                    if triples:
+                        statement = f"{name} {', '.join(triples)}"
+                        yk_result = youknow_validate(statement)
+                        if yk_result == "OK":
+                            # Chain completes — promote to ONT
+                            promote_query = """
+                            MATCH (s:Wiki {n: $name})-[r:REQUIRES_EVOLUTION]->(re:Wiki {n: "Requires_Evolution"})
+                            DELETE r
+                            """
+                            graph.execute_query(promote_query, {'name': name})
+                            promoted_count += 1
+                            print(f"[Promote] {name}: SOUP → ONT (youknow confirmed)", file=sys.stderr)
+                        else:
+                            print(f"[Promote] {name}: still SOUP — {yk_result[:80]}", file=sys.stderr)
+                        continue
+            except ImportError:
+                print(f"[Promote] youknow_kernel not available — skipping re-validation for {name}", file=sys.stderr)
+            except Exception as e:
+                print(f"[Promote] YOUKNOW re-validation failed for {name}: {e}", file=sys.stderr)
 
-            # Remove REQUIRES_EVOLUTION relationship (promote to ONT)
+            # Fallback: if youknow not available, still promote (old behavior)
             promote_query = """
             MATCH (s:Wiki {n: $name})-[r:REQUIRES_EVOLUTION]->(re:Wiki {n: "Requires_Evolution"})
             DELETE r
             """
             graph.execute_query(promote_query, {'name': name})
             promoted_count += 1
-            print(f"[Promote] {name}: SOUP → ONT (dep '{reason[:50]}...' satisfied)", file=sys.stderr)
+            print(f"[Promote] {name}: SOUP → ONT (fallback — youknow unavailable)", file=sys.stderr)
 
     except Exception as e:
         print(f"[Promote] Error checking SOUP items: {e}", file=sys.stderr)
@@ -350,6 +392,7 @@ def parse_queue_file_to_concepts(queue_file: Path) -> list:
                 'relationships': rels_dict,
                 'timestamp': data.get('timestamp'),  # Pass through original timestamp
                 'desc_update_mode': data.get('desc_update_mode', 'append'),  # append/prepend/replace
+                'skip_ontology_healing': data.get('skip_ontology_healing', False),
             })
     elif data.get('concepts') and isinstance(data['concepts'], list):
         # Concepts list format: {"concepts": [{name, description, relationships}, ...]}
@@ -507,8 +550,13 @@ def process_queue_file(queue_file: Path, shared_connection=None) -> bool:
             part_of_targets = rel_dict.get('part_of', [])
 
             is_hc_or_ultramap = 'hypercluster' in is_a_targets or 'ultramap' in is_a_targets
-            is_hc_member = any(
-                t.startswith('Giint_Project_') or t.startswith('GIINT_Project_')
+            # Fire on ANY concept in the GIINT hierarchy — not just direct PART_OF project
+            # Components are PART_OF Features, Deliverables PART_OF Components, Tasks PART_OF Deliverables
+            # All need to trigger recompile since MEMORY.md shows the full expanded hierarchy
+            concept_name = rel_dict.get('concept_name', '') or queue_data.get('concept_name', '')
+            is_giint_concept = concept_name.startswith('Giint_') or concept_name.startswith('GIINT_')
+            is_hc_member = is_giint_concept or any(
+                t.startswith('Giint_') or t.startswith('GIINT_')
                 or t.startswith('Hypercluster_')
                 for t in part_of_targets
             )
@@ -527,8 +575,10 @@ def process_queue_file(queue_file: Path, shared_connection=None) -> bool:
                     if should_compile:
                         from carton_mcp.substrate_projector import compile_memory_tier
                         compile_result = compile_memory_tier(0, shared_connection=shared_connection)
+                        compile_memory_tier(1, shared_connection=shared_connection)
+                        compile_memory_tier(2, shared_connection=shared_connection)
                         debounce_file.write_text(str(now))
-                        print(f"[Worker] Memory recompiled: {compile_result}", file=sys.stderr)
+                        print(f"[Worker] Memory recompiled (all tiers): {compile_result}", file=sys.stderr)
                     else:
                         print(f"[Worker] Memory compile debounced (< 60s)", file=sys.stderr)
                 except Exception as compile_err:
@@ -1001,6 +1051,34 @@ def worker_daemon():
                 elif not shared_neo4j:
                     print("[Worker] ERROR: No Neo4j connection — files stay in queue", file=sys.stderr)
 
+                # Phase 2.5: Enforce GIINT ontology completeness (auto-create superstructure)
+                if all_concepts and neo4j_succeeded:
+                    try:
+                        from carton_mcp.ontology_graphs import ensure_ontology_completeness
+                        GIINT_TYPES = {"giint_project", "giint_feature", "giint_component",
+                                       "giint_deliverable", "giint_task"}
+                        for c in all_concepts:
+                            # Skip concepts auto-created by ensure_ontology_completeness
+                            # (they already have their hierarchy — re-running would double-scaffold)
+                            if c.get("skip_ontology_healing", False):
+                                continue
+                            rels = c.get("relationships", {})
+                            if isinstance(rels, list):
+                                rels = {r.get("relationship", ""): r.get("related", []) for r in rels if isinstance(r, dict)}
+                            c_isa = [t.lower() for t in rels.get("is_a", [])]
+                            if not GIINT_TYPES.intersection(c_isa):
+                                continue
+                            auto_created = ensure_ontology_completeness(
+                                concept_name=c.get("name", ""),
+                                is_a_list=rels.get("is_a", []),
+                                relationship_dict=rels,
+                                shared_connection=shared_neo4j,
+                            )
+                            if auto_created:
+                                print(f"[Worker] GIINT superstructure: {c.get('name','')} → {auto_created}", file=sys.stderr)
+                    except Exception as ont_err:
+                        print(f"[Worker] GIINT ontology enforcement error: {ont_err}", file=sys.stderr)
+
                 # Phase 2.5a: Auto-crystallize complete Skill concepts (Neo4j has them now)
                 if all_concepts and neo4j_succeeded:
                     try:
@@ -1030,6 +1108,109 @@ def worker_daemon():
                                 print(f"[Worker] Skill crystallization failed for {c.get('name','')}: {e}", file=sys.stderr)
                     except ImportError:
                         print("[Worker] substrate_projector not available, skipping crystallization", file=sys.stderr)
+
+                # Phase 2.5c: PBML auto-lane-move — detect phase-completion concepts → GIINT update_task_status
+                if all_concepts and neo4j_succeeded:
+                    try:
+                        from llm_intelligence.projects import update_task_status as giint_update_task
+                        # done_signal → is_done → IN_REVIEW → measure lane
+                        # inclusion_map → is_measured → DONE → learn lane
+                        # bml_learning → is_measured → DONE → learn lane, THEN direct TK move to archive
+                        PBML_TRIGGERS = {
+                            "done_signal": {"is_done": True, "is_blocked": False, "blocked_description": None, "is_ready": False},
+                            "inclusion_map": {"is_done": True, "is_blocked": False, "blocked_description": None, "is_ready": False, "is_measured": True},
+                            "bml_learning": {"is_done": True, "is_blocked": False, "blocked_description": None, "is_ready": False, "is_measured": True},
+                            "odyssey_learning_decision": {"is_done": True, "is_blocked": False, "blocked_description": None, "is_ready": False, "is_measured": True},
+                        }
+                        # Triggers that also need direct TK archive move (GIINT has no archive status)
+                        # Odyssey_Learning_Decision is the AUTHORITATIVE trigger — GNOSYS bml_learning no longer archives
+                        ARCHIVE_TRIGGERS = {"odyssey_learning_decision"}
+                        for c in all_concepts:
+                            rels = c.get("relationships", {})
+                            if isinstance(rels, list):
+                                rels = {r.get("relationship", ""): r.get("related", []) for r in rels if isinstance(r, dict)}
+                            c_isa = [t.lower().replace(" ", "_") for t in rels.get("is_a", [])]
+                            # Match against triggers
+                            matched_trigger = None
+                            for trigger_type in PBML_TRIGGERS:
+                                if trigger_type in c_isa:
+                                    matched_trigger = trigger_type
+                                    break
+                            if not matched_trigger:
+                                continue
+                            # Extract GIINT path from part_of relationships
+                            part_of_targets = rels.get("part_of", [])
+                            giint_task = None
+                            giint_deliverable = None
+                            for target in part_of_targets:
+                                t_lower = target.lower()
+                                if t_lower.startswith("giint_task_"):
+                                    giint_task = target
+                                elif t_lower.startswith("giint_deliverable_"):
+                                    giint_deliverable = target
+                            if not giint_task and not giint_deliverable:
+                                print(f"[Worker] PBML trigger {matched_trigger} for {c.get('name','')} — no GIINT task/deliverable in part_of, skipping", file=sys.stderr)
+                                continue
+                            # Resolve GIINT path from Neo4j (task → deliverable → component → feature → project)
+                            try:
+                                target_name = giint_task or giint_deliverable
+                                path_query = (
+                                    "MATCH (t:Wiki {n: $target})-[:PART_OF]->(d:Wiki)-[:PART_OF]->(comp:Wiki)"
+                                    "-[:PART_OF]->(f:Wiki)-[:PART_OF]->(p:Wiki) "
+                                    "WHERE p.n STARTS WITH 'Giint_Project_' "
+                                    "RETURN p.n AS project, f.n AS feature, comp.n AS component, d.n AS deliverable, t.n AS task"
+                                )
+                                with shared_neo4j.driver.session() as neo_session:
+                                    result = neo_session.run(path_query, target=target_name).single()
+                                if not result:
+                                    print(f"[Worker] PBML trigger {matched_trigger} — could not resolve GIINT path for {target_name}", file=sys.stderr)
+                                    continue
+                                # Strip GIINT prefixes for update_task_status params
+                                project_id = result["project"].replace("Giint_Project_", "")
+                                feature_name = result["feature"].replace("Giint_Feature_", "")
+                                component_name = result["component"].replace("Giint_Component_", "")
+                                deliverable_name = result["deliverable"].replace("Giint_Deliverable_", "")
+                                task_id = result["task"].replace("Giint_Task_", "") if result["task"] else None
+                                if not task_id:
+                                    print(f"[Worker] PBML trigger {matched_trigger} — no task_id resolved, skipping", file=sys.stderr)
+                                    continue
+                                params = PBML_TRIGGERS[matched_trigger].copy()
+                                update_result = giint_update_task(
+                                    project_id=project_id,
+                                    feature_name=feature_name,
+                                    component_name=component_name,
+                                    deliverable_name=deliverable_name,
+                                    task_id=task_id,
+                                    key_insight=c.get("description", "")[:200],
+                                    **params
+                                )
+                                print(f"[Worker] 🔄 PBML auto-move: {matched_trigger} → {task_id} in {project_id}: {update_result.get('treekanban_sync', {})}", file=sys.stderr)
+                                # Archive triggers: after GIINT moves to learn, directly move TK card to archive
+                                if matched_trigger in ARCHIVE_TRIGGERS:
+                                    try:
+                                        from heaven_bml_sqlite.heaven_bml_sqlite_client import HeavenBMLSQLiteClient
+                                        tk_board = os.getenv("GIINT_TREEKANBAN_BOARD")
+                                        if tk_board:
+                                            tk_client = HeavenBMLSQLiteClient()
+                                            tk_cards = tk_client.get_all_cards(tk_board)
+                                            import json as _json
+                                            for tk_card in tk_cards:
+                                                tk_tags = tk_card.get("tags", [])
+                                                if isinstance(tk_tags, str):
+                                                    tk_tags = _json.loads(tk_tags) if tk_tags.startswith("[") else [tk_tags]
+                                                if task_id in tk_tags and tk_card.get("status") == "learn":
+                                                    archive_result = tk_client._make_request("PUT", f"/api/sqlite/cards/{tk_card['id']}", {"board": tk_board, "status": "archive"})
+                                                    if archive_result:
+                                                        print(f"[Worker] 🏁 PBML archive: card #{tk_card['id']} moved to archive", file=sys.stderr)
+                                                    break
+                                    except Exception as arch_err:
+                                        print(f"[Worker] PBML archive move failed: {arch_err}", file=sys.stderr)
+                            except Exception as path_err:
+                                print(f"[Worker] PBML path resolution failed for {c.get('name','')}: {path_err}", file=sys.stderr)
+                    except ImportError:
+                        print("[Worker] GIINT not available, skipping PBML auto-lane-move", file=sys.stderr)
+                    except Exception as pbml_err:
+                        print(f"[Worker] PBML auto-lane-move error: {pbml_err}", file=sys.stderr)
 
                 # Phase 2.5b: Create wiki files for ChromaDB indexing (only if Neo4j succeeded)
                 if all_concepts and neo4j_succeeded:

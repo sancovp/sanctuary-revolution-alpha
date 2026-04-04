@@ -37,6 +37,11 @@ COURSE_STATE_FILE = "/tmp/heaven_data/omnisanc_core/.course_state"
 LOOP_PROMPT_FILE = ".claude/autopoiesis-loop.md"
 HEAVEN_DATA_DIR = os.environ.get("HEAVEN_DATA_DIR", "/tmp/heaven_data")
 
+# HOME prompt directory structure
+HOME_PROMPTS_DIR = Path(HEAVEN_DATA_DIR) / "home_prompts"
+HOME_DEFAULT_PROMPT_FILE = HOME_PROMPTS_DIR / "default_home_prompt.md"
+HOME_QUEUE_DIR = HOME_PROMPTS_DIR / "queue"
+
 # Autopoiesis promise/blocked paths - all in /tmp, never touch ~/.claude
 ACTIVE_PROMISE_PATH = Path("/tmp/active_promise.md")
 BLOCK_REPORT_PATH = Path("/tmp/block_report.json")
@@ -813,50 +818,93 @@ def clear_promise_file() -> None:
 
 
 def determine_mode(course: dict, waypoint: dict, project_path: str = "") -> str:
-    """Determine current mode from state."""
+    """Read mode from course state. OMNISANC is the single source of truth."""
+    # Read zone directly from state — omnisanc writes this on every save
+    zone = course.get("zone")
+    if zone:
+        logger.debug(f"Read zone from course state: {zone}")
+        return zone
+    # Fallback only if zone not yet written (first run after upgrade)
     if not course.get("course_plotted"):
         return "HOME"
-
     if course.get("needs_review"):
         return "LANDING"
-
-    # Check waypoint state FIRST - SESSION takes priority over MISSION
-    # (mission is the container, session is active work within it)
-    if waypoint.get("status") == "IN_PROGRESS":
-        # BUT check if journey was aborted - diary entry takes precedence over stale state file
-        if project_path and check_journey_aborted(project_path):
-            logger.info("Journey was aborted (found in diary), treating as LANDING not SESSION")
-            return "LANDING"
-        return "SESSION"
-
-    if waypoint.get("status") == "END":
-        return "LANDING"
-
-    # Mission active but no waypoint journey started yet
+    if course.get("session_active"):
+        return "JOURNEY"
     if course.get("mission_active"):
-        return "MISSION"
+        return "STARPORT"
+    return "HOME"
 
-    # Course plotted but no waypoint journey
-    return "STARPORT"
+
+def _pop_queued_home_prompt() -> str:
+    """Check queue dir for prompt files. Pop oldest one (read + delete).
+
+    Returns prompt content if found, empty string if queue empty.
+    """
+    try:
+        if not HOME_QUEUE_DIR.exists():
+            return ""
+        # Get all files sorted by name (timestamp-prefixed = chronological)
+        queue_files = sorted(HOME_QUEUE_DIR.iterdir())
+        queue_files = [f for f in queue_files if f.is_file()]
+        if not queue_files:
+            return ""
+        # Pop oldest
+        oldest = queue_files[0]
+        content = oldest.read_text().strip()
+        oldest.unlink()
+        logger.info(f"Popped queued home prompt: {oldest.name}")
+        return content
+    except Exception as e:
+        logger.error(f"Error reading home queue: {e}\n{traceback.format_exc()}")
+        return ""
+
+
+def _read_default_home_prompt() -> str:
+    """Read default home prompt file.
+
+    Returns content if file exists, empty string otherwise.
+    """
+    try:
+        if HOME_DEFAULT_PROMPT_FILE.exists():
+            return HOME_DEFAULT_PROMPT_FILE.read_text().strip()
+    except Exception as e:
+        logger.error(f"Error reading default home prompt: {e}\n{traceback.format_exc()}")
+    return ""
+
+
+FALLBACK_HOME_PROMPT = """You're at HOME. jump cf_home"""
 
 
 def format_home_prompt() -> str:
-    """Format prompt for HOME mode."""
-    return """You're at HOME.
+    """Format prompt for HOME mode.
 
-Available actions:
-- starship.plot_course() to start a journey
-- Review missions with STARSYSTEM tools
+    Priority:
+    1. Queue dir — pop oldest file (one-shot, deleted after read)
+    2. Default prompt file — persistent, editable
+    3. Hardcoded fallback
+    """
+    # 1. Check queue
+    queued = _pop_queued_home_prompt()
+    if queued:
+        return queued
 
-What would you like to work on?"""
+    # 2. Check default prompt file
+    default = _read_default_home_prompt()
+    if default:
+        return default
+
+    # 3. Hardcoded fallback
+    return FALLBACK_HOME_PROMPT
 
 
 def format_starport_prompt(course: dict) -> str:
     """Format prompt for STARPORT mode."""
     project = course.get("projects", ["unknown"])[0] if course.get("projects") else "unknown"
-    description = course.get("description", "")
+    description = course.get("description") or "No description"
+    zone = course.get("zone") or "STARPORT"
 
-    return f"""Course plotted to: {project}
+    return f"""[{zone}] Course plotted to: {project}
 Description: {description}
 
 You've set a course. Now select a flight config and start:
@@ -919,64 +967,67 @@ def _build_navigation_lines() -> list:
 
 def format_session_prompt(course: dict, waypoint: dict, project_path: str, loop_prompt: str) -> str:
     """Format prompt for SESSION mode (active waypoint journey)."""
-    lines = [
-        "<FLIGHT_STABILIZER>",
-        "",
-        "You are in an active flight. Focus on step-to-step progression.",
-        "Complete current step fully before advancing.",
-        "",
-        "<STATUS>",
-        "📍 Course info: starship.get_course_state()",
-    ]
-    lines.extend(_build_waypoint_lines(waypoint))
-    lines.append("</STATUS>")
+    return "<FLIGHT_STABILIZER> You are on a flight. Continue.</FLIGHT_STABILIZER>"
 
-    lines.append("")
-    lines.append("<RECOMMENDED_ACTIONS>")
-    lines.append("If step complete -> call waypoint.navigate_to_next_waypoint()")
-    lines.append("If flight complete -> review ALL steps, only <promise>DONE</promise> when verified")
-    lines.append("If issues found -> call waypoint.reset_waypoint_journey() and run through again")
-    lines.append("</RECOMMENDED_ACTIONS>")
-
-    # Alerts section
-    alerts = _build_diary_status_line(project_path)
-    if alerts:
-        lines.append("")
-        lines.append("<ALERTS>")
-        lines.extend(alerts)
-        lines.append("</ALERTS>")
-
-    # Add emanation HUD to Flight Stabilizer
-    emanation_hud = _get_emanation_gaps_hud()
-    if emanation_hud:
-        lines.append("")
-        lines.append("<OBSERVATION_DECK>")
-        lines.append(emanation_hud)
-        lines.append("</OBSERVATION_DECK>")
-
-    lines.append("")
-    lines.append("<REMINDERS>")
-    lines.append("📣 KNOWLEDGE CAPTURE: When you accomplish something, ask: 'Will I need to")
-    lines.append("   remember how to do this?' If YES → starship.knowledge_update():")
-    lines.append("   • SKILL: fits a skill category (understand/preflight/single_turn_process)")
-    lines.append("   • FLIGHT: complex step-by-step procedure")
-    lines.append("</REMINDERS>")
-
-    lines.append("")
-    lines.append("</FLIGHT_STABILIZER>")
-
-    # Add user's loop prompt
-    lines.append("")
-    if loop_prompt:
-        lines.append("Your Task:")
-        lines.append(loop_prompt)
-    else:
-        lines.append("Continue working on the current step.")
-
-    lines.append("")
-    lines.append("Continue.")
-
-    return "\n".join(lines)
+    # --- COMMENTED OUT: verbose flight stabilizer (Mar 14 2026) ---
+    # lines = [
+    #     "<FLIGHT_STABILIZER>",
+    #     "",
+    #     "You are in an active flight. Focus on step-to-step progression.",
+    #     "Complete current step fully before advancing.",
+    #     "",
+    #     "<STATUS>",
+    #     "📍 Course info: starship.get_course_state()",
+    # ]
+    # lines.extend(_build_waypoint_lines(waypoint))
+    # lines.append("</STATUS>")
+    #
+    # lines.append("")
+    # lines.append("<RECOMMENDED_ACTIONS>")
+    # lines.append("If step complete -> call waypoint.navigate_to_next_waypoint()")
+    # lines.append("If flight complete -> review ALL steps, only <promise>DONE</promise> when verified")
+    # lines.append("If issues found -> call waypoint.reset_waypoint_journey() and run through again")
+    # lines.append("</RECOMMENDED_ACTIONS>")
+    #
+    # # Alerts section
+    # alerts = _build_diary_status_line(project_path)
+    # if alerts:
+    #     lines.append("")
+    #     lines.append("<ALERTS>")
+    #     lines.extend(alerts)
+    #     lines.append("</ALERTS>")
+    #
+    # # Add emanation HUD to Flight Stabilizer
+    # emanation_hud = _get_emanation_gaps_hud()
+    # if emanation_hud:
+    #     lines.append("")
+    #     lines.append("<OBSERVATION_DECK>")
+    #     lines.append(emanation_hud)
+    #     lines.append("</OBSERVATION_DECK>")
+    #
+    # lines.append("")
+    # lines.append("<REMINDERS>")
+    # lines.append("📣 KNOWLEDGE CAPTURE: When you accomplish something, ask: 'Will I need to")
+    # lines.append("   remember how to do this?' If YES → starship.knowledge_update():")
+    # lines.append("   • SKILL: fits a skill category (understand/preflight/single_turn_process)")
+    # lines.append("   • FLIGHT: complex step-by-step procedure")
+    # lines.append("</REMINDERS>")
+    #
+    # lines.append("")
+    # lines.append("</FLIGHT_STABILIZER>")
+    #
+    # # Add user's loop prompt
+    # lines.append("")
+    # if loop_prompt:
+    #     lines.append("Your Task:")
+    #     lines.append(loop_prompt)
+    # else:
+    #     lines.append("Continue working on the current step.")
+    #
+    # lines.append("")
+    # lines.append("Continue.")
+    #
+    # return "\n".join(lines)
 
 
 def format_landing_prompt(course: dict) -> str:
@@ -1087,7 +1138,7 @@ def _get_prompt_for_mode(mode: str, course: dict, waypoint: dict, project_path: 
         return format_home_prompt()
     elif mode == "STARPORT":
         return format_starport_prompt(course)
-    elif mode == "SESSION":
+    elif mode in ("SESSION", "JOURNEY"):
         return format_session_prompt(course, waypoint, project_path, loop_prompt)
     elif mode == "LANDING":
         return format_landing_prompt(course)
@@ -1210,7 +1261,11 @@ def _get_system_state() -> tuple:
 
 
 def _handle_promise_check(course: dict, waypoint: dict) -> None:
-    """Check for active promise and block if found. Handles iteration tracking."""
+    """Check for active promise and block if found. Handles iteration tracking.
+
+    Injection frequency: Full promise prompt every 3rd turn.
+    Other turns get a short "Promise active" reminder to save context window.
+    """
     promise_active, promise_content, frontmatter = get_active_promise()
     if not promise_active:
         return
@@ -1230,8 +1285,22 @@ def _handle_promise_check(course: dict, waypoint: dict) -> None:
     ACTIVE_PROMISE_PATH.write_text(updated_content)
     logger.debug(f"Incremented iteration to {new_iteration}")
 
-    prompt = _build_promise_prompt(promise_content, course, waypoint, iteration, max_iterations)
-    logger.debug("Blocking with active promise")
+    # Full prompt every 3rd turn, short reminder otherwise
+    if iteration % 3 == 1:
+        # Full prompt on turns 1, 4, 7, 10, ... (every 3rd)
+        prompt = _build_promise_prompt(promise_content, course, waypoint, iteration, max_iterations)
+        logger.debug(f"Full promise prompt (iteration {iteration})")
+    else:
+        # Short reminder on other turns
+        frontmatter_parsed, _ = parse_yaml_frontmatter(promise_content)
+        completion_promise = frontmatter_parsed.get('completion_promise', 'DONE')
+        prompt = (
+            f"## AUTOPOIESIS — Promise active (iteration {iteration})\n"
+            f"Complete: `<promise>{completion_promise}</promise>` | "
+            f"Blocked: `be_autopoietic(\"blocked\")`"
+        )
+        logger.debug(f"Short promise reminder (iteration {iteration})")
+
     _output_block(prompt, f"PROMISE (iteration {new_iteration})")
 
 
@@ -1239,8 +1308,12 @@ def _handle_mode_check(mode: str, course: dict, waypoint: dict, project_path: st
     """Handle mode-based blocking logic."""
     loop_active, loop_prompt = get_loop_prompt()
 
-    if not loop_active and mode not in ["SESSION"]:
-        logger.debug("No loop active and not SESSION, approving stop")
+    # When OMNISANC is active, NEVER approve stop — always fall through to mode prompt
+    # This ensures HOME/STARPORT/LANDING/MISSION prompts are always injected
+    omnisanc_active = _is_omnisanc_active()
+
+    if not loop_active and mode not in ["SESSION", "JOURNEY"] and not omnisanc_active:
+        logger.debug("No loop active, not SESSION, OMNISANC off — approving stop")
         if promise_just_cleared:
             _output_approve(course=course, waypoint=waypoint, clearing_promise=True)
         else:
@@ -1284,19 +1357,23 @@ def main():
             SAMAYA_LOOP_PATH.unlink(missing_ok=True)
             _output_approve(course=course, waypoint=waypoint, clearing_promise=True)
 
-        # L3: Samaya loop (highest priority)
-        samaya_active, _ = _check_samaya_loop()
-        if samaya_active:
-            logger.debug("L3 samaya loop active")
-            _handle_samaya_loop(transcript_path, course, waypoint)
-            # If BREACHED, _handle_samaya_loop returns and we fall through to L2
+        # L3/L2: Guru + Samaya ONLY fire at STARPORT zone
+        # Design_Loop_Zone_Mapping: guru is the quality gate for leaving a starsystem.
+        # HOME is unreachable while guru is active — you must prove emanation first.
+        if mode == "STARPORT":
+            # L3: Samaya loop (highest priority)
+            samaya_active, _ = _check_samaya_loop()
+            if samaya_active:
+                logger.debug("L3 samaya loop active (STARPORT)")
+                _handle_samaya_loop(transcript_path, course, waypoint)
+                # If BREACHED, _handle_samaya_loop returns and we fall through to L2
 
-        # L2: Guru loop
-        guru_active, guru_content = _check_guru_loop()
-        if guru_active:
-            logger.debug("L2 guru loop active")
-            _handle_guru_loop(transcript_path, guru_content, course, waypoint)
-            # _handle_guru_loop always blocks, never returns
+            # L2: Guru loop
+            guru_active, guru_content = _check_guru_loop()
+            if guru_active:
+                logger.debug("L2 guru loop active (STARPORT)")
+                _handle_guru_loop(transcript_path, guru_content, course, waypoint)
+                # _handle_guru_loop always blocks, never returns
 
         # L1: Promise check (existing behavior)
         # Check for <promise>DONE</promise> in transcript - if found, clear promise

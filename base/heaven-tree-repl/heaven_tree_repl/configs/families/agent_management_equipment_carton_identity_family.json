@@ -1,0 +1,55 @@
+{
+  "family_root": "agent_management_equipment_carton_identity",
+  "parent": "agent_management_equipment",
+  "domain": "agent_management",
+  "description": "Manage CartON identity for observations",
+  "nodes": {
+    "agent_management_equipment_carton_identity": {
+      "id": "agent_management_equipment_carton_identity",
+      "title": "CartON Identity",
+      "description": "CartON identity for agent observations",
+      "type": "Menu",
+      "options": {
+        "1": "equip",
+        "2": "unequip",
+        "3": "list"
+      }
+    },
+    "equip": {
+      "id": "agent_management_equipment_carton_identity_equip",
+      "title": "Equip CartON Identity",
+      "description": "Set CartON identity name",
+      "type": "Callable",
+      "callable": {
+        "function_name": "equip_carton_identity",
+        "import_path": "heaven_tree_repl.agent_config_management",
+        "import_object": "equip_carton_identity",
+        "args_schema": {
+          "identity_name": "str"
+        }
+      }
+    },
+    "unequip": {
+      "id": "agent_management_equipment_carton_identity_unequip",
+      "title": "Unequip CartON Identity",
+      "description": "Remove CartON identity",
+      "type": "Callable",
+      "callable": {
+        "function_name": "unequip_carton_identity",
+        "import_path": "heaven_tree_repl.agent_config_management",
+        "import_object": "unequip_carton_identity"
+      }
+    },
+    "list": {
+      "id": "agent_management_equipment_carton_identity_list",
+      "title": "Show CartON Identity",
+      "description": "Show current CartON identity",
+      "type": "Callable",
+      "callable": {
+        "function_name": "list_carton_identity",
+        "import_path": "heaven_tree_repl.agent_config_management",
+        "import_object": "list_carton_identity"
+      }
+    }
+  }
+}

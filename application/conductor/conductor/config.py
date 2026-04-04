@@ -2,6 +2,6 @@
 
 PHASES = ["observe", "hypothesize", "proposal", "experiment", "analyze"]
 
-# Default models
-GRUG_MODEL = "claude-sonnet-4-20250514"
-RESEARCHER_MODEL = "claude-opus-4-20250514"
+# Default models - MiniMax via SDNA
+GRUG_MODEL = "MiniMax-M2.5-highspeed"
+RESEARCHER_MODEL = "MiniMax-M2.5-highspeed"

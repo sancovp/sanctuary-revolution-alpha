@@ -62,10 +62,17 @@ def send_to_daemon(hook_data: dict) -> dict:
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     sock.settimeout(5.0)
     sock.connect(SOCKET_PATH)
-    sock.send(json.dumps(hook_data).encode())
-    response_data = sock.recv(65536).decode()
+    sock.sendall(json.dumps(hook_data).encode())
+    sock.shutdown(socket.SHUT_WR)  # Signal done sending
+    # Recv loop for full response
+    chunks = []
+    while True:
+        chunk = sock.recv(65536)
+        if not chunk:
+            break
+        chunks.append(chunk)
     sock.close()
-    return json.loads(response_data)
+    return json.loads(b"".join(chunks).decode())
 
 
 def handle_pre_response(response: dict):
@@ -81,17 +88,22 @@ def handle_pre_response(response: dict):
 
 
 def main():
-    # Fast path: kill switch = pass through
-    if os.path.exists(KILL_SWITCH_FILE):
-        sys.exit(0)
-
+    # Read stdin first (needed for both paths)
     try:
         hook_data = json.load(sys.stdin)
     except json.JSONDecodeError:
         hook_data = {}
 
-    # Auto-start daemon if not running
-    if not os.path.exists(SOCKET_PATH) and not is_daemon_running():
+    # Freestyle mode: skip everything when kill switch active
+    # Daemon should NOT auto-start when disabled — wastes CPU
+    if os.path.exists(KILL_SWITCH_FILE):
+        sys.exit(0)
+
+    # Auto-start daemon if not running (check PID, not just socket existence)
+    if not is_daemon_running():
+        # Clean stale socket if daemon is dead
+        if os.path.exists(SOCKET_PATH):
+            os.remove(SOCKET_PATH)
         sys.stderr.write("🚀 Starting OMNISANC daemon...\n")
         if not start_daemon():
             sys.stderr.write("⚠️ Failed to start daemon, passing through\n")
@@ -101,9 +113,17 @@ def main():
         response = send_to_daemon(hook_data)
         if response.get("hook_type") == "pre":
             handle_pre_response(response)
+        # PostToolUse narration — zone transition context injection
+        # MUST output valid JSON for ScriptHookAdapter to parse
+        # additionalContext key flows through CAVE → paia_posttooluse → Claude Code
+        narration = response.get("narration")
+        if narration:
+            print(json.dumps({"decision": "approve", "additionalContext": narration}))
         sys.exit(0)
     except (FileNotFoundError, ConnectionRefusedError, json.JSONDecodeError):
-        # Daemon not running or bad response = pass through
+        # Daemon died mid-request - clean up stale socket for next call
+        if os.path.exists(SOCKET_PATH) and not is_daemon_running():
+            os.remove(SOCKET_PATH)
         sys.exit(0)
     except socket.timeout:
         sys.stderr.write("⚠️ OMNISANC daemon timeout\n")

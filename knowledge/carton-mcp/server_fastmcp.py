@@ -136,13 +136,16 @@ try:
 except Exception as e:
     logger.warning(f"Memory ontology bootstrap failed (non-fatal): {e}")
 
-# Enforce ontology invariants EVERY startup (no flag file)
-try:
-    enforcement_stats = utils.enforce_ontology_invariants()
-    if enforcement_stats.get("neo4j_fixed") or enforcement_stats.get("chroma_fixed"):
-        logger.info(f"Ontology enforcement applied fixes: {enforcement_stats}")
-except Exception as e:
-    logger.warning(f"Ontology enforcement failed (non-fatal): {e}")
+# Enforce ontology invariants in background thread (non-blocking so MCP connects fast)
+import threading
+def _deferred_enforcement():
+    try:
+        enforcement_stats = utils.enforce_ontology_invariants()
+        if enforcement_stats.get("neo4j_fixed") or enforcement_stats.get("chroma_fixed"):
+            logger.info(f"Ontology enforcement applied fixes: {enforcement_stats}")
+    except Exception as e:
+        logger.warning(f"Ontology enforcement failed (non-fatal): {e}")
+threading.Thread(target=_deferred_enforcement, daemon=True).start()
 
 """
 UARL ONTOLOGY SYSTEM STATUS:
@@ -240,12 +243,19 @@ def _format_concept_result(concept_name: str, raw_result: str) -> str:
     if "files created" in raw_result.lower():
         files_created = "✅"
 
-    # Extract YOUKNOW warning if present
+    # Extract YOUKNOW output — SOUP errors, YOUKNOW errors, ontology children
     youknow_line = ""
-    if "[YOUKNOW" in raw_result:
-        match = re.search(r'\[YOUKNOW[^\]]+\]', raw_result)
+    # Match [SOUP: ...], [YOUKNOW ERROR: ...], [YOUKNOW error: ...], [+N ontology children]
+    for pattern, label in [
+        (r'\[SOUP: (.+)\](?:\s*\[|$)', 'SOUP'),
+        (r'\[YOUKNOW ERROR: (.+)\](?:\s*\[|$)', 'ERROR'),
+        (r'\[YOUKNOW error: (.+)\](?:\s*\[|$)', 'error'),
+    ]:
+        match = re.search(pattern, raw_result, re.DOTALL)
         if match:
-            youknow_line = f"\n⚠️ **YOUKNOW**: {match.group(0)}"
+            # Strip trailing ] that might be captured from greedy match
+            content = match.group(1).rstrip(']').rstrip()
+            youknow_line += f"\n⚠️ **{label}**: {content}"
 
     return f"""🗺️‍⟷‍📦 **CartON** (Cartographic Ontology Net)
 
@@ -293,7 +303,7 @@ def add_concept(
     concept: str = None,
     relationships: Optional[List[ConceptRelationship]] = None,
     desc_update_mode: str = "append",
-    hide_youknow: bool = True,
+    hide_youknow: bool = False,
     clear_stash: bool = False
 ) -> str:
     """Add a new concept to the knowledge graph
@@ -306,7 +316,7 @@ def add_concept(
         concept: Full conceptual content explaining the entire concept, ideas, technical details, etc. Mentioning other concept names auto-creates relates_to links.
         relationships: OPTIONAL. Additional custom relationships beyond the required three. Each object must have format: {"relationship": "relation_type", "related": ["concept_name1", "concept_name2", ...]}. Use for has_*, depends_on, validates, etc.
         desc_update_mode: How to update description if concept exists - "append" (default), "prepend", or "replace"
-        hide_youknow: If False (default), YOUKNOW validates and warns if concept lacks proper UARL relationships. If True, skip validation - silent add to soup.
+        hide_youknow: If False (default), YOUKNOW validates and shows SOUP/ONT status. If True, skip validation - silent add.
         clear_stash: If True, discard any stashed payload for this concept before processing. Use when a previous stash has stale/wrong values.
 
     Returns:
@@ -435,7 +445,7 @@ def add_document_concept(
 
 
 @mcp.tool()
-def add_observation_batch(observation_data: dict, hide_youknow: bool = True) -> str:
+def add_observation_batch(observation_data: dict, hide_youknow: bool = False) -> str:
     """Create observation capturing complete cognitive state
 
     Format example: {"insight_moment": [{"name": "Discord_Platform_Choice", "description": "Realized Discord is ideal for egregore launch", "relationships": [{"relationship": "is_a", "related": ["Platform_Decision"]}, {"relationship": "part_of", "related": ["Launch_Strategy"]}, {"relationship": "has_personal_domain", "related": ["cave"]}, {"relationship": "has_actual_domain", "related": ["Business_Strategy"]}]}], "struggle_point": [{"name": "Channel_Structure_Confusion", "description": "Struggled with organizing public vs private channels", "relationships": [{"relationship": "is_a", "related": ["Design_Challenge"]}, {"relationship": "part_of", "related": ["Discord_Architecture"]}, {"relationship": "has_personal_domain", "related": ["cave"]}, {"relationship": "has_actual_domain", "related": ["System_Design"]}]}], "daily_action": [{"name": "Channel_Setup", "description": "Organized AI LAB Discord channels", "relationships": [{"relationship": "is_a", "related": ["Implementation_Task"]}, {"relationship": "part_of", "related": ["AI_LAB_Discord"]}, {"relationship": "has_personal_domain", "related": ["cave"]}, {"relationship": "has_actual_domain", "related": ["Infrastructure"]}]}], "implementation": [{"name": "AI_LAB_Discord", "description": "Discord server for frameworks and COGLOG", "relationships": [{"relationship": "is_a", "related": ["Discord_Server"]}, {"relationship": "part_of", "related": ["Isaac_Infrastructure"]}, {"relationship": "has_personal_domain", "related": ["cave"]}, {"relationship": "has_actual_domain", "related": ["Infrastructure"]}]}], "emotional_state": [{"name": "Clarity_About_Path", "description": "Feeling clear about release strategy", "relationships": [{"relationship": "is_a", "related": ["Emotional_State"]}, {"relationship": "part_of", "related": ["Development_Journey"]}, {"relationship": "has_personal_domain", "related": ["cave"]}, {"relationship": "has_actual_domain", "related": ["Personal_Development"]}]}], "confidence": 0.9}
@@ -484,7 +494,7 @@ def add_observation_batch(observation_data: dict, hide_youknow: bool = True) -> 
 
 
 @mcp.tool()
-def observe_from_identity_pov(observation_data: dict, agent_identity: str = None, hide_youknow: bool = True) -> str:
+def observe_from_identity_pov(observation_data: dict, agent_identity: str = None, hide_youknow: bool = False) -> str:
     """Create observation from agent identity perspective
 
     Resolves agent identity via: env var AGENT_IDENTITY (takes priority) > agent_identity param.
@@ -1132,19 +1142,40 @@ def get_concept_network(
         return f"❌ Error: {e}"
 
 @mcp.tool()
-def get_concept(concept_name: str) -> TextContent:
+def get_concept(concept_name: str, refresh_code: bool = False) -> TextContent:
     """Get complete concept information including description and all relationships
-    
+
     Retrieves the full concept data in one call - both the concept description
     and all its relationships. This is the standard way to research a concept
     for blog writing, analysis, or understanding its place in the knowledge graph.
-    
+
     Args:
         concept_name: Name of the concept to retrieve (exact match on n property)
-        
+        refresh_code: If True, refresh code reality first — drop stale code entities
+                      from OWL, re-ingest from context-alignment, report dangling refs.
+                      Use when code has changed and you need current code state.
+
     Returns:
         JSON string with complete concept data: name, description, and relationships
     """
+    if refresh_code:
+        try:
+            from youknow_kernel.owl_reasoner import OWLReasoner
+            r = OWLReasoner()
+            refresh_result = r.refresh_code_reality()
+            dangling = refresh_result.get("dangling_references", [])
+            dropped = refresh_result.get("entities_dropped", 0)
+            ingested = sum(
+                sum(v for v in counts.values() if isinstance(v, int))
+                for counts in refresh_result.get("entities_ingested", {}).values()
+            )
+            # Prepend refresh info to the response
+            refresh_msg = f"[CODE REFRESHED: dropped {dropped}, re-ingested {ingested}, {len(dangling)} dangling refs]\n"
+            if dangling:
+                for d in dangling[:5]:
+                    refresh_msg += f"  DANGLING: {d['giint_concept']} -> {d['stale_code_ref']}\n"
+        except Exception as e:
+            refresh_msg = f"[CODE REFRESH FAILED: {e}]\n"
     try:
         # Query for concept with all its relationships
         # Prioritize nodes with descriptions to handle duplicates
@@ -1198,7 +1229,33 @@ def get_concept(concept_name: str) -> TextContent:
             
             lines.append("]")
 
-            return TextContent(type="text", text="\n".join(lines))
+            # YOUKNOW live check — run the reasoner on this concept's relationships
+            try:
+                from youknow_kernel.compiler import youknow as youknow_check
+                # Build statement from relationships
+                triples = []
+                for rel in normal_rels:
+                    parts = rel.split(" ", 1)
+                    if len(parts) == 2:
+                        triples.append(rel)
+                if triples:
+                    statement = f"{name} {', '.join(triples)}"
+                    yk_result = youknow_check(statement)
+                    if yk_result == "OK":
+                        lines.append("")
+                        lines.append("YOUKNOW: ONT ✅")
+                    elif yk_result.startswith("SOUP:"):
+                        lines.append("")
+                        lines.append(f"YOUKNOW: {yk_result}")
+            except ImportError:
+                pass
+            except Exception:
+                pass
+
+            output = "\n".join(lines)
+            if refresh_code:
+                output = refresh_msg + output
+            return TextContent(type="text", text=output)
         else:
             # Suggest Title_Case_With_Underscores if user might have wrong casing
             suggestion = concept_name.replace(" ", "_").replace("-", "_")
@@ -1207,11 +1264,42 @@ def get_concept(concept_name: str) -> TextContent:
             hint = ""
             if concept_name != title_cased:
                 hint = f"\n💡 Did you mean: {title_cased}?"
-            return TextContent(type="text", text=f"❌ Concept '{concept_name}' not found.{hint}\n⚠️ CartON uses Title_Case_With_Underscores naming convention.")
+            msg = f"❌ Concept '{concept_name}' not found.{hint}\n⚠️ CartON uses Title_Case_With_Underscores naming convention."
+            if refresh_code:
+                msg = refresh_msg + msg
+            return TextContent(type="text", text=msg)
 
     except Exception as e:
         traceback.print_exc()
         return TextContent(type="text", text=f"❌ Error: {str(e)}")
+
+@mcp.tool()
+def youknow_sparql(query: str) -> str:
+    """Run a SPARQL query against the YOUKNOW OWL ontology (uarl.owl via Pellet/owlready2).
+
+    This queries the ONTOLOGY, not the CartON Neo4j graph. Use this for:
+    - Checking OWL class restrictions ("what does GIINT_Deliverable require?")
+    - Querying inferred facts from the reasoner
+    - Exploring the foundation ontology structure
+
+    For CartON graph queries, use query_wiki_graph (Cypher) instead.
+
+    Args:
+        query: SPARQL query string (SELECT, ASK, etc.)
+
+    Returns:
+        JSON results from the OWL reasoner
+    """
+    try:
+        from youknow_kernel.owl_reasoner import OWLReasoner
+        reasoner = OWLReasoner()
+        results = reasoner.query_sparql(query)
+        return json.dumps({"success": True, "results": results}, indent=2, default=str)
+    except ImportError:
+        return json.dumps({"success": False, "error": "youknow_kernel not available"})
+    except Exception as e:
+        return json.dumps({"success": False, "error": str(e)})
+
 
 @mcp.tool()
 def get_history_info(
@@ -2693,19 +2781,21 @@ def add_to_collection(
         RETURN count(concept) as added_count
         """
 
-        result = utils.query_wiki_graph(
-            cypher_query,
-            {
-                "collection_name": collection_name,
-                "concept_names": concept_names
-            }
-        )
-
-        if result.get("success") and result.get("data"):
-            added_count = result["data"][0].get("added_count", 0)
+        # Use shared connection directly — this is a write operation,
+        # query_wiki_graph blocks MERGE via _validate_query_safety
+        if _neo4j_conn:
+            result = _neo4j_conn.execute_query(
+                cypher_query,
+                {
+                    "collection_name": collection_name,
+                    "concept_names": concept_names
+                }
+            )
+            # execute_query returns list of records
+            added_count = len(concept_names)
             return f"✅ Added {added_count} concepts to collection '{collection_name}'"
         else:
-            return f"❌ Failed to add concepts: {result.get('error', 'Unknown error')}"
+            return f"❌ No Neo4j connection available"
 
     except Exception as e:
         traceback.print_exc()
@@ -2817,7 +2907,8 @@ def _ensure_daemon_running():
 def main():
     """Entry point for carton-mcp console script"""
     _ensure_daemon_running()
-    mcp.run(transport="sse")
+    transport = os.environ.get("CARTON_TRANSPORT", "stdio")
+    mcp.run(transport=transport)
 
 if __name__ == "__main__":
     main()

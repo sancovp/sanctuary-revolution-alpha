@@ -46,6 +46,8 @@ class SkillManager:
             self.equipped_file = self.skills_dir / "_equipped.json"
         self.equipped: dict[str, Skill] = {}
         self.active_persona: Optional[Persona] = None
+        self._persona_file = self.skills_dir / "_active_persona.json"
+        self._load_persona_state()
 
         # ChromaDB for RAG
         chroma_path = chroma_dir or os.path.join(heaven_data, "skill_chroma")
@@ -369,7 +371,7 @@ class SkillManager:
             if when:
                 concept_desc += f"\nWHEN: {when}"
 
-            add_concept_tool_func(concept_name, concept_desc, relationships, hide_youknow=True)
+            add_concept_tool_func(concept_name, concept_desc, relationships, hide_youknow=False)
             logger.info(f"Synced skill {name} to CartON" + (f" with DESCRIBES {describes_component}" if describes_component else ""))
 
         except Exception as e:
@@ -540,6 +542,33 @@ class SkillManager:
         """Persist current equipped skill names to file."""
         data = {"equipped": list(self.equipped.keys())}
         self.equipped_file.write_text(json.dumps(data, indent=2))
+
+    def _load_persona_state(self):
+        """Load persisted active persona on startup."""
+        if not self._persona_file.exists():
+            return
+        try:
+            data = json.loads(self._persona_file.read_text())
+            name = data.get("name")
+            if name:
+                persona = self.get_persona(name)
+                if persona:
+                    self.active_persona = persona
+                    self._try_equip_skillset_for_persona(persona, {
+                        "missing": [], "equipped_skills": []
+                    })
+                    logger.info(f"Restored persisted persona: {name}")
+        except (json.JSONDecodeError, KeyError):
+            pass
+
+    def _save_persona_state(self):
+        """Persist active persona name to file."""
+        if self.active_persona:
+            self._persona_file.write_text(json.dumps(
+                {"name": self.active_persona.name}, indent=2
+            ))
+        elif self._persona_file.exists():
+            self._persona_file.unlink()
 
     def _quarantine_skill(self, name: str, source: str, reason: str = "duplicate"):
         """Move skill to quarantine with metadata."""
@@ -1269,6 +1298,7 @@ class SkillManager:
         report["mcp_set"] = self._build_mcp_set_status(persona)
 
         self.active_persona = persona
+        self._save_persona_state()
         return report
 
     def get_active_persona(self) -> Optional[dict]:
@@ -1291,5 +1321,6 @@ class SkillManager:
 
         name = self.active_persona.name
         self.active_persona = None
+        self._save_persona_state()
         self.unequip_all()
         return {"deactivated": name, "skills_unequipped": True}

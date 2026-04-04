@@ -1,0 +1,55 @@
+{
+  "family_root": "agent_management_equipment_mcp_set",
+  "parent": "agent_management_equipment",
+  "domain": "agent_management",
+  "description": "Manage strata MCP set",
+  "nodes": {
+    "agent_management_equipment_mcp_set": {
+      "id": "agent_management_equipment_mcp_set",
+      "title": "MCP Set",
+      "description": "Strata MCP set (resolved at agent startup)",
+      "type": "Menu",
+      "options": {
+        "1": "equip",
+        "2": "unequip",
+        "3": "list"
+      }
+    },
+    "equip": {
+      "id": "agent_management_equipment_mcp_set_equip",
+      "title": "Equip MCP Set",
+      "description": "Set strata MCP set name",
+      "type": "Callable",
+      "callable": {
+        "function_name": "equip_mcp_set",
+        "import_path": "heaven_tree_repl.agent_config_management",
+        "import_object": "equip_mcp_set",
+        "args_schema": {
+          "set_name": "str"
+        }
+      }
+    },
+    "unequip": {
+      "id": "agent_management_equipment_mcp_set_unequip",
+      "title": "Unequip MCP Set",
+      "description": "Remove MCP set",
+      "type": "Callable",
+      "callable": {
+        "function_name": "unequip_mcp_set",
+        "import_path": "heaven_tree_repl.agent_config_management",
+        "import_object": "unequip_mcp_set"
+      }
+    },
+    "list": {
+      "id": "agent_management_equipment_mcp_set_list",
+      "title": "Show MCP Set",
+      "description": "Show current MCP set",
+      "type": "Callable",
+      "callable": {
+        "function_name": "list_mcp_set",
+        "import_path": "heaven_tree_repl.agent_config_management",
+        "import_object": "list_mcp_set"
+      }
+    }
+  }
+}

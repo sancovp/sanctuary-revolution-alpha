@@ -181,75 +181,102 @@ def landing_routine(starlog_path: Optional[str] = None) -> str:
     Returns:
         Landing sequence guidance and identity transition
     """
-    logger.info(f"Executing starship landing routine, starlog_path: {starlog_path}")
-    
-    # TODO: Add OMNISANC validation here
-    # if starlog_path:
-    #     validation = omnisanc.validate_sequence(starlog_path, "🛬")
-    #     if not validation.allowed:
-    #         return validation.error_message
-    
-    landing_sequence = """🛬 LANDING PHASE - SESSION REVIEW
+    logger.info(f"Executing starship landing routine (STARSYSTEM MEASURE), starlog_path: {starlog_path}")
 
-You've ended your session and entered the LANDING phase. This is where you review
-what you captured and document your progress before continuing the mission.
+    # STARSYSTEM MEASURE — query what this session produced
+    measure_parts = ["🛬 LANDING PHASE — STARSYSTEM MEASURE\n"]
 
-## What Just Happened
+    # 1. Query skills created/modified this session
+    try:
+        from carton_mcp.carton_utils import CartOnUtils
+        utils = CartOnUtils()
 
-Your STARLOG session has ended. Any knowledge you captured during the session using
-`knowledge_update()` has been stored as primitive flight configs.
+        # Recent skills (last 2 hours as proxy for "this session")
+        skill_query = (
+            "MATCH (s:Wiki) WHERE s.n STARTS WITH 'Skill_' "
+            "AND s.t > datetime() - duration('PT2H') "
+            "RETURN s.n AS name ORDER BY s.t DESC LIMIT 20"
+        )
+        skill_result = utils.query_wiki_graph(skill_query)
+        skills_created = []
+        if skill_result and skill_result.get("success"):
+            skills_created = [r.get("name", "") for r in skill_result.get("data", [])]
 
-## What Happens Next - 3 Mandatory Steps
+        if skills_created:
+            measure_parts.append(f"## Skills Created: {len(skills_created)}")
+            for s in skills_created[:10]:
+                measure_parts.append(f"  - {s}")
+        else:
+            measure_parts.append("## Skills Created: 0")
 
-The LANDING phase has 3 required steps (OMNISANC enforces this sequence):
+        # 2. Flight step progress
+        flight_query = (
+            "MATCH (s:Wiki)-[:HAS_FLIGHT_STEP]->(step:Wiki) "
+            "MATCH (s)-[:PART_OF]->(f:Wiki) "
+            "WHERE f.n STARTS WITH 'Flight_Config_' "
+            "RETURN f.n AS flight, count(s) AS steps_done ORDER BY f.n"
+        )
+        flight_result = utils.query_wiki_graph(flight_query)
+        if flight_result and flight_result.get("success"):
+            flight_data = flight_result.get("data", [])
+            if flight_data:
+                measure_parts.append(f"\n## Flight Progress: {len(flight_data)} flights")
+                for fd in flight_data:
+                    fname = fd.get("flight", "?").replace("Flight_Config_", "")
+                    steps = fd.get("steps_done", 0)
+                    measure_parts.append(f"  - {fname}: {steps} steps")
 
-### Step 1: landing_routine() ✅ (You just called this)
+        # 3. Hallucination flags this session
+        hallo_query = (
+            "MATCH (h:Wiki) WHERE h.n STARTS WITH 'Hallucination_' "
+            "AND h.t > datetime() - duration('PT2H') "
+            "RETURN h.n AS name, h.d AS desc LIMIT 10"
+        )
+        hallo_result = utils.query_wiki_graph(hallo_query)
+        hallos = []
+        if hallo_result and hallo_result.get("success"):
+            hallos = hallo_result.get("data", [])
 
-You're here now. This tool explains the LANDING phase.
+        if hallos:
+            measure_parts.append(f"\n## Hallucinations Flagged: {len(hallos)}")
+            for h in hallos:
+                measure_parts.append(f"  - {h.get('name', '?')}")
+        else:
+            measure_parts.append("\n## Hallucinations Flagged: 0")
 
-### Step 2: session_review() (CALL THIS NEXT)
+        # 4. GIINT hierarchy changes
+        giint_query = (
+            "MATCH (g:Wiki) WHERE (g.n STARTS WITH 'Giint_' OR g.n STARTS WITH 'Design_') "
+            "AND g.t > datetime() - duration('PT2H') "
+            "RETURN g.n AS name ORDER BY g.t DESC LIMIT 20"
+        )
+        giint_result = utils.query_wiki_graph(giint_query)
+        giint_changes = []
+        if giint_result and giint_result.get("success"):
+            giint_changes = [r.get("name", "") for r in giint_result.get("data", [])]
 
-This will show you:
-- All primitives you captured during the session
-- How many steps each primitive has
-- Composition syntax for combining primitives into larger flight configs
+        if giint_changes:
+            measure_parts.append(f"\n## GIINT/Design Changes: {len(giint_changes)}")
+            for g in giint_changes[:10]:
+                measure_parts.append(f"  - {g}")
 
-Call it like this:
-```
-starship.session_review(starlog_path="{starlog_path if starlog_path else '/path/to/project'}")
-```
+    except Exception as e:
+        logger.exception(f"STARSYSTEM MEASURE query failed: {e}")
+        measure_parts.append(f"\n⚠️ Measure query failed: {e}")
 
-### Step 3: giint.respond() (REQUIRED AFTER session_review)
+    # Instructions for next steps
+    measure_parts.append(f"""
+---
+## Next Steps (OMNISANC enforces sequence)
 
-After session_review, you MUST document this session's progress in the mission QA.
+**Step 2: session_review()** — Compare flight predictor predictions vs reality
+  Call: starship.session_review(starlog_path="{starlog_path or '/path/to/project'}")
 
-session_review will give you the exact mission_id and instructions for calling
-giint.respond() with your session notes.
+**Step 3: giint.respond()** — Record LEARN decision (REDO/CONTINUE/ABANDON)
 
-## After All 3 Steps Complete
+After all 3 steps: fly() for next session OR complete_mission()""")
 
-Once you've completed landing_routine → session_review → giint.respond, you can:
-
-- **Continue mission**: Call `starship.fly()` to browse flights for next session
-- **Complete mission**: Call `complete_mission(mission_id)` to finish
-
-## Summary
-
-🔹 You are in LANDING phase
-🔹 NEXT: Call session_review() to see your captured primitives
-🔹 THEN: Call giint.respond() to document this session
-🔹 THEN: fly() for next session OR complete_mission()
-
-OMNISANC will guide you through each step."""
-    
-    # TODO: Add to STARLOG debug diary with 🛬 emoji
-    # if starlog_path:
-    #     starlog.update_debug_diary(
-    #         content=f"🛬 STARSHIP LANDING COMPLETE: Mission accomplished, returning to base identity",
-    #         starlog_path=starlog_path
-    #     )
-    
-    return landing_sequence
+    return "\n".join(measure_parts)
 
 # COURSE MANAGEMENT (OMNISANC CORE INTEGRATION)
 
@@ -1001,42 +1028,21 @@ Stored in registry and created primitive flight config."""
 @mcp.tool()
 def session_review(starlog_path: str, got_compacted: bool = False) -> str:
     """
-    Review knowledge captured during current session and prompt for composition.
+    STARSYSTEM LEARN — evaluate session outcomes and decide next action.
 
-    REGISTRY FLOW:
-    1. Get active session_id from STARLOG
-    2. Query starport_session_knowledge for this session's captures
-    3. Show primitives created
-    4. Prompt with add_flight_config() syntax for composition
+    Replaces legacy session_review (empty knowledge captures).
+    Now: reviews MEASURE output from landing_routine, prompts LEARN decision.
 
     Args:
         starlog_path: STARLOG project path
         got_compacted: Whether conversation was compacted (affects confidence)
 
     Returns:
-        Review prompt with primitives and composition instructions
+        LEARN decision prompt with structured giint.respond template
     """
-    logger.info(f"Running session_review for {starlog_path}")
+    logger.info(f"Running session_review (STARSYSTEM LEARN) for {starlog_path}")
 
     try:
-        # 1. Get active session_id from STARLOG and mission_id from course_state
-        from starlog_mcp.starlog import Starlog
-        from heaven_base.registry.registry_service import RegistryService
-
-        starlog = Starlog()
-        project_name = starlog._get_project_name_from_path(starlog_path)
-
-        # Find active session
-        starlog_data = starlog._get_registry_data(project_name, "starlog")
-        session_id = None
-        for sid, sdata in starlog_data.items():
-            if sdata.get("end_timestamp") is None:
-                session_id = sid
-                break
-
-        if not session_id:
-            return "❌ No active STARLOG session found."
-
         # Get mission_id from course_state
         COURSE_STATE_FILE = os.path.join(os.environ["HEAVEN_DATA_DIR"], "omnisanc_core/.course_state")
         mission_id = None
@@ -1046,170 +1052,56 @@ def session_review(starlog_path: str, got_compacted: bool = False) -> str:
                 mission_id = course_state.get("mission_id")
 
         if not mission_id:
-            return "❌ No active mission. session_review requires active mission context."
+            mission_id = "unknown"
 
-        # 2. Query starport_session_knowledge for this session's captures
-        service = RegistryService()
-        all_captures = service.get_all("starport_session_knowledge")
-
-        if not all_captures:
-            return f"""🔍 STARPORT SESSION REVIEW
-
-Mission: {mission_id}
-Session: {session_id}
-Status: No knowledge captures during this session.
-
-You can still compose existing flight configs using:
-starship.add_flight_config(path, name, {{"work_loop_subchain": ["config1", "config2"]}})
-
----
-
-## 📝 REQUIRED NEXT STEP: Document This Session
-
-Even without primitives, you MUST call giint.respond() to document this session.
-
-Call: giint.respond(qa_id="{mission_id}", ..., simple_response_string="Session notes...")
-
-After giint.respond() completes:
-- Call starship.fly() to continue mission
-- OR call complete_mission(mission_id="{mission_id}") to finish"""
-
-        # Filter captures for this session
-        session_captures = {}
-        for capture_id, capture_data in all_captures.items():
-            if capture_data.get("session_id") == session_id:
-                session_captures[capture_id] = capture_data
-
-        if not session_captures:
-            return f"""🔍 STARPORT SESSION REVIEW
-
-Mission: {mission_id}
-Session: {session_id}
-Status: No knowledge captures during this session.
-
-You can still compose existing flight configs using:
-starship.add_flight_config(path, name, {{"work_loop_subchain": ["config1", "config2"]}})
-
----
-
-## 📝 REQUIRED NEXT STEP: Document This Session
-
-Even without primitives, you MUST call giint.respond() to document this session.
-
-Call: giint.respond(qa_id="{mission_id}", ..., simple_response_string="Session notes...")
-
-After giint.respond() completes:
-- Call starship.fly() to continue mission
-- OR call complete_mission(mission_id="{mission_id}") to finish"""
-
-        # 3. Format primitives created
-        primitives_list = []
-        for capture_id, capture_data in session_captures.items():
-            primitives_list.append({
-                "name": capture_data.get("flight_config_name"),
-                "title": capture_data.get("title"),
-                "step_count": capture_data.get("step_count", 1),
-                "domain": capture_data.get("domain"),
-                "subdomain": capture_data.get("subdomain"),
-                "process": capture_data.get("process")
-            })
-
-        # Build review output
         output = [
-            "🔍 STARPORT SESSION REVIEW",
+            "🧠 STARSYSTEM LEARN — Session Evaluation",
             "",
             f"Mission: {mission_id}",
-            f"Session: {session_id}",
             f"Compacted: {got_compacted}",
-            f"Confidence: {'Low (compacted)' if got_compacted else 'High'}",
             "",
-            f"📦 Primitives Created: {len(primitives_list)}",
-            ""
-        ]
-
-        for i, prim in enumerate(primitives_list, 1):
-            output.append(f"{i}. **{prim['title']}**")
-            output.append(f"   Flight Config: `{prim['name']}`")
-            output.append(f"   Steps: {prim['step_count']}")
-            output.append(f"   Domain: {prim['domain']}/{prim['subdomain']}/{prim['process']}")
-            output.append("")
-
-        # TODO: Future enhancement - integrate treeshell navigation logic here
-        # Add interactive interface for deciding WHEN each primitive vs composite
-        # gets used in a mission. This will provide mission-level orchestration
-        # where users can define conditional logic and sequencing for flight configs.
-
-        output.extend([
-            "🔗 Composition Options:",
+            "## LEARN Decision",
             "",
-            "To compose primitives into a composite flight config:",
+            "Based on the MEASURE output from landing_routine(), decide:",
             "",
-            "```python",
-            "starship.add_flight_config(",
-            f'    path="{starlog_path}",',
-            '    name="my_composite_flight_config",',
-            '    config_data={',
-            '        "description": "Composite workflow description",',
-            '        "work_loop_subchain": [',
-        ])
-
-        # Add primitive names as references
-        for prim in primitives_list:
-            output.append(f'            "{prim["name"]}",')
-
-        output.extend([
-            '        ]',
-            '    },',
-            f'    category="{primitives_list[0]["domain"]}/{primitives_list[0]["subdomain"]}/{primitives_list[0]["process"]}"',
-            ')',
-            "```",
+            "**CONTINUE** — Session produced value. Skills/flights progressed. No major issues.",
+            "  → Record what was accomplished via giint.respond()",
             "",
-            "The flight config system will resolve these references when executing the composite.",
+            "**REDO** — Session had issues (hallucinations, incomplete work, wrong approach).",
+            "  → Note what went wrong, create remediation tasks",
+            "",
+            "**ABANDON** — This mission type doesn't work. Need different approach.",
+            "  → Document why, recommend mission type changes",
+            "",
+            "## Remediation by Hallucination Type (if any flagged)",
+            "",
+            "- FactualFabrication → create rule (.claude/rules/)",
+            "- FactualInconsistency → update CartON concept",
+            "- ContextInconsistency → create skill equip rule",
+            "- InstructionInconsistency → create hook",
+            "- LogicalInconsistency → create flight validation step",
+            "",
+            "## Zero-Shot Check",
+            "",
+            "Did this mission type succeed without manual intervention?",
+            "If YES for 3+ sessions → recommend for goldenization as operadic.",
             "",
             "---",
             "",
-            "## 📝 REQUIRED NEXT STEP: Document This Session",
+            f"## 📝 REQUIRED: Record LEARN Decision via giint.respond()",
             "",
-            "You MUST now call giint.respond() to document this session's progress in the mission QA.",
+            f'Call giint.respond(qa_id="{mission_id}", ..., '
+            f'simple_response_string="LEARN decision: CONTINUE/REDO/ABANDON. '
+            f'Reason: ... Skills created: N. Flights progressed: N. '
+            f'Hallucinations: N. Zero-shot: yes/no.")',
             "",
-            "Call it like this:",
-            "```python",
-            "giint.respond(",
-            f'    qa_id="{mission_id}",',
-            '    user_prompt_description="Session review for [describe what you did]",',
-            '    one_liner="Brief summary of session outcomes",',
-            '    key_tags=["session_review", "domain_tag", "work_tag"],',
-            '    involved_files=["file1.py", "file2.py"],  # Files you worked on',
-            '    project_id="project_name",',
-            '    feature="feature_name",',
-            '    component="component_name",',
-            '    deliverable="deliverable_name",',
-            '    subtask="subtask_name",',
-            '    task="task_name",',
-            '    workflow_id="workflow_name",',
-            '    simple_response_string="""',
-            '    Your session notes here:',
-            '    - What you accomplished',
-            '    - Key decisions made',
-            '    - Primitives created and why',
-            '    - Next steps for mission',
-            '    """',
-            ')',
-            "```",
-            "",
-            "## After giint.respond() Completes",
-            "",
-            "You can then:",
-            "- **Continue mission**: Call `starship.fly()` to select next flight",
-            "- **Complete mission**: Call `complete_mission(mission_id=\"" + mission_id + "\")` to finish",
-            "",
-            "OMNISANC will enforce this sequence."
-        ])
+            f"After giint.respond(): fly() for next session OR complete_mission(mission_id=\"{mission_id}\")",
+        ]
 
         return "\n".join(output)
 
     except Exception as e:
-        logger.error(f"Failed session_review: {e}", exc_info=True)
+        logger.error(f"Failed session_review (LEARN): {e}", exc_info=True)
         return f"❌ Failed session_review: {str(e)}"
 
 def main():

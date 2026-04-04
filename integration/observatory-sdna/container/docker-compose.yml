@@ -1,0 +1,26 @@
+services:
+  repo-lord:
+    image: repo-lord:latest
+    container_name: repo-lord
+    privileged: true  # Required for DinD
+    ports:
+      - "8081:8081"  # GrugAgent CAVEHTTPServer
+    networks:
+      - heaven
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - MINIMAX_API_KEY=${MINIMAX_API_KEY}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - TARGET_REPO=${TARGET_REPO}
+      - TMUX_SESSION=lord
+      - GRUG_PORT=8081
+      - PARENT_URL=http://mind_of_god:8080
+      - HEAVEN_DATA_DIR=/tmp/heaven_data
+    working_dir: /repo-lord
+    stdin_open: true
+    tty: true
+
+networks:
+  heaven:
+    external: true
+    name: god-from-heaven-main_new_build_HEAVEN

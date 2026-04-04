@@ -4,9 +4,12 @@ Agent Management module - Agent and user tree repl classes.
 """
 import json
 import datetime
+import logging
 import uuid
 from typing import Dict, List, Any, Optional
 from .approval_system import ApprovalQueue
+
+logger = logging.getLogger(__name__)
 
 
 class AgentTreeReplMixin:
@@ -157,38 +160,91 @@ class UserTreeReplMixin:
         from heaven_base.baseheavenagent import HeavenAgentConfig
         from heaven_base.unified_chat import ProviderEnum
         from .agent_config_management import get_dynamic_config
-        
+
         self.active_agent_sessions = {}
         self.approval_queue = ApprovalQueue()
         self.parent_approval_callback = parent_approval_callback
-        
+
         # Get equipped values from dynamic config
         dynamic_data = get_dynamic_config()
-        self.dynamic_agent_config = HeavenAgentConfig(
-            name=dynamic_data.get('name', 'DynamicAgent'),
-            system_prompt=dynamic_data.get('system_prompt', 'You are a helpful AI assistant.'),
-            tools=dynamic_data.get('tools', []),
-            provider=dynamic_data.get('provider', ProviderEnum.OPENAI),
-            model=dynamic_data.get('model', 'o4-mini'),
-            temperature=dynamic_data.get('temperature', 0.7),
-            max_tokens=dynamic_data.get('max_tokens', 8000)
-        )
-        
+
+        # Resolve provider string to ProviderEnum
+        provider_str = dynamic_data.get('provider', 'anthropic')
+        try:
+            provider = ProviderEnum(provider_str)
+        except ValueError:
+            provider = ProviderEnum.ANTHROPIC
+
+        # Build config kwargs from dynamic data, only including set fields
+        config_kwargs = {
+            'name': dynamic_data.get('name', 'DynamicAgent'),
+            'system_prompt': dynamic_data.get('system_prompt', 'You are a helpful AI assistant.'),
+            'tools': dynamic_data.get('tools', []),
+            'provider': provider,
+            'model': dynamic_data.get('model', 'MiniMax-M2.5-highspeed'),
+            'temperature': dynamic_data.get('temperature', 0.7),
+            'max_tokens': dynamic_data.get('max_tokens', 8000),
+        }
+
+        # Add optional fields only if they're set
+        optional_fields = [
+            'thinking_budget', 'mcp_servers', 'mcp_set',
+            'persona', 'skillset', 'carton_identity',
+            'prompt_suffix_blocks',
+        ]
+        for field in optional_fields:
+            if field in dynamic_data:
+                config_kwargs[field] = dynamic_data[field]
+
+        self.dynamic_agent_config = HeavenAgentConfig(**config_kwargs)
+
         # Store dynamic_agent_config in session variables so equipment system can access it
         self.session_vars["dynamic_agent_config"] = self.dynamic_agent_config
-        
+
         # Store selected_agent_config as string identifier - initially points to dynamic config
         self.session_vars["selected_agent_config"] = "dynamic"
-    
+
     def _resolve_agent_config(self, config_identifier: str):
-        """Resolve config identifier to actual HeavenAgentConfig object."""
+        """Resolve config identifier to actual HeavenAgentConfig object.
+
+        Supports 'dynamic' for current equipment state, or a saved config name
+        which loads from HEAVEN_DATA_DIR/agents/<name>/<name>_config.json.
+        """
         if config_identifier == "dynamic":
-            # Just return the dynamic config object as-is
             return self.dynamic_agent_config
-        else:
-            # TODO: Load saved config by name
-            # For now, fall back to the original dynamic agent config
+
+        # Try loading saved config
+        from .agent_config_management import copy_existing, get_dynamic_config
+        from heaven_base.baseheavenagent import HeavenAgentConfig
+        from heaven_base.unified_chat import ProviderEnum
+
+        result = copy_existing(config_identifier)
+        if not result.get("success"):
             return self.dynamic_agent_config
+
+        data = get_dynamic_config()
+        provider_str = data.get('provider', 'anthropic')
+        try:
+            provider = ProviderEnum(provider_str)
+        except ValueError:
+            provider = ProviderEnum.ANTHROPIC
+
+        config_kwargs = {
+            'name': data.get('name', config_identifier),
+            'system_prompt': data.get('system_prompt', ''),
+            'tools': data.get('tools', []),
+            'provider': provider,
+            'model': data.get('model', 'MiniMax-M2.5-highspeed'),
+            'temperature': data.get('temperature', 0.7),
+            'max_tokens': data.get('max_tokens', 8000),
+        }
+        for field in ['thinking_budget', 'mcp_servers', 'mcp_set',
+                       'persona', 'skillset', 'carton_identity',
+                       'prompt_suffix_blocks']:
+            if field in data:
+                config_kwargs[field] = data[field]
+
+        return HeavenAgentConfig(**config_kwargs)
     
     def _get_user_interface_config(self):
         """Load user interface configuration from JSON file."""

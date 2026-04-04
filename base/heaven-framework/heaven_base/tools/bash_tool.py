@@ -72,34 +72,41 @@ class _BashSession:
         )
         await self._process.stdin.drain()
 
-        # read output from the process, until the sentinel is found
+        # read output line-by-line using async readline() until sentinel is found
+        # readline() properly awaits data from the subprocess — no polling needed
         try:
+            output_lines = []
             async with asyncio.timeout(self._timeout):
                 while True:
-                    await asyncio.sleep(self._output_delay)
-                    # if we read directly from stdout/stderr, it will wait forever for
-                    # EOF. use the StreamReader buffer directly instead.
-                    output = self._process.stdout._buffer.decode()  # pyright: ignore[reportAttributeAccessIssue]
-                    if self._sentinel in output:
-                        # strip the sentinel and break
-                        output = output[: output.index(self._sentinel)]
+                    line = await self._process.stdout.readline()
+                    if not line:
+                        # EOF — process exited
                         break
+                    decoded = line.decode()
+                    if self._sentinel in decoded:
+                        # sentinel found — don't include it in output
+                        before_sentinel = decoded[:decoded.index(self._sentinel)]
+                        if before_sentinel:
+                            output_lines.append(before_sentinel)
+                        break
+                    output_lines.append(decoded)
         except asyncio.TimeoutError:
             self._timed_out = True
             raise ToolError(
                 f"ERROR: timed out: bash has not returned in {self._timeout} seconds and must be restarted",
             ) from None
 
+        output = "".join(output_lines)
         if output.endswith("\n"):
             output = output[:-1]
 
-        error = self._process.stderr._buffer.decode()  # pyright: ignore[reportAttributeAccessIssue]
-        if error.endswith("\n"):
-            error = error[:-1]
-
-        # clear the buffers so that the next output can be read correctly
-        self._process.stdout._buffer.clear()  # pyright: ignore[reportAttributeAccessIssue]
-        self._process.stderr._buffer.clear()  # pyright: ignore[reportAttributeAccessIssue]
+        # stderr: read whatever is available (non-blocking via buffer)
+        error = ""
+        if self._process.stderr._buffer:  # pyright: ignore[reportAttributeAccessIssue]
+            error = self._process.stderr._buffer.decode()  # pyright: ignore[reportAttributeAccessIssue]
+            self._process.stderr._buffer.clear()  # pyright: ignore[reportAttributeAccessIssue]
+            if error.endswith("\n"):
+                error = error[:-1]
 
         return CLIResult(output=output, error=error)
 

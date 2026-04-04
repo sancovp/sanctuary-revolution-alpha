@@ -6,11 +6,11 @@ Persists to /tmp/heaven_data/cave_agent_config.json
 import json
 from pathlib import Path
 import os
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from .models import MainAgentConfig
+from .models import MainAgentConfig, CaveAgentEntry
 
 CAVE_AGENT_CONFIG_PATH = Path(os.environ.get("HEAVEN_DATA_DIR", "/tmp/heaven_data")) / "cave_agent_config.json"
 CAVE_CONFIG_ARCHIVES_DIR = Path(os.environ.get("HEAVEN_DATA_DIR", "/tmp/heaven_data")) / "cave_config_archives"
@@ -33,8 +33,13 @@ class CAVEConfig(BaseModel):
     system_prompt_target_path: Optional[Path] = None  # Where to write rendered prompt
     template_vars: Dict[str, str] = Field(default_factory=dict)  # {{VAR}} substitutions
 
-    # === Main Agent ===
+    # === Main Agent (legacy — kept for backwards compat) ===
     main_agent_config: MainAgentConfig = Field(default_factory=MainAgentConfig)
+
+    # === Agent Registry (Stage 5) ===
+    # N agents, typed. CAVEAgent.__init__ creates the right type for each.
+    # If empty, falls back to main_agent_config (legacy single-agent mode).
+    agents: List[CaveAgentEntry] = Field(default_factory=list)
 
     # === Features ===
     enable_sse: bool = True

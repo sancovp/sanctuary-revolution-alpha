@@ -207,6 +207,8 @@ async def analyze_dependencies_and_merge_to_graph(repo_name: str, target_entity:
             exclude_from_contextualizer=None,
             include_external_packages=True,
             external_depth=1,
+            recursive=True,
+            recursive_depth=5,
         )
         
         if dep_result["status"] != "found":

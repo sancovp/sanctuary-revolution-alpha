@@ -1,0 +1,60 @@
+name: Validate Inner App
+# Validates the inner app source (React/TypeScript/Vite).
+# Does NOT build a production bundle — the inner app runs from source via Vite.
+# This just ensures the code is clean and compilable.
+
+on:
+  push:
+    paths:
+      - 'src/**'
+      - 'index.html'
+      - 'vite.config.ts'
+      - 'vite.config.web.ts'
+      - 'tsconfig.json'
+      - '.github/workflows/validate-inner-app.yml'
+    branches: [main]
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'index.html'
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+        continue-on-error: false
+
+      - name: ESLint
+        run: npx eslint src/ --max-warnings 0
+        continue-on-error: true  # Warn but don't block
+
+      - name: Vite build test
+        run: npx vite build --mode development
+        env:
+          NODE_ENV: development
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Inner App Validation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "This validates that the inner app source is clean and compilable." >> $GITHUB_STEP_SUMMARY
+          echo "The inner app runs from **source via Vite** — no production build is deployed." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "When agents edit files, Vite HMR pushes updates to the webview instantly." >> $GITHUB_STEP_SUMMARY
+          echo "This workflow just ensures nothing is broken." >> $GITHUB_STEP_SUMMARY

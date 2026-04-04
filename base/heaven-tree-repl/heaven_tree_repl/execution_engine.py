@@ -469,6 +469,8 @@ class ExecutionEngineMixin:
             return self._handle_shortcut(args_str)
         elif cmd == "shortcuts":
             return self._handle_list_shortcuts()
+        elif cmd == "lang":
+            return self._handle_lang()
         elif cmd == "exit":
             return self._handle_exit()
         elif cmd == "set":

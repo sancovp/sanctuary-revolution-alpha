@@ -86,29 +86,65 @@ def get_giint_project_for_starlog(starlog_path: str):
 
 
 def has_ready_tasks(project_id: str) -> bool:
-    """Check if GIINT project has any tasks with is_ready=True.
+    """Check if GIINT project has fully populated task hypercluster in CartON.
 
-    Returns True if ready tasks exist or on error (fail open).
+    A task is 'ready' when its FULL hypercluster web exists:
+    - Starsystem_*_Task_Collections → Hypercluster_{id}
+    - Hypercluster → GIINT_Project → Feature → Component → Deliverable → Task
+    - HC populated beyond skeleton (planning filled it out with specs/concepts)
+
+    The ENTIRE starsystem structure + collection categories + hypercluster +
+    GIINT hierarchy + populated content = ready. Anything less = planning needed.
+
+    Returns True if ready or on error (fail open).
     """
-    if not GIINT_AVAILABLE:
-        return True  # Fail open if GIINT unavailable
-    try:
-        result = giint_projects.get_project(project_id)
-        if not result.get("success"):
-            return True  # Fail open
+    import logging
+    log = logging.getLogger(__name__)
 
-        project = result.get("project", {})
-        for feature in project.get("features", {}).values():
-            for component in feature.get("components", {}).values():
-                for deliverable in component.get("deliverables", {}).values():
-                    for task in deliverable.get("tasks", {}).values():
-                        if task.get("is_ready", False):
-                            return True
-        return False
+    norm_id = project_id.replace("-", "_").replace(" ", "_")
+    project_concept = f"Giint_Project_{norm_id}"
+    hc_concept = f"Hypercluster_{norm_id}"
+
+    try:
+        from neo4j import GraphDatabase
+        driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "password"))
+        with driver.session() as session:
+            # Check 1: Full HC → GIINT chain (HC PART_OF Task_Collections, not HAS_PART)
+            chain = session.run(
+                "MATCH (hc:Wiki {n: $hc})-[:PART_OF]->(tc:Wiki) "
+                "WHERE tc.n ENDS WITH '_Task_Collections' "
+                "WITH hc "
+                "MATCH (hc)-[:HAS_GIINT_PROJECT]->(p:Wiki {n: $proj})"
+                "-[:HAS_FEATURE]->(f:Wiki)"
+                "-[:HAS_COMPONENT]->(c:Wiki)"
+                "-[:HAS_DELIVERABLE]->(d:Wiki)"
+                "-[:HAS_TASK]->(t:Wiki) "
+                "RETURN count(t) > 0 AS ok",
+                hc=hc_concept, proj=project_concept
+            ).single()
+            if not chain or not chain["ok"]:
+                log.info(f"[has_ready_tasks] Missing starsystem→HC→GIINT chain for {hc_concept}")
+                driver.close()
+                return False
+
+            # Check 2: HC populated beyond skeleton (5 = just P/F/C/D/T nodes)
+            pop = session.run(
+                "MATCH (hc:Wiki {n: $hc})-[*1..5]->(m:Wiki) "
+                "RETURN count(DISTINCT m) AS n",
+                hc=hc_concept
+            ).single()
+            count = pop["n"] if pop else 0
+            if count <= 5:
+                log.info(f"[has_ready_tasks] {hc_concept} skeleton only ({count} members)")
+                driver.close()
+                return False
+
+            log.info(f"[has_ready_tasks] {hc_concept} populated ({count} members) — ready")
+            driver.close()
+            return True
     except Exception as e:
-        import logging
-        logging.getLogger(__name__).warning(f"Failed to check ready tasks: {e}")
-        return True  # Fail open
+        log.warning(f"[has_ready_tasks] CartON query failed, failing open: {e}")
+        return True
 
 
 def _check_giint_planning_gate(starlog_path: str, requested_config: str, state: dict) -> dict:
@@ -163,18 +199,26 @@ def _check_giint_planning_gate(starlog_path: str, requested_config: str, state: 
                     notes=f"Auto-injected: GIINT planning gate (no ready tasks in {giint_project_id})"
                 )
 
-                # Create original requested session
-                original_session = mission_module.MissionSession(
-                    project_path=starlog_path,
-                    flight_config=requested_config,
-                    status="pending",
-                    notes=f"Queued: Original requested flight (after planning)"
+                # Check if original flight is already in the mission sequence
+                # (template-driven missions already have all flights queued)
+                original_already_queued = any(
+                    s.flight_config == requested_config
+                    for s in loaded_mission.session_sequence[loaded_mission.current_step:]
                 )
 
-                # Insert planning at current step, original right after
                 current_step = loaded_mission.current_step
+                # Always insert planning flight before current step
                 loaded_mission.session_sequence.insert(current_step, planning_session)
-                loaded_mission.session_sequence.insert(current_step + 1, original_session)
+
+                if not original_already_queued:
+                    # Manual/ad-hoc mission — also queue the original flight after planning
+                    original_session = mission_module.MissionSession(
+                        project_path=starlog_path,
+                        flight_config=requested_config,
+                        status="pending",
+                        notes=f"Queued: Original requested flight (after planning)"
+                    )
+                    loaded_mission.session_sequence.insert(current_step + 1, original_session)
 
                 # Save updated mission
                 mission_module.save_mission(loaded_mission)
@@ -383,15 +427,82 @@ def get_course_state() -> dict:
             "description": None
         }
 
+def _derive_omnisanc_zone(state: dict) -> tuple:
+    """Derive OMNISANC zone from state fields. Returns (state_name, zone_name, allowed_actions, next_step)."""
+    course_plotted = state.get("course_plotted", False)
+    mission_active = state.get("mission_active", False)
+    session_active = state.get("session_active", False)
+    needs_review = state.get("needs_review", False)
+
+    if not course_plotted:
+        return ("HOME", "CF_HOME",
+                ["plot_course", "orient", "fly", "mission_create", "mission_select_menu", "get_health", "CartON tools"],
+                "Plot a course: execute_action.exec {\"server_name\": \"starship\", \"action_name\": \"plot_course\", \"body_schema\": {\"project_paths\": [\"<path>\"], \"description\": \"<desc>\", \"domain\": \"starsystem\"}}")
+
+    if needs_review:
+        landing_step = 1
+        if state.get("landing_routine_called", False):
+            landing_step = 2
+        if state.get("session_review_called", False):
+            landing_step = 3
+        return ("LANDING", "STARPORT_LANDING",
+                ["landing_routine", "giint.respond", "orient", "CartON tools"],
+                f"Complete landing step {landing_step}/3")
+
+    if session_active:
+        return ("JOURNEY", "STARSHIP_SESSION",
+                ["ALL tools available", "update_debug_diary", "end_starlog"],
+                "Work on your task. End with end_starlog when done.")
+
+    # Course plotted, no session, no landing = STARPORT
+    project = state.get("projects", [""])[0] if state.get("projects") else ""
+    mission_id = state.get("mission_id", "none")
+    return ("STARPORT", "STARPORT_LAUNCH",
+            ["fly", "mission_create", "mission_select_menu", "mission_start", "start_waypoint_journey", "orient", "complete_mission", "mission_redo", "go_home"],
+            f"Configure mission or start flight for {project}")
+
+
+OMNISANC_STATE_MD = "/tmp/omnisanc_state.md"
+
+def _write_omnisanc_state_md(state: dict):
+    """Write OMNISANC state as .md for MEMORY.md @include."""
+    try:
+        state_name, zone, allowed, next_step = _derive_omnisanc_zone(state)
+        project = state.get("projects", [""])[0] if state.get("projects") else "none"
+        mission_id = state.get("mission_id") or "none"
+        mission_step = state.get("mission_step", 0)
+
+        md = f"""## OMNISANC
+STATE: {state_name} | ZONE: {zone}
+PROJECT: {project}
+MISSION: {mission_id} (step {mission_step})
+ALLOWED: {', '.join(allowed)}
+NEXT: {next_step}
+"""
+        with open(OMNISANC_STATE_MD, 'w') as f:
+            f.write(md)
+    except Exception as e:
+        logger.error(f"Failed to write omnisanc_state.md: {e}")
+
+
 def save_course_state(state: dict):
-    """Save course state"""
+    """Save course state + project .md for MEMORY.md @include"""
     _ensure_course_dir()
+
+    # Derive zone and persist it so other hooks can READ it without re-deriving
+    try:
+        state_name, zone, _, _ = _derive_omnisanc_zone(state)
+        state["zone"] = state_name
+    except Exception:
+        pass
 
     try:
         with open(COURSE_STATE_FILE, 'w') as f:
             json.dump(state, f, indent=2)
     except Exception as e:
         logger.error(f"Failed to save course state: {e}")
+
+    _write_omnisanc_state_md(state)
 
 def _get_waypoint_state(projects: list) -> dict:
     """Read actual waypoint state from Waypoint's JSON tracking."""
@@ -412,6 +523,198 @@ def _get_waypoint_state(projects: list) -> dict:
     except Exception as e:
         logger.error(f"Failed to read waypoint state: {e}")
         return {}
+
+def _cleanup_waypoint_state(projects: list):
+    """Remove waypoint state file to prevent stale state on next course."""
+    if not projects:
+        return
+    project_path = projects[0] if isinstance(projects, list) else projects
+    project_name = Path(project_path).name
+    waypoint_file = f"/tmp/waypoint_state_{project_name}.json"
+    try:
+        if os.path.exists(waypoint_file):
+            os.remove(waypoint_file)
+            logger.info(f"Cleaned up waypoint state: {waypoint_file}")
+    except Exception as e:
+        logger.warning(f"Failed to clean up waypoint state {waypoint_file}: {e}")
+
+
+# ──────────────────────────────────────────────────────────────
+# Zone Screen Helpers — ONE source of truth for PreToolUse AND PostToolUse
+# ──────────────────────────────────────────────────────────────
+
+def _screen_home(state: dict) -> str:
+    """Generate HOME zone screen."""
+    project = state.get("projects", [""])[0] if state.get("projects") else ""
+    path_placeholder = project if project else "<path>"
+    return f"""🏰🌐
+[🏠 HOME]: No active course. Welcome to Crystal Forest.
+
+HOME OPTIONS:
+1. Plot a course:
+   execute_action.exec {{"server_name": "starship", "action_name": "plot_course", "body_schema": {{"project_paths": ["{path_placeholder}"], "description": "<desc>", "domain": "starsystem"}}}}
+
+2. Orient:
+   execute_action.exec {{"server_name": "starlog", "action_name": "orient", "body_schema": {{}}}}
+
+3. Create a mission:
+   execute_action.exec {{"server_name": "starsystem", "action_name": "mission_create", "body_schema": {{"mission_id": "<task-name>", "mission_type": "bml_default", "mission_type_domain": "odyssey", "variables": {{"project_path": "{path_placeholder}", "project_name": "<task-name>"}}}}}}
+
+4. Select existing mission:
+   execute_action.exec {{"server_name": "starsystem", "action_name": "mission_select_menu", "body_schema": {{}}}}
+
+5. Get next agent task from TK:
+   execute_action.exec {{"server_name": "giint-llm-intelligence", "action_name": "get_next_task_from_treekanban", "body_schema": {{"agent_tasks_only": true}}}}"""
+
+
+def _screen_starport(state: dict) -> str:
+    """Generate STARPORT zone screen."""
+    project = state.get("projects", [""])[0] if state.get("projects") else ""
+    mission_id = state.get("mission_id")
+
+    step, total, flight = 0, 0, None
+    if mission_id:
+        try:
+            from starsystem.mission import load_mission as _lm_screen
+            m = _lm_screen(mission_id)
+            if m:
+                step = m.current_step
+                total = len(m.session_sequence)
+                flight = m.session_sequence[step].flight_config if step < total else None
+        except Exception:
+            pass
+
+    is_empty = total == 0 or flight is None
+
+    if not mission_id or is_empty:
+        return f"""🏰🌐
+[🎯 STARPORT]: Course plotted — no mission flights configured yet.
+Project: {project}
+
+You need to CREATE or SELECT a mission before you can work.
+Use /bml-mission-loop-e2e skill to start a BML mission for your current task.
+
+STARPORT OPTIONS:
+1. Create a BML mission (RECOMMENDED — use skill /bml-mission-loop-e2e):
+   execute_action.exec {{"server_name": "starsystem", "action_name": "mission_create", "body_schema": {{"mission_id": "<task-name>", "mission_type": "bml_default", "mission_type_domain": "odyssey", "variables": {{"project_path": "{project}", "project_name": "<task-name>"}}}}}}
+
+2. Browse available flights first:
+   execute_action.exec {{"server_name": "starship", "action_name": "fly", "body_schema": {{"path": "{project}"}}}}
+
+3. Select from existing mission types:
+   execute_action.exec {{"server_name": "starsystem", "action_name": "mission_select_menu", "body_schema": {{}}}}
+
+4. Scry Crystal Ball for recommendations:
+   execute_action.exec {{"server_name": "crystal-ball", "action_name": "scry", "body_schema": {{}}}}"""
+    else:
+        return f"""🏰🌐
+[🎯 MISSION STARPORT]: Mission '{mission_id}' — step {step + 1}/{total}
+
+Next flight: {flight}
+Project: {project}
+
+STARPORT OPTIONS:
+1. Start the mission's next flight:
+   execute_action.exec {{"server_name": "waypoint", "action_name": "start_waypoint_journey", "body_schema": {{"config_path": "{flight}", "starlog_path": "{project}"}}}}
+
+2. Browse available flights:
+   execute_action.exec {{"server_name": "starship", "action_name": "fly", "body_schema": {{"path": "{project}"}}}}
+
+3. Create a different mission:
+   execute_action.exec {{"server_name": "starsystem", "action_name": "mission_create", "body_schema": {{"mission_id": "<id>", "name": "<name>", "description": "<desc>"}}}}
+
+4. Select existing mission type:
+   execute_action.exec {{"server_name": "starsystem", "action_name": "mission_select_menu", "body_schema": {{}}}}
+
+5. Check mission status:
+   execute_action.exec {{"server_name": "starsystem", "action_name": "mission_get_status", "body_schema": {{"mission_id": "{mission_id}"}}}}
+
+6. Complete current mission:
+   execute_action.exec {{"server_name": "starsystem", "action_name": "complete_mission", "body_schema": {{"mission_id": "{mission_id}"}}}}
+
+7. Extract from mission:
+   execute_action.exec {{"server_name": "starsystem", "action_name": "mission_request_extraction", "body_schema": {{"mission_id": "{mission_id}"}}}}
+
+8. Redo mission (reset to BUILD):
+   execute_action.exec {{"server_name": "starsystem", "action_name": "mission_redo", "body_schema": {{"mission_id": "{mission_id}", "notes": "reason for redo"}}}}"""
+
+
+def _screen_landing(state: dict) -> str:
+    """Generate LANDING zone screen for current step."""
+    landing_done = state.get("landing_routine_called", False)
+    review_done = state.get("session_review_called", False)
+    qa_id = state.get("qa_id", "UNKNOWN")
+    project_path = state.get("projects", ["unknown"])[0] if state.get("projects") else "unknown"
+
+    if not landing_done:
+        return f"""🏰🌐
+[🛬 LANDING]: Step 1 of 3
+
+Session ended. You must complete the 3-step LANDING sequence:
+
+→ STEP 1 (NOW): server=starship, action=landing_routine
+  Signature: landing_routine(starlog_path: Optional[str] = None)
+
+  STEP 2: server=starship, action=session_review
+  STEP 3: server=giint-llm-intelligence, action=core__respond
+
+Only step 1 is allowed right now."""
+    elif not review_done:
+        return f"""🏰🌐
+[🛬 LANDING]: Step 2 of 3
+
+✅ Step 1 complete (landing_routine)
+
+→ STEP 2 (NOW): server=starship, action=session_review
+  Signature: session_review(starlog_path: str, got_compacted: bool = False)
+
+  STEP 3: server=giint-llm-intelligence, action=core__respond
+
+Only step 2 is allowed right now."""
+    else:
+        return f"""🏰🌐
+[🛬 LANDING]: Step 3 of 3
+
+✅ Step 1 complete (landing_routine)
+✅ Step 2 complete (session_review)
+
+→ STEP 3 (NOW): server=giint-llm-intelligence, action=core__respond
+  Signature: core__respond(
+    qa_id: str, user_prompt_description: str, one_liner: str,
+    key_tags: List[str], involved_files: List[str],
+    project_path: str, feature: str, component: str,
+    deliverable: str, subtask: str, task: str, workflow_id: str
+  )
+
+QA Tracking Context:
+  qa_id: "{qa_id}"
+  project_path: "{project_path}"
+
+This is the final step before returning to STARPORT."""
+
+
+def _screen_journey(state: dict) -> str:
+    """Generate JOURNEY/PLANETSIDE zone screen."""
+    project = state.get("projects", [""])[0] if state.get("projects") else ""
+    return f"""🏰🌐
+[🌍 JOURNEY]: Starlog session active — you're on the planet, working.
+Project: {project}
+
+SESSION OPTIONS:
+1. Update debug diary:
+   execute_action.exec {{"server_name": "starlog", "action_name": "update_debug_diary", "body_schema": {{"path": "{project}", "entry": {{"type": "insight", "content": "..."}}}}}}
+
+2. Navigate to next waypoint:
+   execute_action.exec {{"server_name": "waypoint", "action_name": "navigate_to_next_waypoint", "body_schema": {{}}}}
+
+3. Check waypoint progress:
+   execute_action.exec {{"server_name": "waypoint", "action_name": "get_waypoint_progress", "body_schema": {{"starlog_path": "{project}"}}}}
+
+4. End session (when waypoint journey is at END):
+   execute_action.exec {{"server_name": "starlog", "action_name": "end_starlog", "body_schema": {{"end_content": "...", "path": "{project}"}}}}
+
+All tools are available during JOURNEY mode."""
+
 
 def ensure_event_registry(registry_base_name: str) -> bool:
     """
@@ -537,20 +840,28 @@ HOME_MODE_TOOLS = {
     # Orient
     "mcp__starlog__orient",
 
-    # Mission management (HOME → STARPORT transition)
+    # Course management (HOME → STARPORT transition, or resume after compaction)
     "mcp__starship__plot_course",
     "mcp__starsystem__plot_course",  # starsystem-wrapped name via treeshell
+    "mcp__starship__continue_course",
+    "mcp__starsystem__continue_course",  # defensive: allow resume even if HOME shouldn't have compacted course
     "mcp__starsystem__mission_create",
     "mcp__starsystem__mission_start",
     "mcp__starsystem__mission_get_status",
     "mcp__starsystem__mission_list",
     "mcp__starsystem__mission_request_extraction",
+    "mcp__starsystem__mission_redo",
     "mcp__starsystem__mission_select_menu",
     "mcp__starsystem__view_mission_config",
     "mcp__starsystem__create_mission_type",
 
     # OMNISANC control
     "mcp__starsystem__toggle_omnisanc",
+
+    # TreeKanban — pull next task at HOME before plotting course
+    # Strata unwrap drops core__ prefix: execute_action server=giint-llm-intelligence action=get_next_task_from_treekanban
+    "mcp__giint-llm-intelligence__get_next_task_from_treekanban",
+    "mcp__giint-llm-intelligence__core__get_next_task_from_treekanban",  # direct MCP name (if equipped without strata)
 
     # Carton knowledge graph (persistence is infrastructure)
     "mcp__carton__get_recent_concepts",
@@ -581,6 +892,9 @@ HOME_MODE_TOOLS = {
     "taskupdate",
     "tasklist",
     "taskget",
+
+    # Infrastructure — schema fetching for deferred MCP tools
+    "toolsearch",
 }
 
 def is_base_mission(state: dict) -> bool:
@@ -696,43 +1010,38 @@ You must abort the journey first:
 Then you can plot a new course if desired."""
             }
 
-    # Block mission CREATION while on a course — creating missions happens at HOME
+    # mission_create is allowed in STARPORT (fly_called=False gate handles it)
+    # Only block mission_create if already in an active session (JOURNEY/PLANETSIDE)
     if tool_name.lower() == "mcp__starsystem__mission_create":
-        return {
-            "allowed": False,
-            "error_message": """🏰🌐
-[🛑 BLOCKED]: Cannot create missions while on a course
-
-Missions are strategic planning activities that happen at HOME.
-
-You must either:
-1. server=starlog, action=end_starlog (if session active)
-   Signature: end_starlog(end_content: str, path: str)
-2. server=starsystem, action=go_home
-3. Then create missions at HOME"""
-        }
-
-    # mission_start: ALLOW if resuming already-active mission, BLOCK if starting new one
-    if tool_name.lower() == "mcp__starsystem__mission_start":
-        if state.get("mission_active"):
-            # Already on this mission — allow resume (mission.py handles resume logic)
-            return {"allowed": True}
-        else:
+        if state.get("session_active", False):
             return {
                 "allowed": False,
                 "error_message": """🏰🌐
-[🛑 BLOCKED]: Cannot start a NEW mission while on a course
+[🛑 BLOCKED]: Cannot create missions during active session.
 
-You already have a course plotted. Missions start from HOME.
+End your session first, then configure missions in STARPORT.
 
-You must either:
-1. Complete current work
-2. server=starsystem, action=go_home
-3. Then start the mission from HOME with server=starsystem, action=mission_start
-   Signature: mission_start(mission_id: str)
-
-Or if you meant to resume an existing mission, it must already be active."""
+1. server=starlog, action=end_starlog (end current session)
+2. Then create missions in STARPORT"""
             }
+
+    # mission_start: ALLOW from STARPORT (course plotted) or if resuming active mission
+    # BLOCK only during active SESSION (journey mode)
+    if tool_name.lower() == "mcp__starsystem__mission_start":
+        if state.get("session_active", False):
+            return {
+                "allowed": False,
+                "error_message": """🏰🌐
+[🛑 BLOCKED]: Cannot start a mission during active session.
+
+End your session first:
+1. server=starlog, action=end_starlog
+2. Complete landing sequence
+3. Then start mission from STARPORT"""
+            }
+        else:
+            # Course plotted (STARPORT) or resuming — allow
+            return {"allowed": True}
 
     # Check if continue_course was called - must call orient
     if state.get("continue_course_called", False):
@@ -804,6 +1113,7 @@ Cannot use other tools until you continue or plot a new course."""
         # (needed for e.g. connecting MCP servers before giint.respond)
         LANDING_INFRA_TOOLS = {
             "Read", "Glob", "Grep", "Bash", "Write", "Edit",
+            "Skill", "skill",
             "mcp__sancrev_treeshell__run_conversation_shell",
             "mcp__carton__add_concept", "mcp__carton__get_concept",
             "mcp__carton__query_wiki_graph", "mcp__carton__chroma_query",
@@ -933,6 +1243,7 @@ This is the final step before returning to STARPORT."""
         if tool_name.lower() in ["mcp__starsystem__mission_get_status",
                          "mcp__starsystem__mission_inject_step",
                          "mcp__starsystem__mission_request_extraction",
+                         "mcp__starsystem__mission_redo",
                          "mcp__starsystem__complete_mission",
                          "mcp__starsystem-mcp__starsystem__complete_mission",
                          "mcp__waypoint__abort_waypoint_journey"
@@ -942,13 +1253,13 @@ This is the final step before returning to STARPORT."""
         # Allow waypoint.start to continue mission (with flight sequence + is_ready enforcement)
         if tool_name == "mcp__waypoint__start_waypoint_journey":
             starlog_path = arguments.get("starlog_path", "")
-            requested_config = arguments.get("config_path", "")
+            requested_config = arguments.get("flight_config_name", "") or arguments.get("config_path", "")
 
             # GATE 1: GIINT is_ready check — redirects to planning if no ready tasks
             gate_result = _check_giint_planning_gate(starlog_path, requested_config, state)
             if "tool_input" in gate_result:
                 # Planning gate redirected — use redirected config for sequence check
-                requested_config = gate_result["tool_input"].get("config_path", requested_config)
+                requested_config = gate_result["tool_input"].get("flight_config_name", gate_result["tool_input"].get("config_path", requested_config))
 
             # GATE 2: Flight sequence enforcement — requested flight must match mission step
             mission_id = state.get("mission_id")
@@ -1004,22 +1315,72 @@ Use mission_get_status to see the full sequence."""
         # Block everything else - mission must continue
         mission_id = state.get("mission_id", "unknown")
         project = state.get("projects", [""])[0] if state.get("projects") else ""
-        return {
-            "allowed": False,
-            "error_message": f"""🏰🌐
-[🎯 MISSION]: Must continue mission sequence
+        # Read current flight from mission
+        try:
+            from starsystem.mission import load_mission as _load_m
+            _m = _load_m(mission_id)
+            _step = _m.current_step if _m else 0
+            _total = len(_m.session_sequence) if _m else 0
+            _flight = _m.session_sequence[_step].flight_config if _m and _step < _total else None
+        except Exception:
+            _step, _total, _flight = 0, 0, None
 
-Active Mission: {mission_id}
+        # Branch display: empty base_mission vs real mission with flights
+        is_empty_base = _total == 0 or _flight is None
+        if is_empty_base:
+            return {
+                "allowed": False,
+                "error_message": f"""🏰🌐
+[🎯 MISSION STARPORT]: Course plotted — no mission flights configured yet.
+Project: {project}
 
-You must either (use these EXACT treeshell commands):
-1. execute_action.exec {{"server_name": "starsystem", "action_name": "mission_get_status", "body_schema": {{"mission_id": "{mission_id}"}}}}
-2. execute_action.exec {{"server_name": "waypoint", "action_name": "start_waypoint_journey", "body_schema": {{"config_path": "<flight_config>", "starlog_path": "{project}"}}}}
-3. execute_action.exec {{"server_name": "starsystem", "action_name": "mission_inject_step", "body_schema": {{"mission_id": "{mission_id}"}}}}
-4. execute_action.exec {{"server_name": "starsystem", "action_name": "mission_request_extraction", "body_schema": {{"mission_id": "{mission_id}"}}}}
-5. execute_action.exec {{"server_name": "starsystem", "action_name": "complete_mission", "body_schema": {{"mission_id": "{mission_id}"}}}}
+You need to CREATE or SELECT a mission before you can work.
+Use /bml-mission-loop-e2e skill to start a BML mission for your current task.
 
-Cannot use other tools until mission is continued, completed, or extracted."""
-        }
+STARPORT OPTIONS:
+1. Create a BML mission (RECOMMENDED — use skill /bml-mission-loop-e2e):
+   execute_action.exec {{"server_name": "starsystem", "action_name": "mission_create", "body_schema": {{"mission_id": "<task-name>", "mission_type": "bml_default", "mission_type_domain": "odyssey", "variables": {{"project_path": "{project}", "project_name": "<task-name>"}}}}}}
+
+2. Browse available flights first:
+   execute_action.exec {{"server_name": "starship", "action_name": "fly", "body_schema": {{"path": "{project}"}}}}
+
+3. Select from existing mission types:
+   execute_action.exec {{"server_name": "starsystem", "action_name": "mission_select_menu", "body_schema": {{}}}}
+
+4. Scry Crystal Ball for recommendations:
+   execute_action.exec {{"server_name": "crystal-ball", "action_name": "scry", "body_schema": {{}}}}"""
+            }
+        else:
+            return {
+                "allowed": False,
+                "error_message": f"""🏰🌐
+[🎯 MISSION STARPORT]: Mission '{mission_id}' — step {_step + 1}/{_total}
+
+Next flight: {_flight}
+Project: {project}
+
+STARPORT OPTIONS:
+1. Start the mission's next flight:
+   execute_action.exec {{"server_name": "waypoint", "action_name": "start_waypoint_journey", "body_schema": {{"config_path": "{_flight}", "starlog_path": "{project}"}}}}
+
+2. Browse available flights:
+   execute_action.exec {{"server_name": "starship", "action_name": "fly", "body_schema": {{"path": "{project}"}}}}
+
+3. Create a different mission:
+   execute_action.exec {{"server_name": "starsystem", "action_name": "mission_create", "body_schema": {{"mission_id": "<id>", "name": "<name>", "description": "<desc>"}}}}
+
+4. Select existing mission type:
+   execute_action.exec {{"server_name": "starsystem", "action_name": "mission_select_menu", "body_schema": {{}}}}
+
+5. Check mission status:
+   execute_action.exec {{"server_name": "starsystem", "action_name": "mission_get_status", "body_schema": {{"mission_id": "{mission_id}"}}}}
+
+6. Complete current mission:
+   execute_action.exec {{"server_name": "starsystem", "action_name": "complete_mission", "body_schema": {{"mission_id": "{mission_id}"}}}}
+
+7. Extract from mission:
+   execute_action.exec {{"server_name": "starsystem", "action_name": "mission_request_extraction", "body_schema": {{"mission_id": "{mission_id}"}}}}"""
+            }
 
     # MISSION MODE: Skip fly() requirement — mission drives flight selection
     if state.get("mission_active") and not state.get("fly_called", False):
@@ -1027,12 +1388,12 @@ Cannot use other tools until mission is continued, completed, or extracted."""
         # Allow waypoint start (mission's flight), mission management, and toggle
         if tool_name == "mcp__waypoint__start_waypoint_journey":
             starlog_path = arguments.get("starlog_path", "")
-            requested_config = arguments.get("config_path", "")
+            requested_config = arguments.get("flight_config_name", "") or arguments.get("config_path", "")
 
             # GATE 1: GIINT is_ready check — redirects to planning if no ready tasks
             gate_result = _check_giint_planning_gate(starlog_path, requested_config, state)
             if "tool_input" in gate_result:
-                requested_config = gate_result["tool_input"].get("config_path", requested_config)
+                requested_config = gate_result["tool_input"].get("flight_config_name", gate_result["tool_input"].get("config_path", requested_config))
 
             # GATE 2: Flight sequence enforcement — requested flight must match mission step
             if mission_id and mission_id != "unknown":
@@ -1065,10 +1426,19 @@ Use mission_get_status to see the full sequence."""
         if tool_name.lower() in {"mcp__starsystem__toggle_omnisanc", "mcp__starsystem__mission_get_status",
                                   "mcp__starsystem__mission_request_extraction", "mcp__starsystem__mission_report_progress",
                                   "mcp__starsystem__mission_inject_step", "mcp__starsystem__complete_mission",
+                                  "mcp__starsystem__mission_redo",
                                   "mcp__starsystem-mcp__starsystem__complete_mission",
+                                  "mcp__starsystem__mission_create", "mcp__starsystem__mission_select_menu",
+                                  "mcp__starsystem__mission_start",
                                   "mcp__starlog__orient",
-                                  "mcp__starlog__start_starlog", "mcp__starlog__update_debug_diary",
-                                  "mcp__starship__get_course_state"}:
+                                  "mcp__starship__fly",
+                                  "mcp__starship__get_course_state",
+                                  "skill", "mcp__sancrev_treeshell__run_conversation_shell",
+                                  "mcp__starship__launch_routine",
+                                  "mcp__starsystem__go_home",
+                                  "read", "glob", "grep",
+                                  "task",
+                                  "taskcreate", "taskupdate", "tasklist", "taskget"}:
             return {"allowed": True}
         # Block everything else with mission-aware instructions
         project = state.get('projects', [''])[0] if state.get('projects') else ''
@@ -1078,31 +1448,79 @@ Use mission_get_status to see the full sequence."""
             m = load_mission(mission_id)
             step = m.current_step if m else 0
             total = len(m.session_sequence) if m else 0
-            flight = m.session_sequence[step].flight_config if m and step < total else "unknown"
+            flight = m.session_sequence[step].flight_config if m and step < total else None
         except Exception:
-            step, total, flight = 0, 0, "unknown"
-        return {
-            "allowed": False,
-            "error_message": f"""🏰🌐
-[🎯 MISSION STARPORT]: Mission '{mission_id}' active — step {step + 1}/{total}
+            step, total, flight = 0, 0, None
+
+        is_empty = total == 0 or flight is None
+        if is_empty:
+            return {
+                "allowed": False,
+                "error_message": f"""🏰🌐
+[🎯 MISSION STARPORT]: Course plotted — no mission flights configured yet.
+Project: {project}
+
+You need to CREATE or SELECT a mission before you can work.
+Use /bml-mission-loop-e2e skill to start a BML mission for your current task.
+
+STARPORT OPTIONS:
+1. Create a BML mission (RECOMMENDED — use skill /bml-mission-loop-e2e):
+   execute_action.exec {{"server_name": "starsystem", "action_name": "mission_create", "body_schema": {{"mission_id": "<task-name>", "mission_type": "bml_default", "mission_type_domain": "odyssey", "variables": {{"project_path": "{project}", "project_name": "<task-name>"}}}}}}
+
+2. Browse available flights first:
+   execute_action.exec {{"server_name": "starship", "action_name": "fly", "body_schema": {{"path": "{project}"}}}}
+
+3. Select from existing mission types:
+   execute_action.exec {{"server_name": "starsystem", "action_name": "mission_select_menu", "body_schema": {{}}}}
+
+4. Scry Crystal Ball for recommendations:
+   execute_action.exec {{"server_name": "crystal-ball", "action_name": "scry", "body_schema": {{}}}}"""
+            }
+        else:
+            return {
+                "allowed": False,
+                "error_message": f"""🏰🌐
+[🎯 MISSION STARPORT]: Mission '{mission_id}' — step {step + 1}/{total}
 
 Next flight: {flight}
 Project: {project}
 
-Start the mission's flight (use this EXACT treeshell command):
-execute_action.exec {{"server_name": "waypoint", "action_name": "start_waypoint_journey", "body_schema": {{"config_path": "{flight}", "starlog_path": "{project}"}}}}
+STARPORT OPTIONS:
+1. Start the mission's next flight:
+   execute_action.exec {{"server_name": "waypoint", "action_name": "start_waypoint_journey", "body_schema": {{"config_path": "{flight}", "starlog_path": "{project}"}}}}
 
-Or check mission status:
-execute_action.exec {{"server_name": "starsystem", "action_name": "mission_get_status", "body_schema": {{"mission_id": "{mission_id}"}}}}
+2. Browse available flights:
+   execute_action.exec {{"server_name": "starship", "action_name": "fly", "body_schema": {{"path": "{project}"}}}}
 
-Or complete the mission:
-execute_action.exec {{"server_name": "starsystem", "action_name": "complete_mission", "body_schema": {{"mission_id": "{mission_id}"}}}}"""
-        }
+3. Create a different mission:
+   execute_action.exec {{"server_name": "starsystem", "action_name": "mission_create", "body_schema": {{"mission_id": "<id>", "name": "<name>", "description": "<desc>"}}}}
+
+4. Select existing mission type:
+   execute_action.exec {{"server_name": "starsystem", "action_name": "mission_select_menu", "body_schema": {{}}}}
+
+5. Check mission status:
+   execute_action.exec {{"server_name": "starsystem", "action_name": "mission_get_status", "body_schema": {{"mission_id": "{mission_id}"}}}}
+
+6. Complete current mission:
+   execute_action.exec {{"server_name": "starsystem", "action_name": "complete_mission", "body_schema": {{"mission_id": "{mission_id}"}}}}"""
+            }
 
     # Check if fly has been called (enables waypoint.start) — NON-MISSION path
     if not state.get("fly_called", False):
-        # Can call fly() or launch() to proceed
+        # STARPORT allowed tools: fly, launch, mission config, toggle, course state
         if tool_name in ["mcp__starship__fly", "mcp__starship__launch_routine"]:
+            return {"allowed": True}
+        elif tool_name.lower() in {"mcp__starsystem__mission_create", "mcp__starsystem__mission_select_menu",
+                                    "mcp__starsystem__mission_start", "mcp__starsystem__toggle_omnisanc",
+                                    "mcp__starsystem__mission_get_status", "mcp__starsystem__complete_mission",
+                                    "mcp__starsystem__mission_redo",
+                                    "mcp__starsystem__go_home",
+                                    "mcp__starlog__orient",
+                                    "mcp__starship__get_course_state",
+                                    "skill", "mcp__sancrev_treeshell__run_conversation_shell",
+                                    "read", "glob", "grep",
+                                    "task",
+                                    "taskcreate", "taskupdate", "tasklist", "taskget"}:
             return {"allowed": True}
         # Allow Canopy completion during STARPORT Part 1 (LAUNCH)
         elif tool_name in ["mcp__canopy__mark_complete", "mcp__canopy__update_item_status"]:
@@ -1122,17 +1540,28 @@ execute_action.exec {{"server_name": "starsystem", "action_name": "complete_miss
             return {
                 "allowed": False,
                 "error_message": f"""🏰🌐
-[🗺️ STARPORT]: COURSE PLOTTED: Must browse flight configurations to proceed.
+[🚀 STARPORT]: Course plotted — configure your mission before proceeding.
 
-Course plotted:
 {projects_msg}
 
-Choose your path (use these EXACT treeshell commands):
-1. execute_action.exec {{"server_name": "starship", "action_name": "fly", "body_schema": {{"path": "{project_path}"}}}}
-2. execute_action.exec {{"server_name": "starship", "action_name": "launch_routine", "body_schema": {{}}}}
+🔮 CRYSTAL BALL: Scry Crystal Ball to predict which mission/flight to take based on current context.
+   Use: execute_action.exec {{"server_name": "crystal-ball", "action_name": "scry", "body_schema": {{}}}}
 
-After calling fly(), you can start a waypoint journey:
-execute_action.exec {{"server_name": "waypoint", "action_name": "start_waypoint_journey", "body_schema": {{"config_path": "<name_or_path>", "starlog_path": "{project_path}"}}}}"""
+STARPORT OPTIONS:
+1. Browse flights:
+   execute_action.exec {{"server_name": "starship", "action_name": "fly", "body_schema": {{"path": "{project_path}"}}}}
+
+2. Create a mission type:
+   execute_action.exec {{"server_name": "starsystem", "action_name": "mission_create", "body_schema": {{"name": "<name>", "description": "<desc>"}}}}
+
+3. Select existing mission:
+   execute_action.exec {{"server_name": "starsystem", "action_name": "mission_select_menu", "body_schema": {{}}}}
+
+4. Start a one-off flight (auto base mission):
+   execute_action.exec {{"server_name": "starship", "action_name": "launch_routine", "body_schema": {{}}}}
+
+5. Return home:
+   execute_action.exec {{"server_name": "starsystem", "action_name": "go_home", "body_schema": {{}}}}"""
             }
 
     # Check if flight selected (waypoint.start called)
@@ -1161,7 +1590,7 @@ execute_action.exec {{"server_name": "waypoint", "action_name": "start_waypoint_
             return {"allowed": True}
 
         # Allow mission management and Canopy completion in this state
-        if tool_name.lower() in {"mcp__starsystem__complete_mission", "mcp__starsystem__mission_get_status", "mcp__starsystem__mission_list", "mcp__starsystem__mission_request_extraction", "mcp__seed__home", "mcp__canopy__mark_complete", "mcp__canopy__update_item_status"}:
+        if tool_name.lower() in {"mcp__starsystem__complete_mission", "mcp__starsystem__mission_get_status", "mcp__starsystem__mission_list", "mcp__starsystem__mission_request_extraction", "mcp__starsystem__mission_redo", "mcp__seed__home", "mcp__canopy__mark_complete", "mcp__canopy__update_item_status"}:
             return {"allowed": True}
 
         # go_home ONLY allowed when no active mission (must extract/abandon mission first)
@@ -1311,6 +1740,21 @@ Then: server=waypoint, action=navigate_to_next_waypoint"""
 Then: server=waypoint, action=navigate_to_next_waypoint"""
                 }
 
+    # GATE: end_starlog BLOCKED unless waypoint journey is at END
+    # Agent must navigate through all waypoint steps before ending session.
+    # The flight stabilizer (above) detects END and forces end_starlog. That's the ONLY path.
+    if tool_name == "mcp__starlog__end_starlog" and waypoint_state and waypoint_status != "END":
+        return {
+            "allowed": False,
+            "error_message": f"""🏰🌐
+[✈️ SESSION]: Cannot end session — waypoint journey still active (step {waypoint_step}).
+
+You must navigate through all remaining waypoint steps first.
+→ server=waypoint, action=navigate_to_next_waypoint
+
+Complete your flight before ending the session."""
+        }
+
     # Step 4 or waypoint not started - allow all tools
     return {"allowed": True}
 
@@ -1433,6 +1877,15 @@ def on_tool_use(tool_name: str, arguments: dict) -> dict:
         # This ensures users can always disable OMNISANC if needed (case-insensitive for treeshell unwrap)
         if tool_name.lower() == "mcp__starsystem__toggle_omnisanc":
             return {"allowed": True, "reason": "omnisanc_toggle_whitelisted"}
+
+        # SELF-MANAGEMENT WHITELIST: self_compact/self_restart must work in ALL states
+        # These are critical escape hatches that must never be blocked
+        if tool_name.lower() == "mcp__self-claude__self_claude":
+            return {"allowed": True, "reason": "self_claude_globally_whitelisted"}
+        if tool_name == "Bash":
+            cmd = (arguments or {}).get("command", "").strip()
+            if cmd.startswith("self_compact") or cmd.startswith("self_restart"):
+                return {"allowed": True, "reason": "self_management_globally_whitelisted"}
 
         state = get_course_state()
 
@@ -1730,6 +2183,7 @@ After extraction, you can plot a new course (which will end the paused mission).
                 state["waypoint_step"] = 0  # No session = no waypoint journey
                 state["flight_selected"] = False  # Reset for next journey
                 state["fly_called"] = False  # Reset fly state - return to course plotted
+                state["jit_starlog_initialized"] = False  # Reset JIT flag so next flight can set waypoint_step
                 state["session_end_shield_count"] = 1  # Reset shield for next session
                 state["session_shielded"] = True  # Re-enable shield
 
@@ -1775,12 +2229,13 @@ Missions give you planned multi-session work with proper LANDING phases between 
                             if loaded_mission:
                                 current_step = loaded_mission.current_step
                                 if current_step < len(loaded_mission.session_sequence):
-                                    # Mark current session as completed
+                                    # Mark current session as completed and advance step
                                     loaded_mission.session_sequence[current_step].status = "completed"
                                     loaded_mission.session_sequence[current_step].completed_at = datetime.now().isoformat()
+                                    loaded_mission.current_step += 1
                                     loaded_mission.metrics.sessions_completed += 1
                                     mission.save_mission(loaded_mission)
-                                    logger.info(f"Marked mission session {current_step} as completed")
+                                    logger.info(f"Marked mission session {current_step} as completed, advanced to step {loaded_mission.current_step}")
                         except Exception as e:
                             logger.error(f"Failed to update mission session status: {e}")
 
@@ -1818,32 +2273,17 @@ Missions give you planned multi-session work with proper LANDING phases between 
             # Track when mission extraction is allowed (PreToolUse)
             # Actual state clearing happens in PostToolUse after extraction succeeds
 
-            # Handle waypoint abort - check for active session first
+            # Handle waypoint abort — ALWAYS allowed, even with active session (#162)
+            # Abort is the escape hatch. It cleans up everything.
             if tool_name == "mcp__waypoint__abort_waypoint_journey":
-                if state.get("session_active", False):
-                    abort_result = {
-                        "allowed": False,
-                        "error_message": """🏰🌐
-[🛑 BLOCKED]: SESSION IN PROGRESS: Cannot abort while STARLOG session is active.
-
-You must end the session first using starlog.end_starlog().
-Explain your abort reason in the session end entry."""
-                    }
-
-                    # Log event
-                    log_event(
-                        mode=current_mode,
-                        tool_name=tool_name,
-                        arguments=arguments,
-                        allowed=False,
-                        reason="session_active_blocks_abort"
-                    )
-
-                    return abort_result
-                elif result.get("allowed", False):
-                    # No active session, proceed with abort
+                if result.get("allowed", False):
+                    # Clean up session + waypoint state
+                    if state.get("session_active", False):
+                        state["session_active"] = False
+                        state["needs_review"] = False  # Skip LANDING on abort
                     state["flight_selected"] = False
                     state["waypoint_step"] = 0
+                    _cleanup_waypoint_state(state.get("projects", []))
                     # If mission active, this is ratcheting - stay at current mission step
                     if state.get("mission_active", False):
                         # Ratcheting: abort resets waypoint but keeps mission at current step
@@ -2067,11 +2507,11 @@ def on_tool_result(tool_name: str, arguments: dict, result: any, raw_tool_name: 
 
             save_course_state(state)
             logger.info(f"Course state updated: {project_paths} [domain={state['domain']}, subdomain={state['subdomain']}, process={state['process']}]")
-            narration = f"🚀 STARPORT LAUNCH — Course plotted to {', '.join(project_paths) if project_paths else 'unknown'}! You've departed HOME. Use `jump missions_home` to configure your mission, or start working directly."
+            narration = _screen_starport(state)
 
         # Narrate PLANETSIDE transition after start_starlog
         if tool_name == "mcp__starlog__start_starlog":
-            narration = "🌍 PLANETSIDE — Starlog session active! You're on the planet, working. Use `jump planetside_home` for session actions, or `jump landing_home` when done."
+            narration = _screen_journey(get_course_state())
 
         # Generate qa_id after mission_start succeeds
         # SELF-CONTAINED: Extract mission_id from arguments, not course state.
@@ -2081,26 +2521,28 @@ def on_tool_result(tool_name: str, arguments: dict, result: any, raw_tool_name: 
             # Get mission_id from arguments first (treeshell-safe), fallback to state
             mission_id = arguments.get("mission_id") or state.get("mission_id")
             if mission_id:
-                # Ensure mission state is set (PreToolUse may have been bypassed by treeshell whitelist)
-                if not state.get("mission_active"):
-                    state["mission_active"] = True
-                    state["mission_id"] = mission_id
-                    state["mission_step"] = 0
-                    state["course_plotted"] = True
-                    # Load projects from mission file
-                    mission_file = f"/tmp/heaven_data/missions/{mission_id}.json"
-                    try:
-                        with open(mission_file, 'r') as f:
-                            mission_data = json.load(f)
-                            projects = list(set(
-                                session["project_path"]
-                                for session in mission_data["session_sequence"]
-                            ))
-                            state["projects"] = projects
-                    except Exception as e:
-                        logger.error(f"PostToolUse: Failed to load mission projects: {e}")
-                        state["projects"] = []
-                    logger.info(f"PostToolUse: Set mission state for {mission_id} (PreToolUse was bypassed)")
+                # ALWAYS update mission state — overwrites base_mission if one was auto-created
+                old_mission = state.get("mission_id")
+                if old_mission and old_mission != mission_id:
+                    logger.info(f"PostToolUse: Replacing mission {old_mission} with {mission_id}")
+                state["mission_active"] = True
+                state["mission_id"] = mission_id
+                state["mission_step"] = 0
+                state["course_plotted"] = True
+                # Load projects from mission file
+                mission_file = f"/tmp/heaven_data/missions/{mission_id}.json"
+                try:
+                    with open(mission_file, 'r') as f:
+                        mission_data = json.load(f)
+                        projects = list(set(
+                            session["project_path"]
+                            for session in mission_data["session_sequence"]
+                        ))
+                        state["projects"] = projects
+                except Exception as e:
+                    logger.error(f"PostToolUse: Failed to load mission projects: {e}")
+                    state["projects"] = []
+                logger.info(f"PostToolUse: Mission state set for {mission_id}")
 
                 qa_id = f"{mission_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
                 state["qa_id"] = qa_id
@@ -2152,10 +2594,11 @@ def on_tool_result(tool_name: str, arguments: dict, result: any, raw_tool_name: 
             state["fly_called"] = False
             state["waypoint_step"] = 0
             state["jit_starlog_initialized"] = False  # Clear JIT flag
+            _cleanup_waypoint_state(state.get("projects", []))
 
             save_course_state(state)
             logger.info("Mission extraction completed - state cleared to HOME")
-            narration = "🌲 HOME — Mission extracted. You've returned to Crystal Forest. Use `jump cf_home` for orientation."
+            narration = _screen_home(state)
 
         # LANDING Step 3: Advance state after giint.respond succeeds
         if tool_name == "mcp__giint-llm-intelligence__core__respond":
@@ -2192,7 +2635,13 @@ def on_tool_result(tool_name: str, arguments: dict, result: any, raw_tool_name: 
                     state["session_review_called"] = False
                     state["giint_respond_called"] = False
                     save_course_state(state)
-                    logger.info("[LANDING] giint.respond succeeded — LANDING complete, returning to HOME")
+                    logger.info("[LANDING] giint.respond succeeded — LANDING complete")
+
+                    # Use shared screen helpers for post-LANDING narration
+                    if state.get("mission_id"):
+                        narration = _screen_starport(state)
+                    else:
+                        narration = _screen_home(state)
                 else:
                     logger.warning(f"[LANDING] giint.respond did NOT succeed. Result type: {type(result).__name__}, preview: {str(result)[:200]}")
 
@@ -2208,10 +2657,11 @@ def on_tool_result(tool_name: str, arguments: dict, result: any, raw_tool_name: 
             state["fly_called"] = False
             state["waypoint_step"] = 0
             state["jit_starlog_initialized"] = False  # Clear JIT flag
+            _cleanup_waypoint_state(state.get("projects", []))
 
             save_course_state(state)
             logger.info("Mission completed - returned to STARPORT (course still plotted)")
-            narration = "🚀 STARPORT — Mission complete! Course still plotted. Start another mission or use `go_home()` to clear course. Use `jump starport_launch` for options."
+            narration = _screen_starport(state)
 
             # Auto-complete Canopy items referencing this completed mission
             if CANOPY_OPERA_AVAILABLE:
@@ -2242,9 +2692,44 @@ def on_tool_result(tool_name: str, arguments: dict, result: any, raw_tool_name: 
                 except Exception as e:
                     logger.error(f"Failed to auto-complete Canopy items after mission completion: {e}", exc_info=True)
 
+        # Re-activate course state after mission_redo (same as mission_start)
+        if tool_name.lower() == "mcp__starsystem__mission_redo":
+            state = get_course_state()
+            mission_id = arguments.get("mission_id") or state.get("mission_id")
+            if mission_id:
+                state["mission_active"] = True
+                state["mission_id"] = mission_id
+                state["mission_step"] = 0
+                state["course_plotted"] = True
+                state["flight_selected"] = False
+                state["fly_called"] = False
+                state["waypoint_step"] = 0
+                state["needs_review"] = False
+                state["landing_routine_called"] = False
+                state["session_review_called"] = False
+                state["giint_respond_called"] = False
+                # Load projects from mission file
+                mission_file = f"/tmp/heaven_data/missions/{mission_id}.json"
+                try:
+                    with open(mission_file, 'r') as f:
+                        mission_data = json.load(f)
+                        projects = list(set(
+                            session["project_path"]
+                            for session in mission_data["session_sequence"]
+                        ))
+                        state["projects"] = projects
+                except Exception as e:
+                    logger.error(f"PostToolUse: Failed to load mission projects for redo: {e}")
+                qa_id = f"{mission_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                state["qa_id"] = qa_id
+                save_course_state(state)
+                logger.info(f"Mission redo - course state re-activated for {mission_id}")
+                narration = _screen_starport(state)
+
         # Return to HOME after go_home (clears course)
         if tool_name.lower() == "mcp__starsystem__go_home":
             state = get_course_state()
+            _cleanup_waypoint_state(state.get("projects", []))
             state["course_plotted"] = False
             state["mission_active"] = False
             state["mission_id"] = None
@@ -2256,11 +2741,11 @@ def on_tool_result(tool_name: str, arguments: dict, result: any, raw_tool_name: 
             state["projects"] = []
             save_course_state(state)
             logger.info("go_home - returned to HOME, course cleared")
-            narration = "🌲 HOME — Course cleared. You've returned to Crystal Forest. Use `jump cf_home` for orientation."
+            narration = _screen_home(state)
 
         # Narrate LANDING transition after end_starlog
         if tool_name == "mcp__starlog__end_starlog":
-            narration = "🛬 STARPORT LANDING — Session complete! Use `jump landing_home` to wrap up your journey, report progress, or launch again."
+            narration = _screen_landing(get_course_state())
 
         # Session scoring after end_starlog
         if tool_name == "mcp__starlog__end_starlog" and REGISTRY_AVAILABLE:
@@ -2973,6 +3458,87 @@ def on_tool_result(tool_name: str, arguments: dict, result: any, raw_tool_name: 
             except Exception as e:
                 logger.error(f"Auto-vendor hook failed (non-critical): {e}", exc_info=True)
 
+        # === MEMORY RECOMPILE CHAIN (Task #21) ===
+        # After get_next_task_from_treekanban returns, recompile MEMORY.md
+        # so agent sees expanded HC context on next turn (hot-reload).
+        # GIINT's _ensure_giint_hierarchy_in_carton already:
+        #   - Created full starsystem collection hierarchy (Task_Collections, Done_Signal_Collections, etc.)
+        #   - Created HC in Task_Collections with full GIINT hierarchy (Project→Feature→Component→Deliverable→Task)
+        #   - Set /tmp/active_hypercluster.txt
+        if tool_name == "mcp__giint-llm-intelligence__get_next_task_from_treekanban":
+            try:
+                # Parse the tool result to get giint_metadata (same parsing as auto-vendor)
+                recompile_result_data = None
+                if isinstance(result, str):
+                    recompile_result_data = json.loads(result)
+                elif isinstance(result, list) and len(result) > 0:
+                    text_content = result[0].get("text")
+                    if text_content:
+                        recompile_result_data = json.loads(text_content)
+                else:
+                    recompile_result_data = result
+
+                active_hc_file = Path("/tmp/active_hypercluster.txt")
+                if active_hc_file.exists() and recompile_result_data:
+                    hc_name = active_hc_file.read_text().strip()
+                    logger.info(f"[Memory Recompile] Active HC: {hc_name}")
+
+                    # Extract task concept name from giint_metadata
+                    # Result structure: {card: {giint_metadata: {task_id, project_id, ...}}}
+                    card = recompile_result_data.get("card", {})
+                    giint_meta = card.get("giint_metadata", {})
+                    task_id = giint_meta.get("task_id") if giint_meta else None
+                    task_concept = f"Giint_Task_{task_id.replace('-', '_').replace(' ', '_')}" if task_id else None
+
+                    # Step 1: Create Done_Signal collection for this task's HC
+                    # Ontology: Done_Signal IS_A Local_Collection,
+                    #   PART_OF Starsystem_X_Done_Signal_Collections (the category),
+                    #   SIGNALS_FOR the task (which PART_OF Deliverable PART_OF ... PART_OF HC)
+                    done_signal_name = f"{hc_name}_Done_Signal"
+                    try:
+                        from carton_mcp.add_concept_tool import add_concept_tool_func
+                        # Resolve starsystem from active starlog path (same as GIINT does)
+                        ss_name = "Home"
+                        starlog_path_file = Path("/tmp/active_starlog_path.txt")
+                        if starlog_path_file.exists():
+                            raw = starlog_path_file.read_text().strip()
+                            ss_name = Path(raw).name.replace("-", "_").replace(" ", "_").title()
+                        done_signal_category = f"Starsystem_{ss_name}_Done_Signal_Collections"
+
+                        rels = [
+                            {"relationship": "is_a", "related": ["Local_Collection"]},
+                            {"relationship": "part_of", "related": [done_signal_category]},
+                            {"relationship": "instantiates", "related": ["Done_Signal_Collection_Category"]},
+                        ]
+                        if task_concept:
+                            rels.append({"relationship": "signals_for", "related": [task_concept]})
+
+                        add_concept_tool_func(
+                            done_signal_name,
+                            f"Done signal collection for {hc_name}. Agent fills with observations, bugs, and proofs during work. Unverified claim — CE validates before promotion to Completed.",
+                            rels,
+                            desc_update_mode="append",
+                            hide_youknow=True,
+                        )
+                        logger.info(f"[Memory Recompile] Ensured Done_Signal: {done_signal_name} signals_for={task_concept}")
+                    except Exception as e:
+                        logger.warning(f"[Memory Recompile] Done_Signal creation failed (non-critical): {e}")
+
+                    # Step 2: active_hypercluster.txt already set by GIINT _ensure_giint_hierarchy_in_carton
+                    # Step 3: Recompile MEMORY.md with expanded HC context
+                    try:
+                        from carton_mcp.substrate_projector import compile_memory_tier
+                        compile_result = compile_memory_tier(0, active_hypercluster=hc_name)
+                        logger.info(f"[Memory Recompile] MEMORY.md recompiled: {compile_result}")
+                    except Exception as e:
+                        logger.error(f"[Memory Recompile] compile_memory_tier failed: {e}", exc_info=True)
+
+                    # Step 4: MEMORY.md hot-reloads next turn automatically
+                else:
+                    logger.warning("[Memory Recompile] No active_hypercluster.txt or no result data after get_next_task")
+            except Exception as e:
+                logger.error(f"[Memory Recompile] Chain failed (non-critical): {e}", exc_info=True)
+
         result_dict = {"success": True}
         if narration:
             result_dict["narration"] = narration
@@ -3017,10 +3583,13 @@ if __name__ == "__main__":
                 f.flush()
             tool_result = input_data.get("tool_response")
             result = on_tool_result(tool_name, arguments, tool_result)
-            # PostToolUse hooks always succeed (no blocking)
+            narration = result.get("narration") if isinstance(result, dict) else None
             with open('/tmp/omnisanc_POSTTOOLUSE_COMPLETE.log', 'a') as f:
-                f.write(f"{datetime.now()} Completed! tool_name={tool_name}\n")
+                f.write(f"{datetime.now()} Completed! tool_name={tool_name}, narration={bool(narration)}\n")
                 f.flush()
+            if narration:
+                print(f"{narration}", file=sys.stderr)
+                sys.exit(2)
             sys.exit(0)
         else:
             # PreToolUse hook - call on_tool_use

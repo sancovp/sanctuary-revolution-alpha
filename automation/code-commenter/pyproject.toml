@@ -1,0 +1,15 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "code-commenter-mcp"
+version = "0.1.0"
+description = "MCP server for commenting/uncommenting code blocks in files."
+requires-python = ">=3.10"
+dependencies = [
+    "fastmcp>=0.1.0",
+]
+
+[project.scripts]
+code-commenter-mcp = "code_commenter_mcp.mcp_server:mcp.run"

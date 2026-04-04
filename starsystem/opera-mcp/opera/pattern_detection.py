@@ -207,6 +207,52 @@ def _find_repeated_sequences(
     return patterns
 
 
+def _mirror_pattern_to_carton(pattern_id: str, pattern_data: Dict[str, Any]) -> None:
+    """Mirror detected Opera pattern to CartON via carton_queue."""
+    try:
+        import os
+        import uuid
+        from pathlib import Path
+
+        heaven_data = os.environ.get("HEAVEN_DATA_DIR", "/tmp/heaven_data")
+        queue_dir = Path(heaven_data) / "carton_queue"
+        queue_dir.mkdir(parents=True, exist_ok=True)
+
+        # Build description from pattern sequence
+        steps = pattern_data.get("sequence", [])
+        step_names = [s.get("mission_type") or s.get("human_capability") or "unknown" for s in steps]
+        occurrences = pattern_data.get("occurrences", 0)
+        desc = f"[QUARANTINE] Opera pattern: {' → '.join(step_names)} ({occurrences} occurrences)"
+
+        queue_data = {
+            "raw_concept": True,
+            "concept_name": f"Opera_Pattern_{pattern_id}",
+            "description": desc,
+            "relationships": [
+                {"relationship": "is_a", "related": ["Opera_Canopy_Flow_Pattern"]},
+                {"relationship": "part_of", "related": ["Opera_Pattern_Quarantine"]},
+                {"relationship": "instantiates", "related": ["Opera_Pattern_Template"]},
+            ],
+            "desc_update_mode": "replace",
+            "hide_youknow": True,
+            "is_soup": False,
+            "soup_reason": None,
+            "source": "opera_pattern_detection_mirror",
+        }
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        unique_id = str(uuid.uuid4())[:8]
+        queue_file = queue_dir / f"{timestamp}_{unique_id}_opera.json"
+
+        with open(queue_file, "w") as f:
+            json.dump(queue_data, f, indent=2)
+
+        logger.info(f"Mirrored Opera pattern {pattern_id} to CartON")
+
+    except Exception as e:
+        logger.warning(f"Failed to mirror Opera pattern to CartON: {e}")
+
+
 def _store_pattern(pattern: Dict[str, Any]) -> bool:
     """
     Store detected pattern in CanopyFlowPattern quarantine.
@@ -244,6 +290,9 @@ def _store_pattern(pattern: Dict[str, Any]) -> bool:
             key=pattern_id,
             value_dict=canopy_pattern
         )
+
+        # Mirror to CartON via carton_queue
+        _mirror_pattern_to_carton(pattern_id, canopy_pattern)
 
         logger.info(f"Stored pattern: {pattern_id} ({pattern['occurrences']} occurrences)")
         return True

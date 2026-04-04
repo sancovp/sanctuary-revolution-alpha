@@ -1,32 +1,17 @@
-"""Observatory-SDNA: Research system as a DUO on MiniMax/Heaven.
+"""Observatory-SDNA: Research system on MiniMax/Heaven.
 
-The Observatory IS a DUO:
-- Ariadne = Researcher (brain, scientific method)
-- Poimandres = Grug (hands, code execution)
-- OVP = BigBrain Researcher (reviewer)
+Researcher = SDNAC agent with tools (CartON + bash for docker exec into Grug container).
+Processes a research queue. Conductor/user review results externally.
+
+Grug = separate SDNAC in repo-lord container. Researcher reaches it via docker exec.
 """
 
-from .connector import GrugConnector, SDNACConnector, ClaudePConnector
-from .state_machine import StateMachine
-from .runner import Runner
-from .agents import (
-    make_grug_sdnac,
-    make_researcher_sdnac,
-    make_ovp_sdnac,
-    make_observatory_duo,
-)
+from .agents import make_researcher_sdnac, make_researcher_compoctopus
 from .config import PHASES, DEFAULT_MODEL
 
 __all__ = [
-    "GrugConnector",
-    "SDNACConnector",
-    "ClaudePConnector",
-    "StateMachine",
-    "Runner",
-    "make_grug_sdnac",
     "make_researcher_sdnac",
-    "make_ovp_sdnac",
-    "make_observatory_duo",
+    "make_researcher_compoctopus",
     "PHASES",
     "DEFAULT_MODEL",
 ]

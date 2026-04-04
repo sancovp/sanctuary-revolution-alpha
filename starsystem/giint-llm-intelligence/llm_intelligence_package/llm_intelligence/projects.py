@@ -29,9 +29,10 @@ class TaskStatus(str, Enum):
 
 
 class AssigneeType(str, Enum):
-    """Assignee type enum."""
-    HUMAN = "HUMAN"
-    AI = "AI"
+    """Assignee type enum — aligned with Canopy schedule item_type."""
+    AI_HUMAN = "AI+Human"
+    AI_ONLY = "AI-Only"
+    HUMAN_ONLY = "Human-Only"
 
 
 class ProjectType(str, Enum):
@@ -48,9 +49,9 @@ class Task(BaseModel):
     is_blocked: bool = Field(False, description="Whether task is blocked")
     blocked_description: Optional[str] = Field(None, description="Why task is blocked")
     is_ready: bool = Field(True, description="Whether task is ready to work on")
-    assignee: AssigneeType = Field(..., description="Who is assigned to this task")
-    agent_id: Optional[str] = Field(None, description="Agent ID if assignee is AI")
-    human_name: Optional[str] = Field(None, description="Human name if assignee is HUMAN")
+    assignee: AssigneeType = Field(..., description="Canopy assignee type: AI+Human, AI-Only, or Human-Only")
+    agent_id: Optional[str] = Field(None, description="Agent ID if assignee involves AI")
+    human_name: Optional[str] = Field(None, description="Human name if assignee involves human")
     github_issue_id: Optional[str] = Field(None, description="GitHub issue ID if created")
     github_issue_url: Optional[str] = Field(None, description="GitHub issue URL for reference")
     claude_task_id: Optional[str] = Field(None, description="Claude Code task ID for bridging native task system")
@@ -62,22 +63,22 @@ class Task(BaseModel):
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
     updated_at: str = Field(default_factory=lambda: datetime.now().isoformat())
     
-    @validator('agent_id')
+    @validator('agent_id', always=True)
     def validate_agent_id(cls, v, values):
         assignee = values.get('assignee')
-        if assignee == AssigneeType.AI and not v:
-            raise ValueError('agent_id is required when assignee is AI')
-        if assignee == AssigneeType.HUMAN and v:
-            raise ValueError('agent_id should not be set when assignee is HUMAN')
+        if assignee in (AssigneeType.AI_ONLY, AssigneeType.AI_HUMAN) and not v:
+            raise ValueError('agent_id is required when assignee involves AI')
+        if assignee == AssigneeType.HUMAN_ONLY and v:
+            raise ValueError('agent_id should not be set when assignee is Human-Only')
         return v
-    
-    @validator('human_name')
+
+    @validator('human_name', always=True)
     def validate_human_name(cls, v, values):
         assignee = values.get('assignee')
-        if assignee == AssigneeType.HUMAN and not v:
-            raise ValueError('human_name is required when assignee is HUMAN')
-        if assignee == AssigneeType.AI and v:
-            raise ValueError('human_name should not be set when assignee is AI')
+        if assignee in (AssigneeType.HUMAN_ONLY, AssigneeType.AI_HUMAN) and not v:
+            raise ValueError('human_name is required when assignee involves human')
+        if assignee == AssigneeType.AI_ONLY and v:
+            raise ValueError('human_name should not be set when assignee is AI-Only')
         return v
 
 
@@ -126,6 +127,7 @@ class Deliverable(BaseModel):
 class Component(BaseModel):
     """Component containing deliverables."""
     component_name: str = Field(..., description="Component name")
+    path: Optional[str] = Field(None, description="Filesystem path to this component's module/directory within the starsystem")
     spec: Optional[ComponentSpec] = Field(None, description="Component specification")
     deliverables: Dict[str, Deliverable] = Field(default_factory=dict, description="Deliverables in this component")
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
@@ -134,6 +136,7 @@ class Component(BaseModel):
 class Feature(BaseModel):
     """Feature containing components."""
     feature_name: str = Field(..., description="Feature name")
+    path: Optional[str] = Field(None, description="Filesystem path to this feature's directory within the starsystem")
     spec: Optional[FeatureSpec] = Field(None, description="Feature specification")
     components: Dict[str, Component] = Field(default_factory=dict, description="Components in this feature")
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
@@ -466,19 +469,19 @@ class ProjectRegistry:
             logger.error(f"Failed to add sub-project: {e}", exc_info=True)
             return {"error": f"Failed to add sub-project: {e}"}
 
-    def add_feature_to_project(self, project_id: str, feature_name: str) -> Dict[str, Any]:
+    def add_feature_to_project(self, project_id: str, feature_name: str, path: str = None) -> Dict[str, Any]:
         """Add feature to project."""
         try:
             projects = self._load_projects()
-            
+
             if project_id not in projects:
                 return {"error": f"Project {project_id} not found"}
-            
+
             if feature_name in projects[project_id].features:
                 return {"error": f"Feature {feature_name} already exists in project {project_id}"}
-            
+
             # Add feature
-            projects[project_id].features[feature_name] = Feature(feature_name=feature_name)
+            projects[project_id].features[feature_name] = Feature(feature_name=feature_name, path=path)
             projects[project_id].updated_at = datetime.now().isoformat()
             
             # Save
@@ -491,7 +494,7 @@ class ProjectRegistry:
             logger.error(f"Failed to add feature {feature_name} to project {project_id}: {e}", exc_info=True)
             return {"error": f"Failed to add feature: {e}"}
     
-    def add_component_to_feature(self, project_id: str, feature_name: str, component_name: str) -> Dict[str, Any]:
+    def add_component_to_feature(self, project_id: str, feature_name: str, component_name: str, path: str = None) -> Dict[str, Any]:
         """Add component to feature."""
         try:
             projects = self._load_projects()
@@ -506,7 +509,7 @@ class ProjectRegistry:
                 return {"error": f"Component {component_name} already exists in feature {feature_name}"}
 
             # Add component
-            component = Component(component_name=component_name)
+            component = Component(component_name=component_name, path=path)
             projects[project_id].features[feature_name].components[component_name] = component
             projects[project_id].updated_at = datetime.now().isoformat()
 
@@ -550,18 +553,27 @@ class ProjectRegistry:
                 deliverable_name=deliverable_name
             )
             projects[project_id].updated_at = datetime.now().isoformat()
-            
+
             # Save
             self._save_projects(projects)
-            
+
+            # Auto-create TK card on backlog
+            tk_result = self._create_tk_card_for_deliverable(
+                project_id, feature_name, component_name, deliverable_name,
+                projects[project_id].features[feature_name].components[component_name].deliverables[deliverable_name]
+            )
+
             logger.info(f"Added deliverable {deliverable_name} to component {component_name}")
-            return {"success": True, "message": f"Deliverable {deliverable_name} added to component {component_name}"}
+            result = {"success": True, "message": f"Deliverable {deliverable_name} added to component {component_name}"}
+            if tk_result:
+                result["tk_card"] = tk_result
+            return result
             
         except Exception as e:
             logger.error(f"Failed to add deliverable {deliverable_name} to component {component_name}: {e}", exc_info=True)
             return {"error": f"Failed to add deliverable: {e}"}
 
-    def add_task_to_deliverable(self, project_id: str, feature_name: str, component_name: str, deliverable_name: str, task_id: str, is_human_only_task: bool, agent_id: Optional[str] = None, human_name: Optional[str] = None, claude_task_id: Optional[str] = None) -> Dict[str, Any]:
+    def add_task_to_deliverable(self, project_id: str, feature_name: str, component_name: str, deliverable_name: str, task_id: str, assignee: str, agent_id: Optional[str] = None, human_name: Optional[str] = None, claude_task_id: Optional[str] = None) -> Dict[str, Any]:
         """Add task to deliverable."""
         try:
             projects = self._load_projects()
@@ -581,20 +593,21 @@ class ProjectRegistry:
             if task_id in projects[project_id].features[feature_name].components[component_name].deliverables[deliverable_name].tasks:
                 return {"error": f"Task {task_id} already exists in deliverable {deliverable_name}"}
 
-            # Determine assignee based on is_human_only_task
-            if is_human_only_task:
-                assignee = AssigneeType.HUMAN
-                if not human_name:
-                    return {"error": "human_name is required for human-only tasks"}
-            else:
-                assignee = AssigneeType.AI
-                if not agent_id:
-                    return {"error": "agent_id is required for AI tasks"}
+            # Validate and convert assignee string to enum
+            try:
+                assignee_type = AssigneeType(assignee)
+            except ValueError:
+                return {"error": f"Invalid assignee '{assignee}'. Must be: AI+Human, AI-Only, or Human-Only"}
+
+            if assignee_type in (AssigneeType.AI_ONLY, AssigneeType.AI_HUMAN) and not agent_id:
+                return {"error": "agent_id is required when assignee involves AI"}
+            if assignee_type in (AssigneeType.HUMAN_ONLY, AssigneeType.AI_HUMAN) and not human_name:
+                return {"error": "human_name is required when assignee involves human"}
 
             # Add task
             projects[project_id].features[feature_name].components[component_name].deliverables[deliverable_name].tasks[task_id] = Task(
                 task_id=task_id,
-                assignee=assignee,
+                assignee=assignee_type,
                 agent_id=agent_id,
                 human_name=human_name,
                 claude_task_id=claude_task_id
@@ -935,6 +948,100 @@ class ProjectRegistry:
             logger.error(f"Failed to update task {task_id} status: {e}", exc_info=True)
             return {"error": f"Failed to update task status: {e}"}
 
+    def _create_tk_card_for_deliverable(
+        self,
+        project_id: str,
+        feature_name: str,
+        component_name: str,
+        deliverable_name: str,
+        deliverable: Deliverable
+    ) -> Optional[Dict[str, Any]]:
+        """Create a TK card on backlog when a deliverable is added.
+
+        Builds hierarchy string, classifies assignee from description,
+        posts to TreeKanban API. Best-effort — never fails loudly.
+        """
+        try:
+            from heaven_bml_sqlite.heaven_bml_sqlite_client import HeavenBMLSQLiteClient
+        except ImportError:
+            logger.warning("TreeKanban client not available for card creation")
+            return None
+
+        try:
+            board_name = os.getenv("GIINT_TREEKANBAN_BOARD")
+            if not board_name:
+                return None
+
+            # Build hierarchy string
+            hierarchy_str = f"GIINT: {project_id}/{feature_name}/{component_name}/{deliverable_name}"
+
+            # Starsystem tag from project_id
+            starsystem_tag = project_id.lower().replace("_", "-")
+
+            # Auto-classify assignee from deliverable name/context
+            desc_lower = deliverable_name.lower()
+            if any(kw in desc_lower for kw in ["human-only", "manual", "isaac"]):
+                assignee = "human-only"
+            elif any(kw in desc_lower for kw in ["risky", "dangerous", "breaking", "migration", "security"]):
+                assignee = "ai-human"
+            else:
+                assignee = "ai-only"
+
+            concept_name = f"GIINT_Deliverable_{project_id}_{feature_name}_{component_name}_{deliverable_name}"
+            tags = [f"starsystem:{starsystem_tag}", "giint_deliverable", f"assignee:{assignee}",
+                    project_id, deliverable_name]
+
+            import json as _json
+            client = HeavenBMLSQLiteClient()
+
+            # Check if card already exists (idempotent)
+            existing_cards = client.get_all_cards(board_name)
+            for card in existing_cards:
+                card_tags = card.get("tags", [])
+                if isinstance(card_tags, str):
+                    card_tags = _json.loads(card_tags) if card_tags.startswith("[") else [card_tags]
+                if concept_name in card_tags or (deliverable_name in card_tags and "giint_deliverable" in card_tags and project_id in card_tags):
+                    logger.info(f"TK card already exists for deliverable {deliverable_name}")
+                    return {"success": True, "message": "Card already exists", "card_id": card.get("id")}
+
+            result = client._make_request("POST", "/api/sqlite/cards", {
+                "board": board_name,
+                "title": concept_name,
+                "description": hierarchy_str,
+                "status": "backlog",
+                "priority": "NA",
+                "tags": _json.dumps(tags),
+            })
+
+            if result:
+                card_id = result.get("id", "?")
+                logger.info(f"Created TK card #{card_id} for deliverable {deliverable_name}")
+
+                # Mirror to Canopy schedule
+                self._mirror_to_canopy(concept_name, hierarchy_str, assignee)
+
+                return {"success": True, "card_id": card_id, "tags": tags}
+            return None
+
+        except Exception as e:
+            logger.warning(f"TK card creation failed for deliverable {deliverable_name}: {e}")
+            return None
+
+    def _mirror_to_canopy(self, concept_name: str, hierarchy_str: str, assignee: str) -> None:
+        """Mirror a deliverable to Canopy schedule. Best-effort."""
+        try:
+            from canopy.schedule import add_to_schedule
+            item_type_map = {"ai-only": "AI-Only", "ai-human": "AI+Human", "human-only": "Human-Only"}
+            add_to_schedule(
+                item_type=item_type_map.get(assignee, "AI-Only"),
+                description=f"{concept_name} — {hierarchy_str}",
+                execution_type="mission",
+                execution_type_decision_explanation=f"Auto-mirrored from GIINT deliverable. Assignee: {assignee}.",
+            )
+            logger.info(f"Mirrored to Canopy: {concept_name}")
+        except Exception as e:
+            logger.warning(f"Canopy mirror failed (non-fatal): {e}")
+
     def _sync_to_treekanban(
         self,
         project_id: str,
@@ -1264,21 +1371,21 @@ def add_sub_project(composite_project_id: str, sub_project_id: str) -> Dict[str,
     """Add a sub-project to a composite project."""
     return get_registry().add_sub_project(composite_project_id, sub_project_id)
 
-def add_feature_to_project(project_id: str, feature_name: str) -> Dict[str, Any]:
+def add_feature_to_project(project_id: str, feature_name: str, path: str = None) -> Dict[str, Any]:
     """Add feature to project."""
-    return get_registry().add_feature_to_project(project_id, feature_name)
+    return get_registry().add_feature_to_project(project_id, feature_name, path=path)
 
-def add_component_to_feature(project_id: str, feature_name: str, component_name: str) -> Dict[str, Any]:
+def add_component_to_feature(project_id: str, feature_name: str, component_name: str, path: str = None) -> Dict[str, Any]:
     """Add component to feature."""
-    return get_registry().add_component_to_feature(project_id, feature_name, component_name)
+    return get_registry().add_component_to_feature(project_id, feature_name, component_name, path=path)
 
 def add_deliverable_to_component(project_id: str, feature_name: str, component_name: str, deliverable_name: str) -> Dict[str, Any]:
     """Add deliverable to component."""
     return get_registry().add_deliverable_to_component(project_id, feature_name, component_name, deliverable_name)
 
-def add_task_to_deliverable(project_id: str, feature_name: str, component_name: str, deliverable_name: str, task_id: str, is_human_only_task: bool, agent_id: Optional[str] = None, human_name: Optional[str] = None, claude_task_id: Optional[str] = None) -> Dict[str, Any]:
+def add_task_to_deliverable(project_id: str, feature_name: str, component_name: str, deliverable_name: str, task_id: str, assignee: str, agent_id: Optional[str] = None, human_name: Optional[str] = None, claude_task_id: Optional[str] = None) -> Dict[str, Any]:
     """Add task to deliverable."""
-    return get_registry().add_task_to_deliverable(project_id, feature_name, component_name, deliverable_name, task_id, is_human_only_task, agent_id, human_name, claude_task_id)
+    return get_registry().add_task_to_deliverable(project_id, feature_name, component_name, deliverable_name, task_id, assignee, agent_id, human_name, claude_task_id)
 
 def update_task_status(
     project_id: str,

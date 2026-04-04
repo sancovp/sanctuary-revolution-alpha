@@ -1,6 +1,62 @@
 """CAVEAgent - The God Object (State Only).
 
 Unified CAVE runtime state. HTTP routes are in server/http_server.py.
+
+# =============================================================================
+# CAVE_REFACTOR: CAVEAgent CHANGES (Stage 5 + Stage 6)
+# =============================================================================
+#
+# CURRENT: CAVEAgent is a mixin onion that owns a single ClaudeCodeAgent
+#          and manages state directly. http_server.py creates it with
+#          inverted ownership (global cave = CAVEAgent(...) at startup).
+#          Config only knows about ONE agent (main_agent_config: singular).
+#
+# TARGET (Stage 5): CAVEAgent becomes a generic agent registry.
+#   config.agents: List[AgentConfig]  — not just main_agent_config
+#   CAVEAgent.__init__ reads config, creates right agent type for each:
+#     - ChatAgent for Conductor, Autobiographer
+#     - CodeAgent for Inner GNOSYS
+#     - ClawAgent for OpenClaw
+#   Generic registry: register(agent), get(name), list(), route(message)
+#
+# TARGET (Stage 6): CAVEHTTPServer becomes a facade.
+#   CAVEHTTPServer(port, cave_agent) — takes agent IN, not created internally
+#   Every route calls ONE method on cave_agent. No logic in routes.
+#   No global cave variable.
+#   start_sancrev.py becomes ~5 lines:
+#     wd = WakingDreamer()
+#     cave = CAVEHTTPServer(8080, wd)
+#     uvicorn.run(cave.app)
+#
+# TARGET: WakingDreamer(CAVEAgent) — the SANCREV impl.
+#   Singleton god object. Loads config from file. Hot-reloads changes.
+#   IS svabhavikakaya (the unity of all kayas).
+#   Agents edit config → WakingDreamer hot-reloads → behavior changes.
+#
+# CAVEAgent.CentralChannel = the COMPLETE MAP of all agents + all their
+#   conversation types. It IS the routing table for the entire system.
+#
+#   self.central_channel = {
+#     "conductor":      CentralChannel(main=discord_user_chat, heartbeat=heartbeat_convo),
+#     "autobiographer": CentralChannel(chat=memory_chat, journal=journal_convo, night=night_convo),
+#     "gnosys":         CentralChannel(main=tmux_session),
+#     "openclaw":       CentralChannel(main=discord_pipe),
+#   }
+#
+#   Nadis = external inputs that flow INTO agent CentralChannels:
+#     Discord #conductor-whisper  →  conductor.main
+#     Discord heartbeat timer     →  conductor.heartbeat
+#     Discord #journal            →  autobiographer.journal
+#     Cron 6AM/10PM               →  autobiographer.journal
+#     tmux session                →  gnosys.main
+#     Discord #openclaw           →  openclaw.main
+#     Webhook /webhook/{name}     →  wherever automation routes
+#
+# MIXIN ONION: Stays as-is (marked "don't touch" in CAVE_REFACTOR_ANALYSIS).
+#   What MOVES OUT: runtime logic that is NOT invariant (how many agents,
+#   what any config is). CAVEAgent takes configs. Any IMPL gives configs.
+#
+# =============================================================================
 """
 import subprocess
 import logging
@@ -12,8 +68,9 @@ import httpx
 logger = logging.getLogger(__name__)
 
 from .config import CAVEConfig
-from .models import PAIAState, AgentRegistration, RemoteAgentHandle
-from .agent import ClaudeCodeAgent, ClaudeCodeAgentConfig
+from .models import PAIAState, AgentRegistration, RemoteAgentHandle, CaveAgentEntry
+from .agent import Agent, ChatAgent, CodeAgent, ClawAgent, ServiceAgent, RemoteAgent, AgentConfig, CodeAgentConfig, ClaudeCodeAgent, ClaudeCodeAgentConfig
+from .channel import CentralChannel
 from .state_reader import ClaudeStateReader
 from .dna import AutoModeDNA
 from .mixins import (
@@ -31,7 +88,6 @@ from .mixins import (
 )
 from .config_snapshots import MainAgentConfigManager
 from .world import World, RNGEventSource
-from .discord_source import DiscordChannelSource
 from .sanctum_source import SanctumRitualSource
 
 
@@ -58,7 +114,17 @@ class CAVEAgent(
         self.agent_registry: Dict[str, AgentRegistration] = {}
         self.remote_agents: Dict[str, RemoteAgentHandle] = {}
 
-        # === LIVE MIRROR ===
+        # === SSE (must be before cave_agents — auto-SSE needs event_queue) ===
+        self._init_sse()
+
+        # === CAVE AGENT REGISTRY (Stage 5) ===
+        # Generic registry: N agents of any type, created from config.
+        # CentralChannel map = routing table for the entire system.
+        self.cave_agents: Dict[str, Agent] = {}
+        self.central_channels: Dict[str, CentralChannel] = {}
+        self._init_cave_agents()
+
+        # === LIVE MIRROR (legacy — main_agent kept for backwards compat) ===
         self.main_agent: Optional[ClaudeCodeAgent] = None
         self.state_reader = ClaudeStateReader(
             project_dir=self.config.main_agent_config.working_dir
@@ -68,13 +134,16 @@ class CAVEAgent(
         # === ROUTING ===
         self._init_hook_router()
         self._init_loop_manager()
-        self._init_sse()
 
         # === OMNISANC ===
         self._init_omnisanc()
 
         # === ANATOMY (Heart, Blood, Ears, Organs) ===
         self._init_anatomy()
+
+        # === AGENT HEARTBEATS ===
+        # Heartbeats are wired by the IMPL (WakingDreamer), not by config.
+        # The heartbeat system uses HEARTBEAT.md files — not inline prompts.
 
         # === WORLD (environment — event sources tick into Ears) ===
         self.world = World()
@@ -83,9 +152,11 @@ class CAVEAgent(
         # === PERCEPTION (Body perceives world through Ears) ===
         self._wire_perception_loop()
 
-        # === HEARTBEAT (interoception — autonomous prompt injection) ===
-        self._wire_heartbeat()
-        self._wire_conductor_heartbeat()
+        # === HEARTBEAT ===
+        # Conductor heartbeat is now a CronAutomation at
+        # /tmp/heaven_data/automations/conductor_heartbeat.json
+        # Fired by cron_scheduler tick. No more Tick or _wire methods needed.
+        # CodeAgents use OMNISANC, not heartbeat.
 
         # === HEALTH CHECKS (body.checkup — organ state, ticked by Heart) ===
         self._wire_checkup()
@@ -95,6 +166,51 @@ class CAVEAgent(
 
         # === AUTOMATIONS ===
         self._init_automations()
+
+        # === CRON SCHEDULER — fire due automations every 60s ===
+        from .mixins.anatomy import Tick
+        self.heart.add_tick(Tick(
+            name="cron_scheduler",
+            callback=self.fire_due_automations,
+            every=60.0,
+        ))
+
+        # === MINI CLIs — system-level Discord channels with commands ===
+        self.mini_clis = {}
+        try:
+            from .sanctum_cli import create_sanctum_cli
+            sanctum_cli = create_sanctum_cli()
+            if sanctum_cli:
+                self.mini_clis["sanctum"] = sanctum_cli
+        except Exception as e:
+            logger.warning("Failed to create sanctum MiniCLI: %s", e)
+
+        # Poll MiniCLIs on a tick (same rate as perception)
+        if self.mini_clis:
+            def _poll_mini_clis():
+                for name, cli in self.mini_clis.items():
+                    try:
+                        results = cli.poll()
+                        for r in results:
+                            logger.info("MiniCLI %s: %s", name, r)
+                    except Exception as e:
+                        logger.error("MiniCLI %s poll failed: %s", name, e)
+
+            self.heart.add_tick(Tick(
+                name="mini_cli_poll",
+                callback=_poll_mini_clis,
+                every=30.0,
+            ))
+
+        # === AUTOMATION HOT-RELOAD — check for new/changed/deleted JSONs every 5 min ===
+        def _hot_reload_tick():
+            if hasattr(self, 'automation_registry'):
+                self.automation_registry.hot_reload()
+        self.heart.add_tick(Tick(
+            name="automation_hot_reload",
+            callback=_hot_reload_tick,
+            every=300.0,
+        ))
 
         # === DNA (Auto Mode) ===
         self.dna: Optional[AutoModeDNA] = None
@@ -114,12 +230,23 @@ class CAVEAgent(
         )
 
     def _register_event_sources(self) -> None:
-        """Register default event sources with World."""
+        """Register default event sources with World.
+
+        Discord polling is now handled by UserDiscordChannel.receive()
+        through the Channel system — NOT through a World EventSource.
+        Ears.perceive_world() polls CentralChannel.receive_all() for
+        channel-based events (Discord, tmux, file inbox).
+
+        World is reserved for non-channel sources only:
+        - RNG/probabilistic events (disabled for now)
+        - Sanctum ritual reminders (scheduled, no channel home)
+        """
         # Probabilistic: RNG world events — DISABLED (no RNG hooked up yet)
         # self.world.add_source(RNGEventSource.default_world_events())
 
-        # External: Discord private channel polling (auto-disables if no config)
-        self.world.add_source(DiscordChannelSource.from_config())
+        # Discord: NOW HANDLED BY CHANNEL SYSTEM — not World
+        # UserDiscordChannel.receive() polls Discord REST API
+        # Ears.perceive_world() polls CentralChannel.receive_all()
 
         # Deterministic: SANCTUM ritual reminders (auto-disables if no sanctum)
         self.world.add_source(SanctumRitualSource.from_config())
@@ -158,6 +285,269 @@ class CAVEAgent(
             self.main_agent = None
             self._emit_event("no_session", {"session": session})
             return False
+
+    # === CAVE AGENT REGISTRY (Stage 5) ===
+
+    def _init_cave_agents(self):
+        """Create agents from config.agents list.
+
+        Each CaveAgentEntry → right Agent subtype + CentralChannel.
+        If config.agents is empty, no agents are created here
+        (falls back to legacy main_agent path).
+
+        After creation:
+        - Event forwarding: Agent.emit() → CAVEAgent SSE + broadcast channels
+        - Heartbeat: Heart tick added if entry.heartbeat.enabled
+        """
+        for entry in self.config.agents:
+            agent = self._create_agent_from_entry(entry)
+            if agent:
+                self.cave_agents[entry.name] = agent
+                self.central_channels[entry.name] = agent.central_channel or CentralChannel()
+
+                # Wire event forwarding: agent events → SSE + broadcast channels
+                self._wire_event_forwarding(entry.name, agent)
+
+                logger.info(f"CAVE agent registered: {entry.name} ({entry.agent_type})")
+
+
+    def _wire_event_forwarding(self, agent_name: str, agent: Agent):
+        """Wire Agent.emit() to flow through CAVEAgent's unified event stream.
+
+        Every agent event:
+        1. Fires the original llegos Actor emit (local listeners)
+        2. Forwards to CAVEAgent._emit_event() → SSE queue (frontend)
+        3. Forwards to agent's broadcast channels (Discord mirrors etc)
+        """
+        original_emit = agent.emit
+        cave_ref = self
+
+        def forwarding_emit(event_name, data=None):
+            # Original llegos emit
+            original_emit(event_name, data)
+
+            # Forward to unified SSE stream (tagged with agent name)
+            cave_ref._emit_event(f"{agent_name}:{event_name}", {
+                "agent": agent_name,
+                "event": event_name,
+                "data": data,
+            })
+
+            # Forward to broadcast channels (not SSE — that's already handled above)
+            if agent.central_channel:
+                for conv_name, ch in agent.central_channel.conversations.items():
+                    if conv_name == "sse":
+                        continue  # SSE already gets it via _emit_event
+                    if hasattr(ch, 'is_broadcast') and ch.is_broadcast:
+                        try:
+                            ch.deliver({"message": f"[{agent_name}:{event_name}] {data}"})
+                        except Exception as e:
+                            logger.debug("Broadcast to %s.%s failed: %s", agent_name, conv_name, e)
+
+        agent.emit = forwarding_emit
+
+
+    def _create_agent_from_entry(self, entry: CaveAgentEntry) -> Optional[Agent]:
+        """Factory: CaveAgentEntry → correct Agent subtype.
+
+        After creating the agent:
+        1. Builds CentralChannel from config
+        2. Applies channel_mode preset (complete_mirror/notify/mixed)
+        3. Auto-adds SSE channel (every agent gets SSE for frontend)
+        """
+        if entry.agent_type == "code":
+            agent = CodeAgent(config=CodeAgentConfig(
+                name=entry.name,
+                agent_command=entry.command,
+                tmux_session=entry.tmux_session,
+                working_directory=entry.working_dir,
+            ))
+        elif entry.agent_type == "chat":
+            agent = ChatAgent(config=AgentConfig(
+                name=entry.name,
+                working_directory=entry.working_dir,
+            ))
+        elif entry.agent_type == "claw":
+            agent = ClawAgent(config=AgentConfig(
+                name=entry.name,
+                working_directory=entry.working_dir,
+            ))
+        elif entry.agent_type == "service":
+            agent = ServiceAgent(config=AgentConfig(
+                name=entry.name,
+                working_directory=entry.working_dir,
+            ))
+        elif entry.agent_type == "remote":
+            agent = RemoteAgent(config=AgentConfig(
+                name=entry.name,
+                working_directory=entry.working_dir,
+            ))
+        else:
+            logger.error(f"Unknown agent type: {entry.agent_type} for {entry.name}")
+            return None
+
+        # Wire CentralChannel from entry.channels config
+        conversations = {}
+        for conv_name, conv_config in entry.channels.items():
+            channel = self._create_channel_from_config(conv_config)
+            if channel:
+                conversations[conv_name] = channel
+
+        # Apply channel_mode preset
+        if entry.channel_mode == "complete_mirror":
+            for ch in conversations.values():
+                ch.set_modes(["mirror", "broadcast"])
+        elif entry.channel_mode == "notify":
+            for ch in conversations.values():
+                ch.set_modes(["broadcast"])
+        # "mixed" = per-channel modes already set by _create_channel_from_config
+
+        # Auto-SSE: every agent gets an SSE channel (broadcast-only, for frontend)
+        from .channel import SSEChannel
+        if hasattr(self, 'event_queue'):
+            sse_ch = SSEChannel(queue=self.event_queue)
+            sse_ch.set_modes(["broadcast"])
+            conversations["sse"] = sse_ch
+
+        agent.central_channel = CentralChannel(conversations=conversations)
+
+        return agent
+
+    def _create_channel_from_config(self, config: Dict[str, Any]):
+        """Factory: channel config dict → Channel instance.
+
+        Config format: {"type": "discord", "channel_id": "123", "modes": ["mirror", "broadcast"]}
+                       {"type": "tmux", "session": "lord"}
+                       {"type": "inbox", "inbox_dir": "/tmp/..."}
+                       {"type": "internal"}  — no external transport
+                       {"type": "sse"}  — SSE channel (auto-added, but can be explicit)
+
+        Per-channel modes (used when agent channel_mode="mixed"):
+            "modes": ["mirror", "broadcast", "deliverable"]
+        """
+        from .channel import (
+            UserDiscordChannel, AgentInboxChannel, AgentTmuxChannel, SSEChannel
+        )
+
+        ch_type = config.get("type", "internal")
+        channel = None
+
+        if ch_type == "discord":
+            channel = UserDiscordChannel(
+                channel_id=config.get("channel_id", ""),
+                guild_id=config.get("guild_id", ""),
+                token=config.get("token", ""),
+            )
+        elif ch_type == "tmux":
+            channel = AgentTmuxChannel(
+                session=config.get("session", "claude"),
+            )
+        elif ch_type == "inbox":
+            from pathlib import Path
+            channel = AgentInboxChannel(
+                inbox_dir=Path(config.get("inbox_dir", "/tmp/heaven_data/inbox")),
+            )
+        elif ch_type == "internal":
+            from pathlib import Path
+            agent_name = config.get("agent_name", "unknown")
+            channel = AgentInboxChannel(
+                inbox_dir=Path(f"/tmp/heaven_data/inboxes/{agent_name}"),
+            )
+        elif ch_type == "sse":
+            if hasattr(self, 'event_queue'):
+                channel = SSEChannel(queue=self.event_queue)
+            else:
+                logger.warning("SSE channel requested but no event_queue available")
+                return None
+        else:
+            logger.warning(f"Unknown channel type: {ch_type}")
+            return None
+
+        # Apply per-channel modes if specified (for mixed mode)
+        if channel and "modes" in config:
+            channel.set_modes(config["modes"])
+
+        return channel
+
+    def get_cave_agent(self, name: str) -> Optional[Agent]:
+        """Get a registered CAVE agent by name."""
+        return self.cave_agents.get(name)
+
+    def list_cave_agents(self) -> Dict[str, str]:
+        """List all registered CAVE agents: {name: type}."""
+        return {name: agent.__class__.__name__ for name, agent in self.cave_agents.items()}
+
+    def route_to_agent(self, agent_name: str, message) -> bool:
+        """Route a message to a specific agent's inbox."""
+        agent = self.cave_agents.get(agent_name)
+        if not agent:
+            logger.warning(f"No CAVE agent named '{agent_name}'")
+            return False
+        return agent.enqueue(message)
+
+    # === PHASE 5: INTEGRATION WIRING ===
+
+    def get_agent_status(self) -> Dict[str, Any]:
+        """Get status of all CAVE agents for agent awareness.
+
+        Written to agent_status.txt by heartbeat.
+        Conductor reads this every turn to know what each agent is doing.
+        """
+        status = {}
+        for name, agent in self.cave_agents.items():
+            status[name] = {
+                "type": agent.__class__.__name__,
+                "inbox_count": agent.inbox_count,
+                "has_messages": agent.has_messages,
+                "channels": agent.central_channel.list_conversations() if agent.central_channel else [],
+            }
+        return status
+
+    def write_agent_status_file(self):
+        """Write agent_status.txt — called by heartbeat.
+
+        Conductor reads this dynamic file every turn for agent awareness.
+        """
+        import json
+        status = self.get_agent_status()
+        status_file = self.config.data_dir / "conductor_dynamic" / "agent_status.txt"
+        status_file.parent.mkdir(parents=True, exist_ok=True)
+        lines = ["=== Agent Status ===", ""]
+        for name, info in status.items():
+            lines.append(f"{name} ({info['type']}): inbox={info['inbox_count']}, channels={info['channels']}")
+        lines.append("")
+        lines.append(f"Updated: {datetime.utcnow().isoformat()}")
+        status_file.write_text("\n".join(lines))
+
+    def fire_due_automations(self):
+        """Fire all CronAutomations that are due. Called by Heart tick."""
+        registry = getattr(self, 'automation_registry', None)
+        if not registry:
+            return
+        for auto in registry.get_due():
+            try:
+                auto.fire()
+                logger.info(f"Fired automation: {auto.name}")
+            except Exception as e:
+                logger.error(f"Automation {auto.name} failed: {e}")
+
+    def assemble_morning_briefing(self) -> str:
+        """Assemble morning briefing from dynamic files.
+
+        Conductor calls this after journal completes.
+        Reads: sanctum_status.txt, social_queue.txt, agent_status.txt, tasks.
+        """
+        briefing_parts = []
+        dynamic_dir = self.config.data_dir / "conductor_dynamic"
+
+        for filename in ["sanctum_status.txt", "social_queue.txt", "agent_status.txt"]:
+            filepath = dynamic_dir / filename
+            if filepath.exists():
+                briefing_parts.append(f"--- {filename} ---")
+                briefing_parts.append(filepath.read_text().strip())
+                briefing_parts.append("")
+
+        return "\n".join(briefing_parts) if briefing_parts else "No status files available."
 
     def _ensure_attached(self) -> bool:
         if self.main_agent and self.main_agent.session_exists():

@@ -1,0 +1,496 @@
+"""Researcher agent factory — CompoctopusAgent pattern.
+
+Chain of 5 SDNACs (one per scientific method phase) + 1 FunctionLink (Grug dispatch).
+Phase sequencing controlled by Chain, not by LLM state machine.
+CartON carries context between phases via researcher_mcp tools.
+
+Architecture:
+    CompoctopusAgent "researcher"
+      └── ResearcherChain "researcher_chain"
+          ├── SDNAC "observe"          — gather data, record to CartON
+          ├── SDNAC "hypothesize"      — form hypotheses, record
+          ├── SDNAC "propose"          — design experiments for Grug
+          ├── FunctionLink "dispatch_grug" — send to Grug, get results
+          ├── SDNAC "experiment"       — review Grug results, record
+          └── SDNAC "analyze"          — final synthesis, conclusions
+
+Each SDNAC is a fresh LLM conversation. No KeywordBasedStateMachine.
+The Chain IS the state machine — Python controls phase transitions.
+Between PROPOSE and EXPERIMENT, the FunctionLink dispatches work to Grug.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+from typing import Any, Dict, List, Optional
+
+from .config import DEFAULT_MODEL, PHASES
+
+logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# ResearcherChain — Chain subclass that passes **kwargs (on_message) through
+# =============================================================================
+
+from sdna.chain_ontology import Chain, LinkResult, LinkStatus
+
+
+class ResearcherChain(Chain):
+    """Chain that passes kwargs (including on_message) to each link.
+
+    Standard Chain.execute() doesn't forward **kwargs to link.execute().
+    SDNAC.execute() needs on_message for EventBroadcaster callbacks.
+    This subclass forwards all kwargs so each SDNAC gets the callback.
+    """
+
+    async def execute(self, context: Optional[Dict[str, Any]] = None,
+                      start_from: int = 0, on_phase_complete=None, **kwargs):
+        ctx = dict(context) if context else {}
+
+        for i, link in enumerate(self.links):
+            # Skip already-completed phases on restart
+            if i < start_from:
+                logger.info("ResearcherChain: skipping link %d/%d (already completed): %s",
+                            i + 1, len(self.links), getattr(link, 'name', '?'))
+                continue
+
+            logger.info("ResearcherChain: executing link %d/%d: %s",
+                        i + 1, len(self.links), getattr(link, 'name', '?'))
+            result = await link.execute(ctx, **kwargs)
+            ctx = result.context if hasattr(result, 'context') else ctx
+
+            status = result.status if hasattr(result, 'status') else None
+            if str(status) not in ("success", "LinkStatus.SUCCESS", "SDNAStatus.SUCCESS"):
+                if hasattr(result, 'resume_path'):
+                    result.resume_path = [i] + (result.resume_path or [])
+                logger.warning("ResearcherChain: link %s returned %s, stopping chain",
+                               getattr(link, 'name', '?'), status)
+                return result
+
+            logger.info("ResearcherChain: link %s completed successfully",
+                        getattr(link, 'name', '?'))
+
+            # Notify caller so they can persist progress
+            if on_phase_complete:
+                on_phase_complete(i, getattr(link, 'name', '?'))
+
+        return LinkResult(status=LinkStatus.SUCCESS, context=ctx)
+
+
+# =============================================================================
+# MCP servers config
+# =============================================================================
+
+def _get_researcher_mcp_servers():
+    """MCP servers for the researcher agent — researcher_mcp (write + read CartON)."""
+    import shutil
+    mcp_bin = shutil.which("researcher-mcp")
+    if not mcp_bin:
+        raise RuntimeError("researcher-mcp console script not found. pip install observatory-sdna.")
+    return {
+        "researcher": {
+            "command": mcp_bin,
+            "args": [],
+            "transport": "stdio",
+        },
+    }
+
+
+# =============================================================================
+# Phase SDNAC factory — one SDNAC per scientific method phase
+# =============================================================================
+
+def _make_phase_hermes(phase_name, system_prompt, goal, model=DEFAULT_MODEL, max_turns=15):
+    """Build a HermesConfig for a single research phase — NO state machine."""
+    from sdna.config import HermesConfig, HeavenInputs, HeavenAgentArgs
+    from heaven_base.tools import BashTool
+
+    hermes = HermesConfig(
+        name=f"researcher_{phase_name}",
+        goal=goal,
+        backend="heaven",
+        model=model,
+        max_turns=max_turns,
+        permission_mode="bypassPermissions",
+        source_container="mind_of_god",
+        target_container="mind_of_god",
+        heaven_inputs=HeavenInputs(
+            agent=HeavenAgentArgs(
+                provider="ANTHROPIC",
+                max_tokens=8000,
+                tools=[BashTool],
+                enable_compaction=False,  # Short phases, no need
+            ),
+        ),
+        system_prompt=system_prompt,
+    )
+    hermes.mcp_servers = _get_researcher_mcp_servers()
+    return hermes
+
+
+def _make_phase_sdnac(phase_name, system_prompt, goal, model=DEFAULT_MODEL):
+    """Build an SDNAC for a single research phase."""
+    from sdna.sdna import SDNAC
+    from sdna.ariadne import AriadneChain, InjectConfig
+
+    ariadne = AriadneChain(
+        name=f"researcher_{phase_name}_ariadne",
+        elements=[
+            InjectConfig(
+                source="literal",
+                inject_as=f"{phase_name}_instructions",
+                value=f"Execute {phase_name} phase of research. Follow instructions exactly.",
+            ),
+        ],
+    )
+
+    hermes = _make_phase_hermes(phase_name, system_prompt, goal, model)
+    return SDNAC(name=f"researcher_{phase_name}", ariadne=ariadne, config=hermes)
+
+
+# =============================================================================
+# Grug dispatch FunctionLink
+# =============================================================================
+
+def _build_grug_dispatch_link():
+    """FunctionLink that sends experiment proposals to Grug for execution."""
+    from compoctopus.chain_ontology import FunctionLink
+
+    async def dispatch_to_grug(ctx, **kwargs):
+        """Send proposed experiment to Grug for code execution.
+
+        Reads investigation context + prepared_message (PROPOSE output) from ctx.
+        Posts task to Grug's /execute endpoint on repo-lord:8081.
+        Stores result in ctx["grug_result"] for EXPERIMENT phase.
+        """
+        import httpx
+
+        investigation = ctx.get("investigation_name", "unknown")
+        topic = ctx.get("topic", "unknown")
+
+        # Get the experiment proposal — prepared_message is set by poimandres
+        proposal = ctx.get("prepared_message", "")
+        if not proposal:
+            raw = ctx.get("raw_result", {})
+            if isinstance(raw, dict):
+                proposal = raw.get("prepared_message", "")
+        if not proposal:
+            proposal = f"Investigate: {topic}"
+
+        task_for_grug = (
+            f"Research investigation: {investigation}\n"
+            f"Topic: {topic}\n\n"
+            f"The researcher has proposed the following experiments. "
+            f"Execute them and report results:\n\n{proposal}"
+        )
+
+        logger.info("Dispatching to Grug: %s", task_for_grug[:200])
+
+        grug_result = None
+        endpoints = ["http://repo-lord:8081/execute", "http://localhost:8081/execute"]
+
+        for endpoint in endpoints:
+            try:
+                async with httpx.AsyncClient() as client:
+                    resp = await client.post(
+                        endpoint,
+                        json={"task": task_for_grug},
+                        timeout=180.0,
+                    )
+                    resp.raise_for_status()
+                    grug_result = resp.json()
+                    logger.info("Grug responded via %s", endpoint)
+                    break
+            except Exception as e:
+                logger.warning("Grug dispatch to %s failed: %s", endpoint, e)
+                continue
+
+        if grug_result is None:
+            grug_result = {
+                "error": "Grug unreachable on all endpoints",
+                "note": "EXPERIMENT phase should proceed with available data only",
+            }
+
+        history_id = grug_result.get("history_id", "")
+        status = grug_result.get("status", grug_result.get("error", "unknown"))
+
+        if history_id and status == "success":
+            # Build the path where Grug's history lives on repo-lord
+            date_dir = "_".join(history_id.split("_")[:3])
+            history_path = f"/tmp/heaven_data/agents/grug/memories/histories/{date_dir}/{history_id}.json"
+            ctx["grug_result"] = f"Experiment done. repo-lord:{history_path}"
+        elif grug_result.get("error"):
+            ctx["grug_result"] = f"Experiment failed. Grug error: {grug_result['error']}"
+        else:
+            ctx["grug_result"] = "Experiment failed. Grug returned no history_id."
+
+        ctx["grug_history_id"] = history_id
+        return ctx
+
+    return FunctionLink(
+        "dispatch_grug",
+        dispatch_to_grug,
+        "Send experiment proposals to Grug (repo-lord) for code execution",
+    )
+
+
+# =============================================================================
+# CompoctopusAgent factory
+# =============================================================================
+
+def make_researcher_compoctopus(
+    topic: str,
+    domain: str,
+    investigation_name: str,
+    hint: str = "",
+    model: str = DEFAULT_MODEL,
+):
+    """Build researcher as CompoctopusAgent — Chain of SDNACs per phase.
+
+    Args:
+        topic: Research topic.
+        domain: Research domain (e.g. "codebase_analysis").
+        investigation_name: Unique name for this investigation.
+        hint: Optional hint for the researcher.
+        model: LLM model to use.
+
+    Returns:
+        CompoctopusAgent with ResearcherChain ready to .execute().
+    """
+    from compoctopus.agent import CompoctopusAgent
+    from datetime import datetime
+
+    run_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    base_identity = (
+        f"You are Dr. Randy BrainBrane, a research scientist.\n\n"
+        f"Run started: {run_timestamp}\n"
+        f"Investigation: {investigation_name}\n"
+        f"Topic: {topic}\n"
+        f"Domain: {domain}\n"
+        f"{'Hint: ' + hint if hint else ''}\n\n"
+        f"## What You Are Researching\n"
+        f"You study LLM agent capabilities. Your experimental subject is GRUG — an LLM agent\n"
+        f"(SmartGrug) running inside the 'repo-lord' Docker container. Grug is a Heaven-based\n"
+        f"agent with BashTool, git access, and a full code repository. He receives tasks via\n"
+        f"HTTP POST to his /execute endpoint on port 8081, runs them autonomously using his\n"
+        f"own LLM reasoning + tools, and returns results with a history_id.\n\n"
+        f"Your job: design experiments that test what Grug can and cannot do as an LLM agent,\n"
+        f"dispatch those experiments to him via the run_experiment tool, and analyze his results.\n"
+        f"You are NOT inspecting code or debugging infrastructure — you are a SCIENTIST studying\n"
+        f"an AI agent's capabilities and limitations.\n\n"
+        f"## CartON Knowledge Graph\n"
+        f"CartON is triple-based. Wiki nodes have properties: n (name), d (description), t (timestamp).\n"
+        f"Nodes connect via typed relationships: IS_A, PART_OF, INSTANTIATES, HAS_DOMAIN, etc.\n"
+        f"In query_knowledge Cypher, use n.n for name, n.d for description. Example:\n"
+        f"  query='RETURN n.n as name, n.d as description ORDER BY n.n'\n"
+        f"  query='WHERE n.n CONTAINS \"Proposal\" RETURN n.n as name, n.d as description'\n\n"
+        f"## Important\n"
+        f"- Do NOT use docker exec to run experiments — use run_experiment tool instead\n"
+        f"- Do NOT use any tool called send_to_grug — it does not exist\n"
+        f"- Only query CartON for observations from THIS investigation: {investigation_name}\n\n"
+    )
+
+    # --- OBSERVE ---
+    observe = _make_phase_sdnac(
+        "observe",
+        system_prompt=base_identity + (
+            "You are in the OBSERVE phase. You ONLY do observation. Nothing else.\n"
+            "1. Use query_knowledge(investigation_name='{inv}') to check for prior work\n"
+            "2. Formulate what you already know and what you need to find out\n"
+            "3. Call record_observation with phase='observe'\n"
+            "When done, give a brief summary and stop. Do NOT call any more tools after your final summary.\n"
+            "Do NOT use docker exec. Do NOT inspect code. You are a scientist, not a debugger.\n"
+        ).format(inv=investigation_name),
+        goal=f"OBSERVE: Gather what is known about {topic}. Record findings to CartON. Stop when done.",
+        model=model,
+    )
+
+    # --- HYPOTHESIZE ---
+    hypothesize = _make_phase_sdnac(
+        "hypothesize",
+        system_prompt=base_identity + (
+            "You are in the HYPOTHESIZE phase. You ONLY form hypotheses. Nothing else.\n"
+            "1. Use query_knowledge(investigation_name='{inv}') to read your OBSERVE findings\n"
+            "2. Form hypotheses from your observations\n"
+            "3. Call record_observation with phase='hypothesize'\n"
+            "When done, give a brief summary and stop. Do NOT call any more tools after your final summary.\n"
+        ).format(inv=investigation_name),
+        goal=f"HYPOTHESIZE: Form hypotheses from observations about {topic}. Record to CartON.",
+        model=model,
+    )
+
+    # --- PROPOSE ---
+    propose = _make_phase_sdnac(
+        "propose",
+        system_prompt=base_identity + (
+            "You are in the PROPOSE phase. You ONLY design experiments. Nothing else.\n"
+            "1. Use query_knowledge(investigation_name='{inv}') to read your observations and hypotheses\n"
+            "2. Design specific experiments to test your hypotheses\n"
+            "3. Be EXTREMELY SPECIFIC: exact commands, exact code, exact expected outputs\n"
+            "4. Call record_observation with phase='proposal'. The description MUST contain\n"
+            "   complete actionable instructions that Grug (a code execution worker) can follow.\n"
+            "5. Give a one-sentence summary. Do NOT call any more tools after that.\n"
+        ).format(inv=investigation_name),
+        goal=f"PROPOSE: Design specific experiments for {topic}. Be detailed — Grug will execute them.",
+        model=model,
+    )
+
+    # --- EXPERIMENT ---
+    experiment = _make_phase_sdnac(
+        "experiment",
+        system_prompt=base_identity + (
+            "You are in the EXPERIMENT phase. You ONLY dispatch the experiment. Nothing else.\n"
+            "1. Call run_experiment(investigation_name='{inv}')\n"
+            "2. Call record_observation with phase='experiment' noting what was dispatched\n"
+            "When done, say the goal accomplished string to end your turn. Do NOT call any more tools after that.\n"
+        ).format(inv=investigation_name
+        ),
+        goal=f"EXPERIMENT: Use run_experiment to dispatch your proposal to Grug for {topic}. Record what was dispatched.",
+        model=model,
+    )
+
+    # --- ANALYZE ---
+    analyze = _make_phase_sdnac(
+        "analyze",
+        system_prompt=base_identity + (
+            "You are in the ANALYZE phase. You ONLY synthesize and conclude. Nothing else.\n"
+            "1. Use query_knowledge(investigation_name='{inv}') to read ALL prior phase findings\n"
+            "2. Synthesize observations, hypotheses, proposals, and experimental results\n"
+            "3. Draw conclusions. What did you learn? What's confirmed? What's uncertain?\n"
+            "4. Call record_observation with phase='analyze'\n"
+            "When done, give a final summary and stop. Do NOT call any more tools after your final summary.\n"
+        ).format(inv=investigation_name),
+        goal=f"ANALYZE: Final analysis of {topic}. Synthesize all findings. Draw conclusions. Record to CartON.",
+        model=model,
+    )
+
+    # Build chain — 5 SDNACs, no FunctionLink
+    # Grug dispatch happens via run_experiment MCP tool during EXPERIMENT phase
+    chain = ResearcherChain("researcher_chain", [
+        observe,
+        hypothesize,
+        propose,
+        experiment,
+        analyze,
+    ])
+
+    return CompoctopusAgent(
+        agent_name="researcher",
+        chain=chain,
+        model=model,
+    )
+
+
+# =============================================================================
+# Legacy factory — kept for backwards compatibility
+# =============================================================================
+
+def _build_researcher_state_machine():
+    """Build the scientific method state machine for the researcher. LEGACY."""
+    from heaven_base.state_machine import KeywordBasedStateMachine, StateConfig
+
+    return KeywordBasedStateMachine(
+        name="researcher",
+        states={
+            "OBSERVE": StateConfig(
+                goal="OBSERVE phase. Gather raw data about the subject. "
+                     "Use docker exec repo-lord for code inspection. "
+                     "Use query_knowledge to check prior work. "
+                     "When done, call record_observation with phase='observe', "
+                     "then transition to HYPOTHESIZE.",
+            ),
+            "HYPOTHESIZE": StateConfig(
+                goal="HYPOTHESIZE phase. Form hypotheses from your observations. "
+                     "What patterns did you see? What could explain them? "
+                     "Record your hypotheses with record_observation phase='hypothesize', "
+                     "then transition to PROPOSE.",
+            ),
+            "PROPOSE": StateConfig(
+                goal="PROPOSE phase. Design experiments to test your hypotheses. "
+                     "What commands would confirm or deny? What would you need to run? "
+                     "Record proposals with record_observation phase='proposal', "
+                     "then transition to EXPERIMENT.",
+            ),
+            "EXPERIMENT": StateConfig(
+                goal="EXPERIMENT phase. Execute your proposed experiments. "
+                     "Use docker exec repo-lord to run code. Use BashTool for local commands. "
+                     "Record results with record_observation phase='experiment', "
+                     "then transition to ANALYZE.",
+            ),
+            "ANALYZE": StateConfig(
+                goal="ANALYZE phase. Analyze all results. Draw conclusions. "
+                     "What did you learn? What's confirmed? What's still uncertain? "
+                     "Record final analysis with record_observation phase='analyze', "
+                     "then transition to DONE (or OBSERVE for another cycle).",
+            ),
+            "DONE": StateConfig(
+                goal="Research complete. Summarize findings.",
+            ),
+        },
+        initial_state="OBSERVE",
+        terminal_states={"DONE"},
+        transitions={
+            "OBSERVE": ["HYPOTHESIZE"],
+            "HYPOTHESIZE": ["PROPOSE"],
+            "PROPOSE": ["EXPERIMENT"],
+            "EXPERIMENT": ["ANALYZE"],
+            "ANALYZE": ["DONE", "OBSERVE"],
+        },
+    )
+
+
+def make_researcher_sdnac(system_prompt: str, model: str = DEFAULT_MODEL, tools_list=None):
+    """LEGACY — single SDNAC with KeywordBasedStateMachine.
+
+    Use make_researcher_compoctopus() instead for the CompoctopusAgent pattern.
+    """
+    from sdna.sdna import SDNAC
+    from sdna.ariadne import AriadneChain, InjectConfig
+    from sdna.config import HermesConfig, HeavenInputs, HeavenAgentArgs
+
+    if tools_list is None:
+        from heaven_base.tools import BashTool
+        tools_list = [BashTool]
+
+    sm = _build_researcher_state_machine()
+
+    ariadne = AriadneChain(
+        name="researcher_ariadne",
+        elements=[
+            InjectConfig(
+                source="literal",
+                inject_as="researcher_instructions",
+                value="Execute as researcher. Follow the state machine phases exactly.",
+            ),
+        ],
+    )
+
+    hermes = HermesConfig(
+        name="researcher",
+        goal="{phase_prompt}",
+        backend="heaven",
+        model=model,
+        max_turns=30,
+        permission_mode="bypassPermissions",
+        source_container="mind_of_god",
+        target_container="mind_of_god",
+        heaven_inputs=HeavenInputs(
+            agent=HeavenAgentArgs(
+                provider="ANTHROPIC",
+                max_tokens=8000,
+                tools=tools_list,
+                enable_compaction=True,
+                extra_agent_kwargs={
+                    "state_machine": sm,
+                    "min_sm_cycles": 1,
+                },
+            ),
+        ),
+        system_prompt=system_prompt,
+    )
+    hermes.mcp_servers = _get_researcher_mcp_servers()
+
+    return SDNAC(name="researcher", ariadne=ariadne, config=hermes)

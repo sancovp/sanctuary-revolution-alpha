@@ -21,7 +21,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
-from cave.core.channel import Channel, UserDiscordChannel
+from cave.core.channel import Channel, UserDiscordChannel, SSEChannel
 from heaven_base.memory.heaven_event import HeavenEvent
 
 logger = logging.getLogger(__name__)

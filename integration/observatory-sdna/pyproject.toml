@@ -12,8 +12,15 @@ dependencies = [
     "heaven-framework",
 ]
 
+[project.scripts]
+researcher-mcp = "observatory.researcher_mcp:main"
+
 [project.optional-dependencies]
 test = ["pytest", "pytest-asyncio"]
+
+[tool.setuptools.packages.find]
+include = ["observatory*"]
+exclude = ["container*", "tests*"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

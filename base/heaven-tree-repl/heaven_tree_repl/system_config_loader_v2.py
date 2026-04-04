@@ -476,9 +476,16 @@ class SystemConfigLoader:
         """
         shortcuts = {}
         
-        # Load shortcuts for each config type by looking for corresponding shortcuts files
+        # Load shortcuts for each config type
         for config_type in self.config_types:
-            shortcuts_config_type = f"{config_type}_shortcuts"
+            # Two resolution paths:
+            # 1. Derived: "base" → look for "base_shortcuts"
+            # 2. Direct: "user_shortcuts" → load directly (already a shortcuts type)
+            if config_type.endswith("_shortcuts") and config_type in self.system_config_files:
+                shortcuts_config_type = config_type
+            else:
+                shortcuts_config_type = f"{config_type}_shortcuts"
+
             if shortcuts_config_type in self.system_config_files:
                 # Load system shortcuts
                 system_shortcuts = self._load_and_validate_system_config(shortcuts_config_type)
@@ -487,7 +494,7 @@ class SystemConfigLoader:
                     shortcuts_data = {k: v for k, v in system_shortcuts.items() if k != 'path'}
                     if isinstance(shortcuts_data, dict):
                         shortcuts.update(shortcuts_data)
-                
+
                 # Load dev shortcuts if they exist
                 dev_shortcuts = self._load_and_validate_dev_config(shortcuts_config_type, dev_config_path)
                 if dev_shortcuts:

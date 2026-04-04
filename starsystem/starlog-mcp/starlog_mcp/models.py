@@ -110,12 +110,22 @@ class DebugDiaryEntry(BaseModel):
     content: str = Field(..., description="The diary entry content")
     insights: Optional[str] = Field(default=None, description="Additional insights or analysis")
     in_file: Optional[str] = Field(default=None, description="File context if applicable")
-    
-    # TODO: Rules context strategy - add applicable_rules field
-    # applicable_rules: List[str] = Field(default_factory=list, description="Rule names that apply to this work")
-    # Validate rule names exist, provide helpful error: "Rule 'x' invalid. Check rules(path) for valid names."
-    # Alternative: brain-agent selects applicable rules, or carry rules from session END
-    
+
+    # Entry type — what kind of event this is. Enables filtered views of the timeline.
+    entry_type: str = Field(
+        default="observation",
+        description="Event type: observation|bug|bug_fix|potential_solution|skill|deliverable|task|design|idea|inclusion_map|session_start|session_end|system_event"
+    )
+
+    # Source — who/what created this entry
+    source: str = Field(
+        default="agent",
+        description="Who created: agent|dragonbones|system|omnisanc"
+    )
+
+    # Concept reference — if this entry was created from a Dragonbones EC
+    concept_ref: Optional[str] = Field(default=None, description="CartON concept name if sourced from entity chain")
+
     # GitHub Issue Workflow - mutually exclusive flags
     bug_report: bool = Field(default=False, description="Creates GitHub issue")
     bug_fix: bool = Field(default=False, description="Updates GitHub issue to in-review")
@@ -295,6 +305,37 @@ class StarlogEntry(BaseModel):
         if self.end_timestamp:
             delta = self.end_timestamp - self.timestamp
             return int(delta.total_seconds() / 60)
+        return None
+
+
+class JointSessionEntry(BaseModel):
+    """Model for joint sessions spanning multiple starsystems.
+
+    A joint session is a Starlog_Project_ that references N starsystems.
+    It has its own child sessions (one per member starsystem) and its own diary.
+    """
+    id: str = Field(default_factory=lambda: f"joint_{uuid.uuid4().hex[:8]}")
+    timestamp: datetime = Field(default_factory=datetime.now)
+    session_title: str = Field(..., description="Joint session title")
+    member_projects: List[str] = Field(..., description="Project names of member starsystems")
+    child_session_ids: Dict[str, str] = Field(default_factory=dict, description="project_name → child session_id")
+    session_goals: List[str] = Field(default_factory=list)
+    start_content: str = Field(..., description="START content")
+    end_content: Optional[str] = Field(default=None)
+    end_timestamp: Optional[datetime] = Field(default=None)
+
+    def end_session(self, end_content: str):
+        self.end_content = end_content
+        self.end_timestamp = datetime.now()
+
+    @property
+    def is_ended(self) -> bool:
+        return self.end_content is not None
+
+    @property
+    def duration_minutes(self) -> Optional[int]:
+        if self.end_timestamp:
+            return int((self.end_timestamp - self.timestamp).total_seconds() / 60)
         return None
 
 

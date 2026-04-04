@@ -55,12 +55,27 @@ class CommandHandlersMixin:
         original_target = target_coord
         
         
-        # Check existing shortcuts first
+        # Check existing shortcuts first (case-insensitive)
         shortcuts = self.get_shortcuts()
+        # Try exact match first, then case-insensitive
         if target_coord in shortcuts:
             shortcut = shortcuts[target_coord]
+        else:
+            # Case-insensitive lookup
+            target_lower = target_coord.lower()
+            for key, val in shortcuts.items():
+                if key.lower() == target_lower:
+                    shortcut = val
+                    break
+            else:
+                shortcut = None
+        
+        if shortcut:
             if isinstance(shortcut, dict) and shortcut.get("type") == "jump":
                 return shortcut.get("coordinate", target_coord)
+            elif isinstance(shortcut, dict) and shortcut.get("type") == "chain":
+                # For chain shortcuts, return the template for execution
+                return shortcut.get("template", target_coord)
             elif isinstance(shortcut, str):
                 return shortcut  # Legacy shortcut format
         
@@ -160,9 +175,10 @@ class CommandHandlersMixin:
                         else:
                             return {"error": "Invalid JSON arguments"}
                 else:
-                    # Navigate to target
-                    self.current_position = target_coord
-                    self.stack.append(target_coord)
+                    # Navigate to target (resolve semantic addresses including shortcuts)
+                    resolved_coord = self._resolve_semantic_address(target_coord)
+                    self.current_position = resolved_coord
+                    self.stack.append(resolved_coord)
                     self._save_session_state()  # Save state after position change
                     
                     return self._build_response({
@@ -185,7 +201,7 @@ class CommandHandlersMixin:
         # Apply semantic resolution
         target_coord = self._resolve_semantic_address(original_target)
         
-        if target_coord not in self.nodes and target_coord not in self.numeric_nodes:
+        if target_coord not in self.nodes and target_coord not in self.numeric_nodes and not (hasattr(self, 'combo_nodes') and target_coord in self.combo_nodes):
             # JIT: try resolving from CartON knowledge graph
             if hasattr(self, '_jit_node_from_carton') and self._jit_node_from_carton(target_coord):
                 pass  # Node now cached in self.nodes by _jit_node_from_carton
@@ -234,11 +250,8 @@ class CommandHandlersMixin:
         """
         # Try to validate with Lark for better error messages
         try:
-            import sys
-            import os
-            sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            from lark_parser import create_lark_parser
-            
+            from .lark_parser import create_lark_parser
+
             lark_parser = create_lark_parser()
             if lark_parser:
                 # Validate syntax with Lark
@@ -246,15 +259,15 @@ class CommandHandlersMixin:
                 if not result["success"]:
                     # Return error with better Lark message
                     return [{"error": f"Syntax error: {result['error']}"}]
-        except:
+        except ImportError:
             pass  # Lark not available, continue with manual parsing
-        
-        # Use our working operand parser 
+
+        # Use our working operand parser
         try:
-            from operand_parser import OperandParser
+            from .operand_parser import OperandParser
             
             # Check if chain has operands
-            has_operands = any(op in chain_str for op in [' and ', ' or ', ' if ', ' while '])
+            has_operands = any(op in chain_str for op in [' and ', ' or ', ' if ', ' while ', ' for '])
             
             if has_operands:
                 parser = OperandParser()
@@ -290,10 +303,7 @@ class CommandHandlersMixin:
         
         if has_operands:
             # Use operand executor for complex chains
-            import sys
-            import os
-            sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            from operand_executor import OperandExecutor
+            from .operand_executor import OperandExecutor
             
             executor = OperandExecutor(self)
             result = await executor.execute_plan(execution_plan)
@@ -388,19 +398,18 @@ class CommandHandlersMixin:
             # Store chain step results for next steps
             self.chain_results[f"step{i+1}_result"] = result.get("result")
         
-        # End at final step position
-        final_target = steps[-1].split()[0]
-        self.current_position = final_target
-        self.stack.append(final_target)
+        # End at final step position (use resolved coord, not raw input)
+        self.current_position = final_coord
+        self.stack.append(final_coord)
         self._save_session_state()  # Save state after position change
-        
+
         return self._build_response({
             "action": "chain",
             "success": True,
             "steps_executed": len(steps),
             "chain_results": chain_results,
-            "final_position": final_target,
-            "menu": self._get_node_menu(final_target)
+            "final_position": final_coord,
+            "menu": self._get_node_menu(final_coord)
         })
     
     def _handle_build_pathway(self) -> dict:
@@ -1109,4 +1118,74 @@ class CommandHandlersMixin:
             "value_type": type(value).__name__,
             "message": f"Set ${var_name} = {value}"
         })
-    
+
+    def _handle_lang(self) -> dict:
+        """Show full TreeShell language reference."""
+        shortcuts = self.get_shortcuts()
+        shortcut_lines = []
+        for alias, sc in shortcuts.items():
+            if isinstance(sc, dict):
+                sc_type = sc.get("type", "jump")
+                if sc_type == "jump":
+                    shortcut_lines.append(f"  {alias} → jump {sc.get('coordinate', '?')}")
+                elif sc_type == "chain":
+                    shortcut_lines.append(f"  {alias} → chain \"{sc.get('template', '?')}\"")
+            else:
+                shortcut_lines.append(f"  {alias} → jump {sc}")
+        shortcuts_block = "\n".join(shortcut_lines) if shortcut_lines else "  (none)"
+
+        lang_ref = f"""# TreeShell Language Reference
+
+## Navigation
+  nav                         Show full tree with coordinates
+  jump <name>                 Go to node (full name or numeric coordinate)
+  back                        Go up one level
+  menu                        Show current position menu
+  search <term>               Search nodes by name
+
+## Execution
+  <name>.exec {{"arg": "val"}}  Jump + execute with args
+  exec {{"args"}}               Execute at current position
+  <name>.exec()               Jump + execute with no args
+
+## Addressing (valid inputs only)
+  Full node name:             agent_management_equipment
+  Numeric coordinate:         0.2.1
+  Registered shortcut:        nav, lang, etc.
+  Bare words that aren't any of the above are INVALID
+
+## Chains (sequential execution with data flow)
+  chain step1 {{}} -> step2 {{"data": "$step1_result"}}
+  Data variables: $step1_result, $step2_result, $last_result
+
+## Control Flow (inside chains)
+  and    also execute with existing data
+  or     alternative execute
+  if <condition> then <action> else <alt>
+  while <condition> x <body>
+
+## Variables
+  set $var to value           Assign a variable
+  $var_name                   Reference in exec args
+  {{$var_name}}                 Inline in strings
+
+## Shortcuts
+  shortcut <alias> <coord>    Create jump shortcut
+  shortcut <alias> "chain"    Create chain shortcut
+  shortcuts                   List all shortcuts
+
+## Active Shortcuts
+{shortcuts_block}
+
+## Other
+  health                      Show diagnostics
+  show_execution_history      Show past executions
+  build_pathway               Start recording
+  lang                        This reference"""
+
+        return self._build_response({
+            "action": "lang_reference",
+            "result": lang_ref,
+            "message": "TreeShell language reference"
+        })
+

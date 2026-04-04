@@ -15,9 +15,13 @@ import traceback
 from difflib import get_close_matches
 import logging
 
-# YOUKNOW integration - uses compiler.youknow() with SHACL + Pellet validation
+# YOUKNOW integration - Prolog runtime wraps compiler.youknow() with SHACL + Pellet
 try:
-    from youknow_kernel.compiler import youknow as youknow_validate
+    from youknow_kernel.prolog_runtime import get_runtime as _get_prolog_runtime
+    _prolog_rt = _get_prolog_runtime()
+    def youknow_validate(statement):
+        result = _prolog_rt.validate(statement)
+        return result["result"]
     YOUKNOW_AVAILABLE = True
 except ImportError:
     YOUKNOW_AVAILABLE = False
@@ -1680,199 +1684,103 @@ def add_observation(
         return f"❌ Error queuing observation: {str(e)}"
 
 
-def validate_giint_hierarchy(concept_name: str, relationship_dict: Dict[str, List[str]]) -> Optional[str]:
-    """
-    Validate GIINT hierarchy constraints (Mar 03 unification).
+# DEAD CODE — Commented out 2026-03-29. Python validation that bypasses the reasoner. The reasoner (Pellet + SHACL) runs inside youknow() compiler at _compile_packet() line 498-553. CartON calls youknow(), youknow() runs the reasoner. This function should not exist.
+# def validate_giint_hierarchy(concept_name: str, relationship_dict: Dict[str, List[str]]) -> Optional[str]:
+    # """
+    # Validate GIINT hierarchy constraints (Mar 03 unification).
 
-    Returns error string if validation fails, None if passes.
-    """
-    # Reject standalone Architecture_ concepts (now GIINT_Project descriptions)
-    if concept_name.startswith("Architecture_"):
-        return (
-            "ERROR: Architecture_ concepts replaced by GIINT_Project (Mar 03 unification). "
-            "Architecture_ is now the DESCRIPTION of a GIINT_Project, not a separate concept type. "
-            "Create a GIINT_Project with 'description' field containing architecture info."
-        )
+    # Returns error string if validation fails, None if passes.
+    # """
+    # # Reject standalone Architecture_ concepts (now GIINT_Project descriptions)
+    # if concept_name.startswith("Architecture_"):
+        # return (
+            # "ERROR: Architecture_ concepts replaced by GIINT_Project (Mar 03 unification). "
+            # "Architecture_ is now the DESCRIPTION of a GIINT_Project, not a separate concept type. "
+            # "Create a GIINT_Project with 'description' field containing architecture info."
+        # )
 
-    # Check if this IS a GIINT_Project - require valid relationships
-    is_a_list = relationship_dict.get("is_a", [])
-    if "GIINT_Project" in is_a_list or concept_name.startswith("GIINT_Project"):
-        # GIINT_Project must have part_of pointing to system/domain
-        part_of_list = relationship_dict.get("part_of", [])
-        if not part_of_list:
-            return (
-                "ERROR: GIINT_Project must have PART_OF relationship pointing to parent system/domain. "
-                "Example: part_of=['Compound_Intelligence_System']"
-            )
+    # # Check if this IS a GIINT_Project - require valid relationships
+    # is_a_list = relationship_dict.get("is_a", [])
+    # if "GIINT_Project" in is_a_list or concept_name.startswith("GIINT_Project"):
+        # # GIINT_Project must have part_of pointing to system/domain
+        # part_of_list = relationship_dict.get("part_of", [])
+        # if not part_of_list:
+            # return (
+                # "ERROR: GIINT_Project must have PART_OF relationship pointing to parent system/domain. "
+                # "Example: part_of=['Compound_Intelligence_System']"
+            # )
 
-        # FORCING FUNCTION: A GIINT_Project contains EVERY SINGLE FEATURE of a codebase.
-        # It IS the STARSYSTEM. Validation queries CartON — no filesystem checks.
-        has_path_list = relationship_dict.get("has_path", [])
-        if not has_path_list:
-            # Query CartON for ALL existing STARSYSTEMs to show in error
-            starsystem_list = ""
-            conn = _get_module_connection()
-            if conn:
-                try:
-                    result = conn.execute_query(
-                        "MATCH (g:Wiki)-[:HAS_PATH]->(p:Wiki) "
-                        "WHERE g.n STARTS WITH 'Giint_Project_' "
-                        "RETURN g.n as project, p.n as path ORDER BY g.n"
-                    )
-                    if result:
-                        lines = []
-                        for record in result:
-                            name = record.get('project') if isinstance(record, dict) else record['project']
-                            path = record.get('path') if isinstance(record, dict) else record['path']
-                            lines.append(f"  - {name}: {path}")
-                        if lines:
-                            starsystem_list = "\nRegistered STARSYSTEMs:\n" + "\n".join(lines) + "\n"
-                except Exception:
-                    pass
+        # # NOTE: has_path validation REMOVED (Mar 13 2026).
+        # # GIINT_Projects are auto-created by ensure_ontology_completeness
+        # # when a Starsystem_Collection is created. No path dependency.
 
-            return (
-                "ERROR: GIINT_Project requires HAS_PATH to a STARSYSTEM directory.\n"
-                "\n"
-                "STOP AND THINK: Is this REALLY a GIINT_Project?\n"
-                "\n"
-                "A GIINT_Project contains EVERY SINGLE FEATURE of an entire codebase.\n"
-                "It IS the STARSYSTEM itself. So are you saying this is an entire project?\n"
-                "\n"
-                "If NO — then this is NOT a GIINT_Project. It is one of:\n"
-                "  - Feature: a major capability area INSIDE a project\n"
-                "  - Component: a buildable piece of a feature\n"
-                "  - Deliverable: a shippable unit of a component\n"
-                "  - Task: atomic work item inside a deliverable\n"
-                "Use the GIINT hierarchy: Project → Feature → Component → Deliverable → Task\n"
-                "and place this UNDER an existing GIINT_Project.\n"
-                "\n"
-                "If YES — then this needs its own STARSYSTEM:\n"
-                "  1. starlog.init_project(path='/your/project/', name='...', description='...')\n"
-                "  2. Then create this concept with has_path=['/your/project/']\n"
-                + starsystem_list +
-                "\nUse orient() to see all existing STARSYSTEMs."
-            )
+    # # Check Bug_ prefix - Bug lives UNDER a GIINT_Deliverable or GIINT_Component
+    # # Hierarchy: Project → Feature → Component → Deliverable → Bug → Task
+    # if concept_name.startswith("Bug_"):
+        # if "Bug" not in is_a_list:
+            # return (
+                # "ERROR: Bug_ concepts must have IS_A Bug. "
+                # "Bugs are problems found in Deliverables/Components. "
+                # "Hierarchy: Project → Feature → Component → Deliverable → Bug → Task. "
+                # "Add: is_a=['Bug']"
+            # )
+        # part_of_list = relationship_dict.get("part_of", [])
+        # has_valid_parent = any(
+            # "GIINT_Deliverable" in parent or "GIINT_Component" in parent or
+            # "Deliverable" in parent or "Component" in parent
+            # for parent in part_of_list
+        # )
+        # if not has_valid_parent:
+            # return (
+                # "ERROR: Bug_ must have PART_OF relationship to a GIINT_Deliverable or GIINT_Component. "
+                # "Bugs are found IN deliverables/components, not at project/feature level. "
+                # "Hierarchy: Project → Feature → Component → Deliverable → Bug → Task. "
+                # "Add: part_of=['GIINT_Deliverable_Name' or 'GIINT_Component_Name']"
+            # )
 
-        # Validate path via CartON — query ALL registered STARSYSTEMs
-        project_path = has_path_list[0].rstrip("/")
-        conn = _get_module_connection()
-        if conn:
-            try:
-                result = conn.execute_query(
-                    "MATCH (g:Wiki)-[:HAS_PATH]->(p:Wiki) "
-                    "WHERE g.n STARTS WITH 'Giint_Project_' "
-                    "RETURN g.n as project, p.n as path ORDER BY g.n"
-                )
-                all_starsystems = {}
-                if result:
-                    for record in result:
-                        name = record.get('project') if isinstance(record, dict) else record['project']
-                        path = record.get('path') if isinstance(record, dict) else record['path']
-                        all_starsystems[path.rstrip("/")] = name
+    # # Check Potential_Solution_ prefix - lives UNDER a Bug as a proposed fix
+    # # Hierarchy: Bug → Potential_Solution → Task (to implement the solution)
+    # if concept_name.startswith("Potential_Solution_"):
+        # if "Potential_Solution" not in is_a_list:
+            # return (
+                # "ERROR: Potential_Solution_ concepts must have IS_A Potential_Solution. "
+                # "Solutions are proposed fixes for Bugs. "
+                # "Hierarchy: Project → Feature → Component → Deliverable → Bug → Potential_Solution → Task. "
+                # "Add: is_a=['Potential_Solution']"
+            # )
+        # part_of_list = relationship_dict.get("part_of", [])
+        # has_bug_parent = any("Bug_" in parent or "Bug" in parent for parent in part_of_list)
+        # if not has_bug_parent:
+            # return (
+                # "ERROR: Potential_Solution_ must have PART_OF relationship to a Bug_. "
+                # "Solutions address specific bugs. "
+                # "Add: part_of=['Bug_Name']"
+            # )
 
-                starsystem_listing = "\n".join(
-                    f"  - {n}: {p}" for p, n in sorted(all_starsystems.items())
-                )
+    # # Check GIINT_Deliverable - must have proper hierarchy
+    # if "GIINT_Deliverable" in is_a_list or concept_name.startswith("GIINT_Deliverable"):
+        # part_of_list = relationship_dict.get("part_of", [])
+        # has_component_parent = any("GIINT_Component" in parent or "Potential_Solution_" in parent or "Component" in parent for parent in part_of_list)
+        # if not has_component_parent:
+            # return (
+                # "ERROR: GIINT_Deliverable must have PART_OF relationship to GIINT_Component. "
+                # "Deliverables are outputs of components. "
+                # "Add: part_of=['Potential_Solution_Name' or 'GIINT_Component_Name']"
+            # )
 
-                # Check: is this path already claimed by ANOTHER GIINT_Project?
-                if project_path in all_starsystems:
-                    existing = all_starsystems[project_path]
-                    if existing != concept_name:
-                        return (
-                            f"ERROR: Path '{project_path}' is already registered to '{existing}'.\n"
-                            f"Each STARSYSTEM can only have ONE GIINT_Project.\n"
-                            f"\n"
-                            f"This should be a Feature, Component, Deliverable, or Task under '{existing}'.\n"
-                            f"Use: part_of=['{existing}'] with the appropriate GIINT hierarchy type."
-                        )
-                    # Same concept re-creating itself — allow through
+    # # Check GIINT_Task - must have proper hierarchy
+    # if "GIINT_Task" in is_a_list or concept_name.startswith("GIINT_Task"):
+        # part_of_list = relationship_dict.get("part_of", [])
+        # has_deliverable_parent = any("GIINT_Deliverable" in parent or "Deliverable" in parent for parent in part_of_list)
+        # if not has_deliverable_parent:
+            # return (
+                # "ERROR: GIINT_Task must have PART_OF relationship to GIINT_Deliverable. "
+                # "Tasks are work items that produce deliverables. "
+                # "Add: part_of=['GIINT_Deliverable_Name']"
+            # )
 
-                # Check: is this path INSIDE an existing STARSYSTEM?
-                for sys_path, sys_name in all_starsystems.items():
-                    if project_path.startswith(sys_path + "/"):
-                        return (
-                            f"ERROR: Path '{project_path}' is INSIDE STARSYSTEM '{sys_name}' (at {sys_path}).\n"
-                            f"\n"
-                            f"A GIINT_Project must be a TOP-LEVEL STARSYSTEM, not a subdirectory.\n"
-                            f"This should be a Feature, Component, Deliverable, or Task under '{sys_name}'.\n"
-                            f"\n"
-                            f"All registered STARSYSTEMs:\n"
-                            f"{starsystem_listing}"
-                        )
-
-                # Path is new and top-level — allow GIINT_Project creation
-                # (starlog.init_project creates the STARSYSTEM registration)
-            except Exception as e:
-                logger.warning(f"GIINT CartON validation query failed: {e}")
-                # Don't block on query failure — allow creation
-
-    # Check Bug_ prefix - Bug lives UNDER a GIINT_Deliverable or GIINT_Component
-    # Hierarchy: Project → Feature → Component → Deliverable → Bug → Task
-    if concept_name.startswith("Bug_"):
-        if "Bug" not in is_a_list:
-            return (
-                "ERROR: Bug_ concepts must have IS_A Bug. "
-                "Bugs are problems found in Deliverables/Components. "
-                "Hierarchy: Project → Feature → Component → Deliverable → Bug → Task. "
-                "Add: is_a=['Bug']"
-            )
-        part_of_list = relationship_dict.get("part_of", [])
-        has_valid_parent = any(
-            "GIINT_Deliverable" in parent or "GIINT_Component" in parent or
-            "Deliverable" in parent or "Component" in parent
-            for parent in part_of_list
-        )
-        if not has_valid_parent:
-            return (
-                "ERROR: Bug_ must have PART_OF relationship to a GIINT_Deliverable or GIINT_Component. "
-                "Bugs are found IN deliverables/components, not at project/feature level. "
-                "Hierarchy: Project → Feature → Component → Deliverable → Bug → Task. "
-                "Add: part_of=['GIINT_Deliverable_Name' or 'GIINT_Component_Name']"
-            )
-
-    # Check Potential_Solution_ prefix - lives UNDER a Bug as a proposed fix
-    # Hierarchy: Bug → Potential_Solution → Task (to implement the solution)
-    if concept_name.startswith("Potential_Solution_"):
-        if "Potential_Solution" not in is_a_list:
-            return (
-                "ERROR: Potential_Solution_ concepts must have IS_A Potential_Solution. "
-                "Solutions are proposed fixes for Bugs. "
-                "Hierarchy: Project → Feature → Component → Deliverable → Bug → Potential_Solution → Task. "
-                "Add: is_a=['Potential_Solution']"
-            )
-        part_of_list = relationship_dict.get("part_of", [])
-        has_bug_parent = any("Bug_" in parent or "Bug" in parent for parent in part_of_list)
-        if not has_bug_parent:
-            return (
-                "ERROR: Potential_Solution_ must have PART_OF relationship to a Bug_. "
-                "Solutions address specific bugs. "
-                "Add: part_of=['Bug_Name']"
-            )
-
-    # Check GIINT_Deliverable - must have proper hierarchy
-    if "GIINT_Deliverable" in is_a_list or concept_name.startswith("GIINT_Deliverable"):
-        part_of_list = relationship_dict.get("part_of", [])
-        has_component_parent = any("GIINT_Component" in parent or "Potential_Solution_" in parent or "Component" in parent for parent in part_of_list)
-        if not has_component_parent:
-            return (
-                "ERROR: GIINT_Deliverable must have PART_OF relationship to GIINT_Component. "
-                "Deliverables are outputs of components. "
-                "Add: part_of=['Potential_Solution_Name' or 'GIINT_Component_Name']"
-            )
-
-    # Check GIINT_Task - must have proper hierarchy
-    if "GIINT_Task" in is_a_list or concept_name.startswith("GIINT_Task"):
-        part_of_list = relationship_dict.get("part_of", [])
-        has_deliverable_parent = any("GIINT_Deliverable" in parent or "Deliverable" in parent for parent in part_of_list)
-        if not has_deliverable_parent:
-            return (
-                "ERROR: GIINT_Task must have PART_OF relationship to GIINT_Deliverable. "
-                "Tasks are work items that produce deliverables. "
-                "Add: part_of=['GIINT_Deliverable_Name']"
-            )
-
-    # All checks passed
-    return None
+    # # All checks passed
+    # return None
 
 
 def add_concept_tool_func(
@@ -1883,6 +1791,7 @@ def add_concept_tool_func(
     desc_update_mode: str = "append",
     hide_youknow: bool = False,
     shared_connection=None,
+    _skip_ontology_healing: bool = False,
 ) -> str:
     """
     Create a new concept with its component files.
@@ -1926,33 +1835,32 @@ def add_concept_tool_func(
     #
     youknow_msg = ""
     soup_items = []
-    if YOUKNOW_AVAILABLE:
+    if YOUKNOW_AVAILABLE and not hide_youknow:
         try:
             errors = []
-            # Validate ALL relationships (always, regardless of hide_youknow)
+            # Build single multi-triple statement for YOUKNOW
+            # Format: "Concept_Name rel1 Target1, rel2 Target2, rel3 Target3"
+            # YOUKNOW parses comma-separated triples as a whole concept
+            triples = []
             for rel_type, targets in relationship_dict.items():
                 for target in targets:
-                    statement = f"{concept_name} {rel_type} {target}"
-                    result = youknow_validate(statement)
-                    if result == "OK":
-                        pass  # Chain complete - added to ONT
-                    elif "|SOUP:" in result or result.startswith("SOUP:"):
-                        # Chain incomplete but persisted to SOUP - this is OK!
-                        # Compressed format: {1:Entity}|SOUP:?[1]need[isa,po,inst]
-                        # Legacy format: SOUP: statement. Unknown: ...
-                        soup_items.append(result)  # Already compressed, just pass through
-                    else:
-                        # Actual error (parse failure, etc.)
-                        errors.append(f"{statement}: {result}")
+                    triples.append(f"{rel_type} {target}")
+            if triples:
+                statement = f"{concept_name} {', '.join(triples)}"
+                result = youknow_validate(statement)
+                if result == "OK":
+                    pass  # Chain complete - added to ONT
+                elif "|SOUP:" in result or result.startswith("SOUP:"):
+                    soup_items.append(result)
+                else:
+                    errors.append(f"{statement}: {result}")
 
-            # Build message only if NOT silenced
-            if not hide_youknow:
-                if soup_items:
-                    soup_msg = "; ".join(soup_items)
-                    youknow_msg = f" [SOUP: {soup_msg}]"
-                if errors:
-                    error_msg = "; ".join(errors)
-                    youknow_msg += f" [YOUKNOW ERROR: {error_msg}]"
+            if soup_items:
+                soup_msg = "; ".join(soup_items)
+                youknow_msg = f" [SOUP: {soup_msg}]"
+            if errors:
+                error_msg = "; ".join(errors)
+                youknow_msg += f" [YOUKNOW ERROR: {error_msg}]"
         except Exception as e:
             logger.warning(f"YOUKNOW validation error: {e}\n{traceback.format_exc()}")
             if not hide_youknow:
@@ -1981,10 +1889,9 @@ def add_concept_tool_func(
                         f"Compose on scratchpad, add missing rels, submit when complete."
                     )
 
-    # GIINT HIERARCHY VALIDATION (Mar 03 unification - blocking)
-    giint_error = validate_giint_hierarchy(concept_name, relationship_dict)
-    if giint_error:
-        raise Exception(f"GIINT VALIDATION: {giint_error}")
+    # GIINT validation happens inside youknow() compiler (line 498-553 of compiler.py).
+    # youknow() calls validate_with_reasoning() which runs SHACL + Pellet.
+    # Do NOT duplicate that here — CartON calls youknow(), youknow() runs the reasoner.
 
     # Write to queue for async processing by daemon
     queue_dir = get_observation_queue_dir()
@@ -2002,10 +1909,49 @@ def add_concept_tool_func(
         # SOUP tracking - daemon creates REQUIRES_EVOLUTION relationship if is_soup=True
         "is_soup": len(soup_items) > 0,
         "soup_reason": "; ".join(soup_items) if soup_items else None,
+        # Ontology healing flag — daemon Phase 2.5 skips concepts with this set
+        "skip_ontology_healing": _skip_ontology_healing,
     }
 
     with open(queue_file, 'w') as f:
         json.dump(queue_data, f, indent=2)
+
+    # Prolog fact injection happens INSIDE PrologRuntime.validate() — not here.
+    # CartON does not manipulate Prolog directly. Prolog is the outer runtime.
+
+    # ONTOLOGY SELF-HEALING: Now driven by YOUKNOW's OWL restriction index.
+    # The UARLValidator._validate_chain() auto-heals system types by creating
+    # SOUP placeholders for missing required graph elements. Healed concepts
+    # are stored on the validator singleton after youknow() runs.
+    if not _skip_ontology_healing:
+        try:
+            from youknow_kernel.compiler import _get_uarl_validator
+            validator = _get_uarl_validator()
+            if validator and hasattr(validator, '_healed_concepts') and validator._healed_concepts:
+                healed = validator._healed_concepts
+                for h in healed:
+                    try:
+                        h_rels = [
+                            {"relationship": "is_a", "related": [h["type"]]},
+                            {"relationship": "part_of", "related": [h["parent_name"]]},
+                        ]
+                        add_concept_tool_func(
+                            concept_name=h["name"],
+                            description=f"SOUP placeholder for {h['parent_type']} {h['relationship_from_parent']} requirement",
+                            relationships=h_rels,
+                            hide_youknow=True,
+                            shared_connection=shared_connection,
+                            _skip_ontology_healing=True,
+                        )
+                        import sys
+                        print(f"[ONTOLOGY] Auto-healed: {h['name']} (required by {h['parent_name']})", file=sys.stderr)
+                    except Exception as he:
+                        logger.warning(f"[ONTOLOGY] Failed to heal {h['name']}: {he}")
+                if healed:
+                    youknow_msg += f" [+{len(healed)} healed from OWL]"
+                validator._healed_concepts = []  # Clear after processing
+        except Exception as e:
+            logger.warning(f"[ONTOLOGY] OWL self-healing failed for {concept_name}: {e}")
 
     # Concise output - always include youknow_msg (has SOUP and errors)
     return f"✅ {concept_name}{youknow_msg}"

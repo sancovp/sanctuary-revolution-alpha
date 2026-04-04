@@ -130,6 +130,14 @@ class SancrevTreeshellMCPServer:
     #     Read self.shell families → for each family → create understand skill
     #     describing domain coordinates and navigation.
 
+    async def _restore_persona(self):
+        """Restore persisted persona on MCP startup."""
+        from sanctuary_revolution_treeshell.persona_manager import PersonaManager
+        mgr = PersonaManager()
+        result = await mgr.restore_on_startup()
+        if result:
+            logger.info(f"Persona restored on startup: {result.get('persona', '?')} ({len(result.get('equipped_skills', []))} skills)")
+
     async def run_conversation_shell(self, command: str) -> dict:
         if not self.shell:
             try:
@@ -147,6 +155,12 @@ class SancrevTreeshellMCPServer:
                 self._generate_boot_skills()
             except Exception as e:
                 logger.warning(f"Boot skill generation failed (non-fatal): {e}")
+
+            # Restore persisted persona (skillset + MCP set + mirror to Claude skills dir)
+            try:
+                await self._restore_persona()
+            except Exception as e:
+                logger.warning(f"Persona restore failed (non-fatal): {e}")
 
             # Process management handled by start_sancrev.sh, not treeshell MCP
 
@@ -198,12 +212,37 @@ async def serve() -> None:
                 name=TreeShellTools.RUN_CONVERSATION_SHELL.value,
                 description="""Sanctuary Revolution TreeShell - Unified interface (Game + Builders + GNOSYS + Skills).
 
-Commands:
-- 'nav' - Show full tree structure with coordinates
-- 'jump <name>' - Navigate to action (e.g., 'jump equip')
-- '<name>.exec {"arg": "value"}' - Jump and execute with args (e.g., 'equip.exec {"name": "my-skill"}')
-- 'exec {"args"}' - Execute at current position
-- 'lang' - Open computational substrate: TreeShell language reference, syntax, shortcuts
+Navigation:
+- 'nav' — Full tree with coordinates
+- 'jump <node_name>' — Go to node by full name or numeric coordinate
+- 'back' — Go up one level
+- 'menu' — Show current position menu
+
+Execution:
+- '<node>.exec {"arg": "val"}' — Jump + execute (e.g., 'equip.exec {"name": "my-skill"}')
+- 'exec {"args"}' — Execute at current position
+
+Addressing (valid inputs only):
+- Full node name: 'agent_management_equipment'
+- Numeric coordinate: '0.2.1'
+- Registered shortcut: 'nav', 'lang', 'brain', etc.
+- Bare words that aren't any of the above are INVALID
+
+Chains (sequential execution with data flow):
+- 'chain step1 {} -> step2 {"data": "$step1_result"}' — pipe results between steps
+- Data variables: $step1_result, $step2_result, $last_result
+
+Control flow:
+- 'and' — also execute with existing data
+- 'or' — alternative execute
+- 'if condition then ... else ...' — conditional
+- 'while condition x body' — loop
+- 'for variable in collection x body' — iterate
+
+Shortcuts:
+- 'lang' — Full language reference + active shortcuts
+- 'shortcut <alias> <coordinate>' — Create jump shortcut
+- 'shortcut <alias> "<chain>"' — Create chain shortcut
 
 === Game (jump game) ===
 new_game(player_name) | select_player(player_name) | game_status | list_players | stack_status

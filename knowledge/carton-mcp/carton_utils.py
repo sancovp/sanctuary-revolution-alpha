@@ -424,6 +424,90 @@ class CartOnUtils:
         graph, should_close = self._get_connection()
 
         try:
+            # --- SEED SHIP ENFORCEMENT (root graph node, one per user) ---
+            try:
+                from carton_mcp.add_concept_tool import add_concept_tool_func
+                from carton_mcp.ontology_graphs import ensure_ontology_completeness
+
+                seed_ship_check = graph.execute_query(
+                    "MATCH (n:Wiki {n: 'Seed_Ship'}) RETURN n.n as name LIMIT 1"
+                )
+                if not seed_ship_check:
+                    add_concept_tool_func(
+                        concept_name="Seed_Ship",
+                        description="Root graph node for user's fleet. One per user. HAS starsystems, kardashev map, and SANCTUM.",
+                        relationships=[
+                            {"relationship": "is_a", "related": ["Seed_Ship"]},
+                            {"relationship": "instantiates", "related": ["Seed_Ship_Template"]},
+                        ],
+                        hide_youknow=True,
+                        shared_connection=graph,
+                    )
+                    logger.info("[INVARIANT] Created Seed_Ship root node")
+
+                # Always ensure children exist (catches pre-existing Seed_Ship missing children)
+                ensure_ontology_completeness(
+                    "Seed_Ship", ["Seed_Ship"], {"is_a": ["Seed_Ship"]},
+                    shared_connection=graph,
+                )
+
+                # --- STARSYSTEM ONTOLOGY ENFORCEMENT ---
+                # Find all starsystems, fix PART_OF to Seed_Ship_Starsystems, ensure completeness
+                starsystems = graph.execute_query(
+                    "MATCH (ss:Wiki)-[:IS_A]->(:Wiki {n: 'Starsystem_Collection'}) RETURN ss.n as name"
+                )
+                if starsystems:
+                    for ss_rec in starsystems:
+                        ss_name = ss_rec["name"] if isinstance(ss_rec, dict) else ss_rec["name"]
+
+                        # Check if already PART_OF Seed_Ship_Starsystems
+                        has_ref = graph.execute_query(
+                            "MATCH (ss:Wiki {n: $name})-[:PART_OF]->(:Wiki {n: 'Seed_Ship_Starsystems'}) RETURN ss.n LIMIT 1",
+                            {"name": ss_name}
+                        )
+                        if not has_ref:
+                            # Remove old All_Starsystems or STARSYSTEM_Collection refs
+                            graph.execute_query(
+                                "MATCH (ss:Wiki {n: $name})-[r:PART_OF]->(old:Wiki) "
+                                "WHERE old.n IN ['All_Starsystems', 'STARSYSTEM_Collection'] DELETE r",
+                                {"name": ss_name}
+                            )
+                            # Add proper Seed Ship membership (bidirectional)
+                            graph.execute_query(
+                                "MATCH (ss:Wiki {n: $name}), (target:Wiki {n: 'Seed_Ship_Starsystems'}) "
+                                "MERGE (ss)-[:PART_OF]->(target) "
+                                "MERGE (target)-[:HAS_PART]->(ss)",
+                                {"name": ss_name}
+                            )
+                            logger.info(f"[INVARIANT] Migrated {ss_name} to Seed_Ship_Starsystems")
+
+                        # Ensure starsystem ontology completeness (auto-creates Task_Collections etc.)
+                        ensure_ontology_completeness(
+                            ss_name, ["Starsystem_Collection"],
+                            {"is_a": ["Starsystem_Collection"]},
+                            shared_connection=graph,
+                        )
+
+            except Exception as e:
+                logger.warning(f"[INVARIANT] Seed_Ship/starsystem enforcement failed: {e}")
+
+            # --- ONTOLOGY TYPE MATERIALIZATION (bounded to ONTOLOGY_SCHEMAS keys) ---
+            try:
+                from carton_mcp.ontology_graphs import materialize_ontology_types, ensure_instances_have_is_a
+
+                materialized = materialize_ontology_types(graph)
+                if materialized:
+                    logger.info(f"[INVARIANT] Materialized {len(materialized)} ontology types: {materialized}")
+                    stats["ontology_types_materialized"] = len(materialized)
+
+                linked = ensure_instances_have_is_a(graph)
+                if linked:
+                    logger.info(f"[INVARIANT] Linked {len(linked)} instances to ontology types")
+                    stats["instances_linked"] = len(linked)
+
+            except Exception as e:
+                logger.warning(f"[INVARIANT] Ontology materialization failed: {e}")
+
             # --- SKILL ENFORCEMENT ---
             # 1. Get all skill dirs on disk (source of truth)
             skill_names = []
@@ -660,9 +744,12 @@ class CartOnUtils:
 
     def _validate_query_safety(self, cypher_query: str) -> dict:
         """Validate query is safe (read-only, :Wiki namespace)"""
+        import re
         query_upper = cypher_query.upper().strip()
         
-        if 'CREATE' in query_upper or 'MERGE' in query_upper:
+        # Word-boundary match to avoid false positives (e.g. 'as created' matching 'CREATE')
+        write_pattern = re.compile(r'\b(CREATE|MERGE|DELETE|DETACH)\b')
+        if write_pattern.search(query_upper):
             return {"success": False, "error": "Write operations (CREATE/MERGE) not allowed. Use add_concept tool instead."}
         
         if ':Wiki' not in cypher_query:

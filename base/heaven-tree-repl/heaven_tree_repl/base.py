@@ -1281,11 +1281,14 @@ class TreeShellBase:
             rels = [r for r in data.get("relationships", []) if r.get("type")]
 
             # Build options from explicit HAS_OPTION relationships only
+            # Keep original case - TreeShell will handle resolution
             options = {}
             for rel in rels:
                 if rel["type"] == "HAS_OPTION" and rel.get("target"):
                     target = rel["target"]
-                    options[target.lower()] = target
+                    # Use title-case for display (TreeShell style) but keep referenceable
+                    display_name = target.title() if target.islower() else target
+                    options[display_name] = target
 
             node = {
                 "type": "Menu",
@@ -1352,7 +1355,7 @@ class TreeShellBase:
                 action_name = target_node.get("prompt", f"Node {target}")
                 menu_options[str(i)] = action_name
             else:
-                menu_options[str(i)] = f"{key} -> {target}"
+                menu_options[str(i)] = target
         
         # Add universal commands
         universal_commands = [

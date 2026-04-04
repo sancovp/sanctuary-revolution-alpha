@@ -593,13 +593,18 @@ async def workshop__add_metastack_model(file_path: str, domain: str, model_name:
 
 
 @mcp.tool()
-async def get_next_task_from_treekanban() -> str:
+async def get_next_task_from_treekanban(agent_tasks_only: bool = False) -> str:
     """
     Get next task from TreeKanban build lane with auto-ratcheting from plan.
 
     If build lane is empty, automatically moves next eligible task from plan to build:
     - GIINT tasks must have is_ready=true
     - Non-GIINT tasks bypass ready gate
+
+    Args:
+        agent_tasks_only: If True, only return cards tagged assignee:ai-only or
+            assignee:ai-human. Skips human-only and untagged cards. Use this when
+            the agent is autonomously picking work (e.g. HOME mode).
 
     Returns:
         Next task card details including title, description, tags, and context
@@ -618,21 +623,56 @@ async def get_next_task_from_treekanban() -> str:
         }, indent=2)
 
     def parse_giint_metadata(card: dict) -> dict:
-        """Extract GIINT metadata from card description/title."""
+        """Extract GIINT metadata from card description/title/tags.
+
+        Works with THREE levels of specificity:
+        1. Full GIINT path in description: GIINT: project/feature/component/deliverable/task
+        2. Starsystem tag + card title: creates placeholder hierarchy with _Unnamed suffixes
+        3. Neither: returns None (no hierarchy creation)
+        """
         desc = card.get("description", "")
         title = card.get("title", "")
         combined = f"{title}\n{desc}"
+        tags = json.loads(card.get('tags', '[]'))
 
-        # Look for pattern: GIINT: project_id/feature/component/deliverable/task_id
+        # Extract starsystem from tags (e.g., "starsystem:giint-llm-intelligence")
+        starsystem = None
+        for tag in tags:
+            if tag.startswith("starsystem:"):
+                starsystem = tag.split(":", 1)[1].strip()
+                break
+
+        # Level 1: Full GIINT path in description
         match = re.search(r'GIINT:\s*([^/\s]+)/([^/\s]+)/([^/\s]+)/([^/\s]+)/([^/\s\n]+)', combined)
         if match:
-            return {
+            result = {
                 "project_id": match.group(1),
                 "feature": match.group(2),
                 "component": match.group(3),
                 "deliverable": match.group(4),
-                "task_id": match.group(5)
+                "task_id": match.group(5),
             }
+            if starsystem:
+                result["starsystem"] = starsystem
+            return result
+
+        # Level 2: Starsystem tag + card title → card is a DELIVERABLE
+        # Naming cascades TOP DOWN: starsystem → project → feature → component → deliverable
+        # Tasks are created dynamically by the agent as it works
+        if starsystem and title:
+            ss_norm = re.sub(r'[^a-zA-Z0-9_\s]', '', starsystem).strip().replace(' ', '_').replace('-', '_')
+            deliv_norm = re.sub(r'[^a-zA-Z0-9_\s]', '', title).strip().replace(' ', '_')
+            if not deliv_norm:
+                deliv_norm = f"Card_{card.get('id', 'Unknown')}"
+            return {
+                "project_id": ss_norm,
+                "feature": f"{ss_norm}_Unnamed",
+                "component": f"{ss_norm}_Unnamed",
+                "deliverable": f"{ss_norm}_{deliv_norm}",
+                "task_id": None,
+                "starsystem": starsystem,
+            }
+
         return None
 
     def is_task_ready_in_giint(metadata: dict) -> bool:
@@ -678,6 +718,14 @@ async def get_next_task_from_treekanban() -> str:
         except:
             return (float('inf'),)
 
+    def _has_agent_assignee(card: dict) -> bool:
+        """Check if card has assignee:ai-only or assignee:ai-human tag."""
+        tags = json.loads(card.get('tags', '[]'))
+        return any(
+            t in ("assignee:ai-only", "assignee:ai-human", "assignee:ai+human")
+            for t in tags
+        )
+
     try:
         client = HeavenBMLSQLiteClient()
         board_name = os.getenv("GIINT_TREEKANBAN_BOARD")
@@ -694,8 +742,10 @@ async def get_next_task_from_treekanban() -> str:
                 "message": "No cards found in TreeKanban"
             }, indent=2)
 
-        # Filter to build lane
+        # Filter to build lane (+ agent assignee filter if requested)
         build_cards = [c for c in cards if c.get("lane") == "build"]
+        if agent_tasks_only:
+            build_cards = [c for c in build_cards if _has_agent_assignee(c)]
 
         # Auto-ratchet if build empty
         if not build_cards:
@@ -716,16 +766,21 @@ async def get_next_task_from_treekanban() -> str:
             eligible_card = None
             for card in plan_cards:
                 tags = json.loads(card.get('tags', '[]'))
+
+                # Skip non-agent cards when agent_tasks_only
+                if agent_tasks_only and not _has_agent_assignee(card):
+                    continue
+
                 is_giint_task = "giint_task" in tags
 
                 if is_giint_task:
-                    # GIINT task - check if ready
+                    # GIINT task with explicit tag - check if ready via registry
                     metadata = parse_giint_metadata(card)
                     if metadata and is_task_ready_in_giint(metadata):
                         eligible_card = card
                         break
                 else:
-                    # Non-GIINT task - no ready gate
+                    # Non-GIINT task (including starsystem-tagged cards) - no ready gate
                     eligible_card = card
                     break
 
@@ -795,8 +850,19 @@ async def get_next_task_from_treekanban() -> str:
         elif "task" in tags:
             card_type = "task"
 
-        # Parse GIINT metadata if present
-        giint_metadata = parse_giint_metadata(next_card) if "giint_task" in tags else None
+        # Parse GIINT metadata from card (full path, starsystem tag, or None)
+        giint_metadata = parse_giint_metadata(next_card)
+
+        # Every card MUST have a starsystem tag — no tag = not a valid task
+        if not giint_metadata:
+            return json.dumps({
+                "success": False,
+                "error": "no_starsystem_tag",
+                "message": f"Card '{next_card.get('title')}' has no starsystem tag. Every task card MUST have a starsystem:<name> tag.",
+                "card_id": next_card.get("id"),
+                "card_title": next_card.get("title"),
+                "tags": tags,
+            }, indent=2)
 
         # Build result
         result = {
@@ -853,13 +919,16 @@ def _ensure_giint_hierarchy_in_carton(giint_metadata: dict) -> str:
     deliverable = giint_metadata["deliverable"]
     task_id = giint_metadata["task_id"]
 
-    # Resolve starsystem from active starlog
-    starsystem_name = "Home"  # default
-    starlog_path_file = Path("/tmp/active_starlog_path.txt")
-    if starlog_path_file.exists():
-        raw = starlog_path_file.read_text().strip()
-        # Extract dir name as starsystem name
-        starsystem_name = Path(raw).name.replace("-", "_").replace(" ", "_").title()
+    # Resolve starsystem: prefer metadata (from TK tag), fall back to active starlog
+    starsystem_name = giint_metadata.get("starsystem")
+    if not starsystem_name:
+        starsystem_name = "Home"  # default
+        starlog_path_file = Path("/tmp/active_starlog_path.txt")
+        if starlog_path_file.exists():
+            raw = starlog_path_file.read_text().strip()
+            starsystem_name = Path(raw).name
+    # Normalize: replace dashes/spaces, title case
+    starsystem_name = starsystem_name.replace("-", "_").replace(" ", "_").title()
 
     # Normalize names
     def norm(s):
@@ -877,7 +946,7 @@ def _ensure_giint_hierarchy_in_carton(giint_metadata: dict) -> str:
     feature_name = f"Giint_Feature_{norm(feature)}"
     component_name = f"Giint_Component_{norm(component)}"
     deliverable_name = f"Giint_Deliverable_{norm(deliverable)}"
-    task_name = f"Giint_Task_{norm(task_id)}"
+    task_name = f"Giint_Task_{norm(task_id)}" if task_id else None
 
     def ensure_concept(name, desc, rels):
         try:
@@ -886,7 +955,7 @@ def _ensure_giint_hierarchy_in_carton(giint_metadata: dict) -> str:
                 description=desc,
                 relationships=rels,
                 desc_update_mode="append",
-                hide_youknow=True,
+                hide_youknow=False,
             )
         except Exception as e:
             logger.warning(f"Failed to create {name}: {e}")
@@ -947,19 +1016,22 @@ def _ensure_giint_hierarchy_in_carton(giint_metadata: dict) -> str:
     ])
 
     # 6. Deliverable
-    ensure_concept(deliverable_name, f"GIINT deliverable: {deliverable}", [
+    deliverable_rels = [
         {"relationship": "is_a", "related": ["GIINT_Deliverable"]},
         {"relationship": "part_of", "related": [component_name]},
         {"relationship": "instantiates", "related": ["GIINT_Deliverable_Template"]},
-        {"relationship": "has_task", "related": [task_name]},
-    ])
+    ]
+    if task_name:
+        deliverable_rels.append({"relationship": "has_task", "related": [task_name]})
+    ensure_concept(deliverable_name, f"GIINT deliverable: {deliverable}", deliverable_rels)
 
-    # 7. Task
-    ensure_concept(task_name, f"GIINT task: {task_id}", [
-        {"relationship": "is_a", "related": ["GIINT_Task"]},
-        {"relationship": "part_of", "related": [deliverable_name]},
-        {"relationship": "instantiates", "related": ["GIINT_Task_Template"]},
-    ])
+    # 7. Task (only if task_id provided — agent creates tasks dynamically as it works)
+    if task_name:
+        ensure_concept(task_name, f"GIINT task: {task_id}", [
+            {"relationship": "is_a", "related": ["GIINT_Task"]},
+            {"relationship": "part_of", "related": [deliverable_name]},
+            {"relationship": "instantiates", "related": ["GIINT_Task_Template"]},
+        ])
 
     # Set active hypercluster
     Path("/tmp/active_hypercluster.txt").write_text(hc_name)

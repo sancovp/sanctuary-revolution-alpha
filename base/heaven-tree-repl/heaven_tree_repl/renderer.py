@@ -108,19 +108,21 @@ def render_response(response: Dict[str, Any]) -> str:
         Formatted string with crystal ball header and markdown content
     """
     # Get metadata
-    position = response.get("semantic_address") or response.get("position", "0")
+    numeric_position = response.get("position", "0")
+    semantic_address = response.get("semantic_address", "")
     app_id = response.get("app_id", "default")
     domain = response.get("domain", "general")
     role = response.get("role", "assistant")
 
-    # Start with crystal ball tree header and position info
+    # Start with crystal ball tree header showing both addresses
     node_source = response.get("_source", "")
     source_tag = f" | 📂 {node_source}" if node_source == "carton_jit" else ""
-    base_header = f"<<[🔮‍🌳]>> You are now visiting position `{position}` in the {app_id} tree space for the domain: {domain}.{source_tag}"
-    
+    semantic_tag = f" Semantic address: `{semantic_address}`." if semantic_address and semantic_address != numeric_position else ""
+    base_header = f"<<[🔮‍🌳]>> Position `{numeric_position}`.{semantic_tag} In the {app_id} tree space for the domain: {domain}.{source_tag}"
+
     # Build header with help message for main menu
-    help_msg = " | 💡 New here? Use `jump 0.2.6` for Computational Model overview" if position == "0" else ""
-    
+    help_msg = " | 💡 Use `lang` for language reference, `nav` for full tree" if numeric_position == "0" else ""
+
     header = f"{base_header}{help_msg}"
     
     # Handle different response types
@@ -190,7 +192,7 @@ def render_response(response: Dict[str, Any]) -> str:
         pass
 
     # Add universal nav hint footer
-    nav_hint = "\n💡 Use `nav` to see full tree structure" if position != "0" else ""
+    nav_hint = "\n💡 Use `nav` to see full tree structure" if numeric_position != "0" else ""
 
     return f"{header}\n\n{content}{nav_hint}\n>>>"
 

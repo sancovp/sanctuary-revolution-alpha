@@ -9,9 +9,17 @@ This demonstrates proper conversation flow:
 - load_conversation: Switch to existing conversation
 
 Uses both heaven_response_utils and heaven_conversation_utils.
+
+TreeShell Conversation Registry:
+- Tracks which conversations were started from TreeShell
+- list_conversations filters to only TreeShell conversations
+- load_conversation validates against registry
 """
 
 import asyncio
+import json
+import os
+
 from heaven_tree_repl import UserTreeShell, render_response
 from heaven_base import HeavenAgentConfig, ProviderEnum, completion_runner
 from heaven_base.langgraph.foundation import HeavenState
@@ -24,6 +32,48 @@ current_conversation = {
     "conversation_id": None,
     "conversation_data": None
 }
+
+# ============================================================================
+# TreeShell Conversation Registry
+# ============================================================================
+# Registry file stores conversation IDs that were started from TreeShell
+TREESHELL_REGISTRY_PATH = "/tmp/heaven_data/tree_shell_conversations_registry.json"
+
+
+def _get_treeshell_conv_ids():
+    """Get set of TreeShell-originated conversation IDs."""
+    if os.path.exists(TREESHELL_REGISTRY_PATH):
+        try:
+            with open(TREESHELL_REGISTRY_PATH) as f:
+                return set(json.load(f))
+        except (json.JSONDecodeError, IOError):
+            return set()
+    return set()
+
+
+def _register_treeshell_conv(conv_id):
+    """Register a conversation as TreeShell-originated."""
+    ids = _get_treeshell_conv_ids()
+    ids.add(conv_id)
+    os.makedirs(os.path.dirname(TREESHELL_REGISTRY_PATH), exist_ok=True)
+    with open(TREESHELL_REGISTRY_PATH, 'w') as f:
+        json.dump(list(ids), f)
+
+
+def _filter_treeshell_conversations(conversations):
+    """Filter conversation list to only TreeShell-originated conversations."""
+    treeshell_ids = _get_treeshell_conv_ids()
+    return [c for c in conversations if c["conversation_id"] in treeshell_ids]
+
+
+def _is_treeshell_conversation(conv_id):
+    """Check if a conversation was started from TreeShell."""
+    return conv_id in _get_treeshell_conv_ids()
+
+
+# ============================================================================
+# Chat Functions
+# ============================================================================
 
 async def _start_chat(title: str, message: str, tags: str, agent_config, return_all_results: bool = False):
     """Start a new conversation."""
@@ -81,6 +131,9 @@ async def _start_chat(title: str, message: str, tags: str, agent_config, return_
             tags=tag_list
         )
         
+        # Register as TreeShell conversation
+        _register_treeshell_conv(conversation_data["conversation_id"])
+        
         # Update current conversation
         current_conversation["conversation_id"] = conversation_data["conversation_id"]
         current_conversation["conversation_data"] = conversation_data
@@ -100,6 +153,7 @@ async def _start_chat(title: str, message: str, tags: str, agent_config, return_
         error_msg = f"❌ Error starting conversation: {str(e)}\n\n**Exception Type:** {type(e).__name__}\n**Full Traceback:**\n{full_traceback}"
         print(f"FULL ERROR DETAILS:\n{error_msg}")  # Also print to console
         return error_msg, False
+
 
 async def _continue_chat(message: str, agent_config, return_all_results: bool = False):
     """Continue the current conversation."""
@@ -181,19 +235,24 @@ async def _continue_chat(message: str, agent_config, return_all_results: bool = 
 ```"""
         return error_msg, False
 
+
 def _list_conversations(limit: int = 10):
-    """List recent conversations."""
+    """List recent TreeShell conversations only."""
     
     try:
-        conversations = list_chats(limit=limit)
+        # Get ALL conversations from underlying system
+        all_conversations = list_chats(limit=limit)
         
-        if not conversations:
-            return "📭 No conversations found", True
+        # Filter to only TreeShell-originated conversations
+        treeshell_conversations = _filter_treeshell_conversations(all_conversations)
         
-        result_lines = [f"📚 **Recent Conversations** (showing {len(conversations)}):"]
+        if not treeshell_conversations:
+            return "📭 No TreeShell conversations found (use 'start' to begin a new one)", True
+        
+        result_lines = [f"📚 **Recent TreeShell Conversations** (showing {len(treeshell_conversations)}):"]
         result_lines.append("")
         
-        for i, conv in enumerate(conversations, 1):
+        for i, conv in enumerate(treeshell_conversations, 1):
             tags_str = ", ".join(conv["metadata"]["tags"]) if conv["metadata"]["tags"] else "None"
             exchanges = conv["metadata"]["total_exchanges"]
             last_updated = conv["last_updated"][:19].replace("T", " ")  # Format datetime
@@ -212,13 +271,19 @@ def _list_conversations(limit: int = 10):
     except Exception as e:
         return f"❌ Error listing conversations: {str(e)}", False
 
+
 def _load_conversation(conversation_id: str):
-    """Load an existing conversation."""
+    """Load an existing TreeShell conversation."""
     
     if not conversation_id.strip():
         return "❌ Please provide a conversation_id", False
     
     try:
+        # First check if it's a TreeShell conversation
+        if not _is_treeshell_conversation(conversation_id):
+            return f"❌ Conversation '{conversation_id}' was not started from TreeShell.\n\nOnly TreeShell-originated conversations can be loaded here.\nUse 'list' to see available TreeShell conversations.", False
+        
+        # Load the conversation
         conv_data = load_chat(conversation_id)
         
         if not conv_data:
@@ -248,19 +313,24 @@ Ready to continue this conversation!"""
     except Exception as e:
         return f"❌ Error loading conversation: {str(e)}", False
 
+
 def _search_conversations(query: str):
-    """Search conversations."""
+    """Search TreeShell conversations only."""
     
     if not query.strip():
         return "❌ Please provide a search query", False
     
     try:
-        matches = search_chats(query)
+        # Search all conversations
+        all_matches = search_chats(query)
+        
+        # Filter to only TreeShell conversations
+        matches = [c for c in all_matches if _is_treeshell_conversation(c["conversation_id"])]
         
         if not matches:
-            return f"🔍 No conversations found matching '{query}'", True
+            return f"🔍 No TreeShell conversations found matching '{query}'", True
         
-        result_lines = [f"🔍 **Search Results for '{query}'** ({len(matches)} found):"]
+        result_lines = [f"🔍 **Search Results for '{query}'** ({len(matches)} TreeShell conversations):"]
         result_lines.append("")
         
         for i, conv in enumerate(matches, 1):
@@ -277,6 +347,7 @@ def _search_conversations(query: str):
         
     except Exception as e:
         return f"❌ Error searching conversations: {str(e)}", False
+
 
 async def main():
     config = {
@@ -311,21 +382,21 @@ async def main():
             "list_conversations": {
                 "type": "Callable",
                 "prompt": "List Conversations",
-                "description": "Show recent conversations",
+                "description": "Show recent TreeShell conversations",
                 "function_name": "_list_conversations",
                 "args_schema": {"limit": "int"}
             },
             "load_conversation": {
                 "type": "Callable",
                 "prompt": "Load Conversation",
-                "description": "Switch to an existing conversation",
+                "description": "Switch to an existing TreeShell conversation",
                 "function_name": "_load_conversation", 
                 "args_schema": {"conversation_id": "str"}
             },
             "search_conversations": {
                 "type": "Callable",
                 "prompt": "Search Conversations",
-                "description": "Search conversations by title or tags",
+                "description": "Search TreeShell conversations by title or tags",
                 "function_name": "_search_conversations",
                 "args_schema": {"query": "str"}
             }

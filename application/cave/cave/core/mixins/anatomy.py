@@ -283,7 +283,7 @@ class Ears(Organ):
         logger.info("Ears '%s' stopped (processed %d messages)", self.name, self._messages_processed)
         return {"status": "stopped", "total_processed": self._messages_processed}
 
-    def check_now(self) -> list:
+    async def check_now(self) -> list:
         """Manual check — poll main agent inbox right now."""
         if not self._agent_ref or not hasattr(self._agent_ref, 'main_agent'):
             return []
@@ -292,7 +292,7 @@ class Ears(Organ):
             return []
 
         self._last_check = datetime.utcnow().isoformat()
-        responses = agent.check_inbox()
+        responses = await agent.check_inbox()
 
         if responses:
             self._messages_processed += len(responses)
@@ -306,25 +306,26 @@ class Ears(Organ):
         return responses
 
     def perceive_world(self) -> list:
-        """Perceive world sources. Body-level perception through Ears.
+        """Perceive through channels AND world sources.
 
-        World perception is a Body function — Ears is the perceptive organ.
-        Events flow: world.tick() → route by source → inbox/conductor/injection.
-        Rate-limited by proprioception_rate (default 30s).
+        Two input paths, unified:
+        1. Channel perception: poll each agent's CentralChannel.receive_all()
+           → feed results into agent inbox (Discord, tmux, file inbox channels)
+        2. World perception: poll world.tick() for RNG/probabilistic events only
 
         ARCHITECTURE RULE (Isaac, Mar 01 2026):
         CaveAgent is the ONLY thing that ever runs. ALL event routing happens
         HERE inside CaveAgent's Ears. Nothing polls Discord outside this object.
-        organ_daemon does NOT have its own World — it receives pushed events only.
 
-        Discord routing (previously in organ_daemon.run()):
-        - Isaac's messages → conductor inbox via route_message(to="conductor")
-        - Commands (e.g. "done standup") → CAVE /sanctum/ritual/complete
-        - Other Discord messages → main inbox
-        - Sanctum events → Discord ping (outbound)
-        - RNG events → injection file
+        Channel-based routing (Discord, tmux, file):
+        - Messages arrive via channel.receive() on each agent's CentralChannel
+        - Ears feeds them into the agent's inbox
+        - Discord routing: Isaac's messages → conductor, commands → CAVE endpoint
+
+        World-based routing (RNG only):
+        - Probabilistic events → injection file
         """
-        if not self._agent_ref or not hasattr(self._agent_ref, 'world'):
+        if not self._agent_ref:
             return []
 
         now = time.time()
@@ -332,27 +333,102 @@ class Ears(Organ):
             return []
         self._last_perception = now
 
-        events = self._agent_ref.world.tick()
         routed = []
-        for event in events:
-            if event.source == "discord":
-                self._route_discord_event(event)
-            elif event.source == "rng":
-                from ..organ_daemon import write_to_injection
-                write_to_injection(event)
-            elif event.source == "sanctum":
-                # Sanctum events: ping Discord, skip inbox
-                self._ping_discord(event.content)
-            else:
-                self._agent_ref.route_message(
-                    from_agent=f"world:{event.source}",
-                    to_agent="main",
-                    content=event.content,
-                    priority=event.priority,
-                )
-            routed.append(event)
-            self._world_events_processed += 1
+
+        # === 1. CHANNEL PERCEPTION — poll all agent CentralChannels ===
+        if hasattr(self._agent_ref, 'cave_agents') and hasattr(self._agent_ref, 'central_channels'):
+            for agent_name, central in self._agent_ref.central_channels.items():
+                messages = central.receive_all()
+                for conv_name, msg_data in messages.items():
+                    channel = central.get(conv_name)
+                    ch_type = channel.channel_type() if channel else "unknown"
+
+                    if "discord" in ch_type:
+                        self._route_channel_discord_message(agent_name, conv_name, msg_data)
+                    else:
+                        # Non-discord channels: feed directly to agent inbox
+                        agent = self._agent_ref.cave_agents.get(agent_name)
+                        if agent:
+                            from ..agent import UserPromptMessage, IngressType
+                            content = msg_data.get("content", str(msg_data))
+                            inbox_msg = UserPromptMessage(
+                                content=content,
+                                ingress=IngressType.SYSTEM,
+                                priority=msg_data.get("priority", 0),
+                            )
+                            agent.enqueue(inbox_msg)
+
+                    self._world_events_processed += 1
+                    routed.append(msg_data)
+
+        # === 2. WORLD PERCEPTION — RNG/probabilistic only ===
+        if hasattr(self._agent_ref, 'world'):
+            events = self._agent_ref.world.tick()
+            for event in events:
+                if event.source == "rng":
+                    from ..organ_daemon import write_to_injection
+                    write_to_injection(event)
+                elif event.source == "sanctum":
+                    self._ping_discord(event.content)
+                else:
+                    self._agent_ref.route_message(
+                        from_agent=f"world:{event.source}",
+                        to_agent="main",
+                        content=event.content,
+                        priority=event.priority,
+                    )
+                routed.append(event)
+                self._world_events_processed += 1
+
         return routed
+
+    def _route_channel_discord_message(self, agent_name: str, conv_name: str, msg_data: Dict[str, Any]) -> None:
+        """Route a message received from a Discord channel.
+
+        Replaces _route_discord_event but works with Channel data instead of WorldEvent.
+        """
+        from ..organ_daemon import _detect_command, _handle_command
+        from ..discord_config import load_discord_config
+
+        if not hasattr(self, '_isaac_user_id'):
+            discord_config = load_discord_config()
+            self._isaac_user_id = discord_config.get("isaac_user_id")
+
+        content = msg_data.get("content", "")
+        metadata = msg_data.get("metadata", {})
+        sender_id = metadata.get("discord_user_id", "")
+
+        # Check for commands first
+        cmd = _detect_command(content)
+        if cmd:
+            command, argument = cmd
+            logger.info("Ears: command detected via channel: %s %s", command, argument)
+            _handle_command(command, argument, source="discord")
+            return
+
+        # Route to the agent this channel belongs to
+        agent = self._agent_ref.cave_agents.get(agent_name)
+        if agent:
+            from ..agent import UserPromptMessage, IngressType
+            inbox_msg = UserPromptMessage(
+                content=content,
+                ingress=IngressType.DISCORD,
+                priority=7,
+                source_id=sender_id,
+            )
+            agent.enqueue(inbox_msg)
+            logger.info("Ears: %s.%s <- discord: %s", agent_name, conv_name, content[:80])
+
+            # Trigger inbox processing as async task — NEVER block Ears
+            async def _process_agent_inbox(a=agent, name=agent_name):
+                try:
+                    responses = await a.check_inbox()
+                    if responses:
+                        logger.info("Ears: %s processed %d messages", name, len(responses))
+                except Exception as e:
+                    logger.error("Ears: %s inbox processing failed: %s", name, e)
+
+            asyncio.create_task(_process_agent_inbox())
 
     def _route_discord_event(self, event) -> None:
         """Route a Discord WorldEvent. Runs INSIDE CaveAgent — never outside.
@@ -428,7 +504,7 @@ class Ears(Organ):
         World perceived every proprioception_rate (30s), rate-limited internally.
         """
         while self._running:
-            self.check_now()
+            await self.check_now()
             self.perceive_world()
             await asyncio.sleep(self.poll_interval)
 
@@ -761,16 +837,27 @@ class AnatomyMixin:
         ))
 
     def _wire_perception_loop(self) -> None:
-        """Wire Body perception through Ears.
+        """Wire Body perception through Ears via Heart tick.
 
-        World perception is a Body function executed by Ears (the perceptive
-        organ). Ears.poll_loop() handles both inbox and world perception.
-        Heart only pumps scheduled prompts — it does not perceive.
+        Ears.perceive_world() polls CentralChannels + World sources.
+        Ears.check_now() polls inbox.
+        Both run on a Heart tick (not async — Heart tick thread drives them).
 
         Must be called AFTER both _init_anatomy() and self.world exist.
         """
         self.ears.proprioception_rate = 30.0
-        self.ears.start()  # Sets _running=True so poll_loop actually loops
+        self.ears.start()  # Sets _running=True
+
+        # Heart tick drives perception — fires async check_now as task
+        def _perception_tick():
+            asyncio.create_task(self.ears.check_now())
+            self.ears.perceive_world()
+
+        self.heart.add_tick(Tick(
+            name="perception",
+            callback=_perception_tick,
+            every=30.0,
+        ))
 
     def _wire_checkup(self) -> None:
         """Wire body health checks. Heart ticks checkup every 60s.

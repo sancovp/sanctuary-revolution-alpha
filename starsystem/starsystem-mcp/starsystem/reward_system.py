@@ -4,7 +4,7 @@ Reward System - STARSYSTEM Health + Legacy Event Scoring
 
 NEW (State-based): get_starsystem_health()
   - Measures CURRENT project health, not accumulated events
-  - Formula: emanation×0.30 + smells×0.25 + arch×0.20 + complexity×0.15 + kg_depth×0.10
+  - Formula: emanation×0.25 + smells×0.20 + arch×0.15 + complexity×0.15 + kg_depth×0.10 + consistency×0.15
 
 DEPRECATED (Event-based): compute_fitness(), compute_session_reward(), etc.
   - Old approach counting tool calls
@@ -46,7 +46,7 @@ def get_starsystem_health(path: Optional[str] = None) -> Dict[str, Any]:
     not accumulated events. Score updates immediately when you fix things.
 
     Formula:
-        health = emanation×0.30 + smells×0.25 + arch×0.20 + complexity×0.15 + kg_depth×0.10
+        health = emanation×0.25 + smells×0.20 + arch×0.15 + complexity×0.15 + kg_depth×0.10 + consistency×0.15
 
     Args:
         path: STARSYSTEM directory path (defaults to cwd)
@@ -76,16 +76,23 @@ def get_starsystem_health(path: Optional[str] = None) -> Dict[str, Any]:
     # 4. COMPLEXITY LEVEL (0.15 weight) - L0=0, L6=1.0
     components["complexity"] = _get_complexity_score(path)
 
-    # 5. KNOWLEDGE GRAPH DEPTH (0.10 weight)
+    # 5. KNOWLEDGE GRAPH DEPTH (0.10 weight) — how complete is the GIINT hierarchy (Unnamed count)
     components["kg_depth"] = _get_kg_depth_score(path, components["complexity"])
+
+    # 6. CONSISTENCY (0.15 weight) — GIINT filled out + skills mirrored + rules exist
+    consistency = check_graph_filesystem_consistency(path)
+    # Use coverage ratio directly (0.0-1.0) — penalize for unmirrored skills and missing GIINT
+    giint_penalty = 0.0 if consistency.get("giint_complete", False) else 0.3
+    components["consistency"] = max(0.0, consistency.get("coverage", 1.0) - giint_penalty)
 
     # Calculate weighted health
     health = (
-        components["emanation"] * 0.30 +
-        components["smells"] * 0.25 +
-        components["architecture"] * 0.20 +
+        components["emanation"] * 0.25 +
+        components["smells"] * 0.20 +
+        components["architecture"] * 0.15 +
         components["complexity"] * 0.15 +
-        components["kg_depth"] * 0.10
+        components["kg_depth"] * 0.10 +
+        components["consistency"] * 0.15
     )
 
     return {
@@ -94,11 +101,12 @@ def get_starsystem_health(path: Optional[str] = None) -> Dict[str, Any]:
         "path": str(path),
         "components": components,
         "weights": {
-            "emanation": 0.30,
-            "smells": 0.25,
-            "architecture": 0.20,
+            "emanation": 0.25,
+            "smells": 0.20,
+            "architecture": 0.15,
             "complexity": 0.15,
-            "kg_depth": 0.10
+            "kg_depth": 0.10,
+            "consistency": 0.15
         }
     }
 
@@ -167,17 +175,8 @@ def _get_smell_score(path: Path) -> float:
 
 
 def _get_architecture_score(path: Path) -> float:
-    """
-    Get onion architecture compliance as 0-1 score.
-
-    TODO: Implement real architecture analysis:
-    - Check for utils.py → core.py → facade pattern
-    - Detect logic in wrong layers
-    - Check for god classes
-
-    Current: Placeholder returning 0.5
-    """
-    # TODO: Real implementation
+    """Onion architecture compliance score. PLACEHOLDER — checks file existence only."""
+    # TODO: Use context-alignment to analyze actual architecture layers
     # For now, check if canonical structure exists
     try:
         has_core = (path / "core.py").exists() or any(path.rglob("core.py"))
@@ -240,15 +239,16 @@ def _get_complexity_score(path: Path) -> float:
 
         # PART B: Query CartON for what's connected to this starsystem
         # This includes both local items that were synced AND remote emanations
+        # Use OWL-defined relationships + IS_A type checks (ontology is truth)
         cypher = """
         MATCH (s:Wiki {n: $starsystem_name})
-        OPTIONAL MATCH (skill:Wiki)-[:PART_OF|DESCRIBES]->(s) WHERE (skill)-[:IS_A]->(:Wiki {n: "Skill"})
-        OPTIONAL MATCH (agent:Wiki)-[:PART_OF|DESCRIBES]->(s) WHERE (agent)-[:IS_A]->(:Wiki {n: "Agent"})
-        OPTIONAL MATCH (hook:Wiki)-[:PART_OF|DESCRIBES]->(s) WHERE (hook)-[:IS_A]->(:Wiki {n: "Hook"})
-        OPTIONAL MATCH (cmd:Wiki)-[:PART_OF|DESCRIBES]->(s) WHERE (cmd)-[:IS_A]->(:Wiki {n: "Slash_Command"})
-        OPTIONAL MATCH (flight:Wiki)-[:PART_OF|AUTOMATES]->(s) WHERE (flight)-[:IS_A]->(:Wiki {n: "Flight_Config"})
+        OPTIONAL MATCH (skill:Wiki)-[:HAS_STARSYSTEM|PART_OF]->(s) WHERE (skill)-[:IS_A]->(:Wiki {n: "Skill"})
+        OPTIONAL MATCH (agent:Wiki)-[:PART_OF]->(s) WHERE (agent)-[:IS_A]->(:Wiki {n: "Agent"})
+        OPTIONAL MATCH (hook:Wiki)-[:PART_OF]->(s) WHERE (hook)-[:IS_A]->(:Wiki {n: "Hook"})
+        OPTIONAL MATCH (cmd:Wiki)-[:PART_OF]->(s) WHERE (cmd)-[:IS_A]->(:Wiki {n: "Slash_Command"})
+        OPTIONAL MATCH (flight:Wiki)-[:PART_OF]->(s) WHERE (flight)-[:IS_A]->(:Wiki {n: "Flight_Config"})
         OPTIONAL MATCH (persona:Wiki)-[:CONFIGURES]->(s) WHERE (persona)-[:IS_A]->(:Wiki {n: "Persona"})
-        OPTIONAL MATCH (mcp:Wiki)-[:PART_OF|PROVIDES_TOOLS_TO]->(s) WHERE (mcp)-[:IS_A]->(:Wiki {n: "MCP_Server"})
+        OPTIONAL MATCH (mcp:Wiki)-[:PART_OF]->(s) WHERE (mcp)-[:IS_A]->(:Wiki {n: "MCP_Server"})
         RETURN
             count(DISTINCT skill) as carton_skills,
             count(DISTINCT agent) as carton_agents,
@@ -347,12 +347,18 @@ def _get_giint_hierarchy_completeness(path: Path) -> float:
         path_slug = str(path).strip("/").replace("/", "_").replace("-", "_").title()
         starsystem_name = f"Starsystem_{path_slug}"
 
+        # Walk the full hierarchy chain: Starsystem → Collection_Category → HC → Project → Feature → Component → Deliverable
+        # Exclude _Unnamed concepts — they are incomplete placeholders that should NOT count toward completeness
         cypher = """
         MATCH (s:Wiki {n: $starsystem_name})
-        MATCH (gp:Wiki)-[:PART_OF]->(s) WHERE gp.n STARTS WITH 'GIINT_Project'
-        MATCH (f:Wiki)-[:PART_OF]->(s) WHERE f.n CONTAINS 'Feature' OR (f)-[:IS_A]->(:Wiki {n: 'Feature'})
-        MATCH (c:Wiki)-[:PART_OF]->(s) WHERE c.n CONTAINS 'Component' OR (c)-[:IS_A]->(:Wiki {n: 'Component'})
-        MATCH (d:Wiki)-[:PART_OF]->(s) WHERE d.n CONTAINS 'Deliverable' OR (d)-[:IS_A]->(:Wiki {n: 'Deliverable'})
+        OPTIONAL MATCH (gp:Wiki)-[:PART_OF*1..3]->(s)
+            WHERE gp.n STARTS WITH 'Giint_Project_' AND NOT gp.n CONTAINS '_Unnamed'
+        OPTIONAL MATCH (f:Wiki)-[:PART_OF*1..4]->(s)
+            WHERE f.n STARTS WITH 'Giint_Feature_' AND NOT f.n CONTAINS '_Unnamed'
+        OPTIONAL MATCH (c:Wiki)-[:PART_OF*1..5]->(s)
+            WHERE c.n STARTS WITH 'Giint_Component_' AND NOT c.n CONTAINS '_Unnamed'
+        OPTIONAL MATCH (d:Wiki)-[:PART_OF*1..6]->(s)
+            WHERE d.n STARTS WITH 'Giint_Deliverable_' AND NOT d.n CONTAINS '_Unnamed'
         RETURN
             count(DISTINCT gp) as giint_projects,
             count(DISTINCT f) as features,
@@ -369,7 +375,7 @@ def _get_giint_hierarchy_completeness(path: Path) -> float:
             components = data.get("components", 0)
             deliverables = data.get("deliverables", 0)
 
-            # Score: 0.25 per level that has at least 1 element
+            # Score: 0.25 per level that has at least 1 NON-Unnamed element
             score = 0.0
             if giint_projects > 0:
                 score += 0.25
@@ -440,6 +446,274 @@ def _get_inter_starsystem_relations(path: Path) -> float:
     except Exception as e:
         logger.warning(f"Could not get inter-STARSYSTEM relations: {e}")
         return 0.0
+
+
+def check_graph_filesystem_consistency(path: Path, auto_repair: bool = True) -> Dict[str, Any]:
+    """Check CartON graph matches filesystem for a STARSYSTEM.
+
+    Three checks:
+    1. GIINT hierarchy is filled out (Project→Feature→Component→Deliverable)
+    2. Skills are mirrored INTO the starsystem (not just in heaven_data)
+    3. Rules exist in .claude/rules/ for the starsystem's skills
+
+    When auto_repair=True (default), automatically mirrors missing skills
+    and generates rules before returning the final consistency score.
+
+    Returns:
+        {
+            "consistent": bool,
+            "coverage": float,  # 0.0-1.0 ratio of mirrored/total
+            "giint_complete": bool,
+            "skills_total": int,
+            "skills_mirrored": int,
+            "skills_with_rules": int,
+            "issues": [{"category": str, "issue": str, "target": str}],
+            "repairs_attempted": [{"action": str, "target": str, "result": str}]
+        }
+    """
+    try:
+        path = Path(path)
+        path_slug = str(path).strip("/").replace("/", "_").replace("-", "_").title()
+        starsystem_name = f"Starsystem_{path_slug}"
+
+        issues = []
+        repairs = []
+
+        # --- CHECK 1: GIINT hierarchy completeness ---
+        giint_cypher = """
+        MATCH (s:Wiki {n: $ss_name})
+        OPTIONAL MATCH (gp:Wiki)-[:PART_OF*1..2]->(s)
+            WHERE gp.n STARTS WITH 'Giint_Project_' OR gp.n STARTS WITH 'GIINT_Project_'
+        OPTIONAL MATCH (f:Wiki)-[:PART_OF*1..3]->(s)
+            WHERE f.n STARTS WITH 'Giint_Feature_' OR f.n STARTS WITH 'GIINT_Feature_'
+        OPTIONAL MATCH (c:Wiki)-[:PART_OF*1..4]->(s)
+            WHERE c.n STARTS WITH 'Giint_Component_' OR c.n STARTS WITH 'GIINT_Component_'
+        OPTIONAL MATCH (d:Wiki)-[:PART_OF*1..5]->(s)
+            WHERE d.n STARTS WITH 'Giint_Deliverable_' OR d.n STARTS WITH 'GIINT_Deliverable_'
+        RETURN
+            count(DISTINCT gp) as projects,
+            count(DISTINCT f) as features,
+            count(DISTINCT c) as components,
+            count(DISTINCT d) as deliverables
+        """
+        giint_result = _carton_query(giint_cypher, {"ss_name": starsystem_name})
+        giint_data = {}
+        giint_complete = False
+
+        if giint_result.get("success") and giint_result.get("data"):
+            giint_data = giint_result["data"][0] if giint_result["data"] else {}
+            projects = giint_data.get("projects", 0)
+            features = giint_data.get("features", 0)
+            components = giint_data.get("components", 0)
+            deliverables = giint_data.get("deliverables", 0)
+
+            giint_complete = all([projects > 0, features > 0, components > 0, deliverables > 0])
+
+            if projects == 0:
+                issues.append({"category": "giint", "issue": "No GIINT_Project for this starsystem", "target": starsystem_name})
+            if projects > 0 and features == 0:
+                issues.append({"category": "giint", "issue": "GIINT_Project exists but has no Features", "target": starsystem_name})
+            if features > 0 and components == 0:
+                issues.append({"category": "giint", "issue": "Features exist but have no Components", "target": starsystem_name})
+            if components > 0 and deliverables == 0:
+                issues.append({"category": "giint", "issue": "Components exist but have no Deliverables", "target": starsystem_name})
+
+        # --- CHECK 2: Skills mirrored into starsystem ---
+        # Get skills that explicitly belong to THIS starsystem via:
+        # a) skill -[:HAS_STARSYSTEM]-> this starsystem
+        # b) skill -[:HAS_DESCRIBES_COMPONENT]-> component -[:PART_OF*1..4]-> this starsystem
+        # c) skill -[:PART_OF]-> this starsystem directly
+        skills_cypher = """
+        MATCH (s:Wiki {n: $ss_name})
+        OPTIONAL MATCH (skill1:Wiki)-[:HAS_STARSYSTEM]->(s) WHERE skill1.n STARTS WITH 'Skill_'
+        OPTIONAL MATCH (skill2:Wiki)-[:PART_OF]->(s) WHERE skill2.n STARTS WITH 'Skill_'
+        OPTIONAL MATCH (skill3:Wiki)-[:HAS_DESCRIBES_COMPONENT]->(comp:Wiki)-[:PART_OF*1..4]->(s)
+            WHERE skill3.n STARTS WITH 'Skill_'
+        WITH collect(DISTINCT skill1.n) + collect(DISTINCT skill2.n) + collect(DISTINCT skill3.n) as all_skills
+        UNWIND all_skills as skill_name
+        WITH skill_name WHERE skill_name IS NOT NULL
+        RETURN DISTINCT skill_name
+        """
+        skills_result = _carton_query(skills_cypher, {"ss_name": starsystem_name})
+
+        carton_skills = set()
+        if skills_result.get("success") and skills_result.get("data"):
+            for row in skills_result["data"]:
+                sn = row.get("skill_name")
+                if sn:
+                    carton_skills.add(sn)
+
+        # Also check heaven_data/skills/ for skills with matching starsystem in _metadata.json
+        heaven_skills_dir = Path(os.environ.get("HEAVEN_DATA_DIR", "/tmp/heaven_data")) / "skills"
+        if heaven_skills_dir.exists():
+            for skill_dir in heaven_skills_dir.iterdir():
+                if not skill_dir.is_dir():
+                    continue
+                meta_file = skill_dir / "_metadata.json"
+                if meta_file.exists():
+                    try:
+                        meta = json.loads(meta_file.read_text())
+                        skill_starsystem = meta.get("starsystem", "")
+                        if skill_starsystem and str(path) in skill_starsystem:
+                            # Normalize to CartON name
+                            concept_name = "Skill_" + "_".join(
+                                w.capitalize() for w in skill_dir.name.replace("-", "_").split("_")
+                            )
+                            carton_skills.add(concept_name)
+                    except (json.JSONDecodeError, OSError):
+                        pass
+
+        # Check which skills are mirrored into the starsystem's .claude/skills/
+        starsystem_skills_dir = path / ".claude" / "skills"
+        starsystem_rules_dir = path / ".claude" / "rules"
+
+        skills_total = len(carton_skills)
+        skills_mirrored = 0
+        skills_with_rules = 0
+
+        for skill_concept in sorted(carton_skills):
+            # Convert concept name to directory slug
+            skill_slug = skill_concept.lower().replace("_", "-")
+            if skill_slug.startswith("skill-"):
+                skill_slug = skill_slug[6:]  # Remove "skill-" prefix for dir name
+
+            # Check if mirrored into starsystem .claude/skills/
+            mirrored = False
+            if starsystem_skills_dir.exists():
+                # Try multiple slug patterns
+                for candidate in [skill_slug, f"skill-{skill_slug}", skill_concept.lower().replace("_", "-")]:
+                    if (starsystem_skills_dir / candidate).exists():
+                        mirrored = True
+                        break
+
+            if mirrored:
+                skills_mirrored += 1
+            else:
+                issues.append({
+                    "category": "skill_mirror",
+                    "issue": f"Skill '{skill_concept}' belongs to this starsystem but not mirrored to {starsystem_skills_dir}",
+                    "target": skill_concept
+                })
+                repairs.append({"action": "mirror_skill", "target": skill_concept})
+
+            # Check if rule exists for this skill
+            has_rule = False
+            if starsystem_rules_dir.exists():
+                for rule_file in starsystem_rules_dir.iterdir():
+                    if rule_file.is_file() and rule_file.suffix == ".md":
+                        # Check if rule name relates to skill
+                        rule_stem = rule_file.stem.lower().replace("-", "_")
+                        skill_lower = skill_slug.replace("-", "_")
+                        if skill_lower in rule_stem or rule_stem in skill_lower:
+                            has_rule = True
+                            break
+
+            if has_rule:
+                skills_with_rules += 1
+
+        # --- CHECK 3: Disk skills not in CartON ---
+        if starsystem_skills_dir.exists():
+            carton_slugs = set()
+            for sc in carton_skills:
+                slug = sc.lower().replace("_", "-")
+                if slug.startswith("skill-"):
+                    slug = slug[6:]
+                carton_slugs.add(slug)
+
+            for skill_dir in starsystem_skills_dir.iterdir():
+                if skill_dir.is_dir():
+                    disk_slug = skill_dir.name.lower().replace("-", "_").replace("skill_", "")
+                    normalized = disk_slug.replace("_", "-")
+                    if normalized not in carton_slugs and disk_slug not in carton_slugs:
+                        issues.append({
+                            "category": "skill_orphan",
+                            "issue": f"Skill '{skill_dir.name}' on disk in starsystem but not tracked in CartON",
+                            "target": skill_dir.name
+                        })
+                        repairs.append({"action": "sync_to_carton", "target": skill_dir.name})
+                        skills_total += 1  # Count it in total
+
+        # --- AUTO-REPAIR: mirror missing skills + generate rules ---
+        repairs_attempted = []
+        if auto_repair and repairs:
+            import shutil
+            heaven_skills = Path(os.environ.get("HEAVEN_DATA_DIR", "/tmp/heaven_data")) / "skills"
+            starsystem_skills_dir.mkdir(parents=True, exist_ok=True)
+            starsystem_rules_dir.mkdir(parents=True, exist_ok=True)
+
+            for repair in repairs:
+                action = repair.get("action", "")
+                target = repair.get("target", "")
+
+                if action == "mirror_skill":
+                    skill_slug = target.lower().replace("_", "-")
+                    if skill_slug.startswith("skill-"):
+                        skill_slug = skill_slug[6:]
+
+                    source = None
+                    for candidate in [skill_slug, f"skill-{skill_slug}", target.lower().replace("_", "-")]:
+                        candidate_path = heaven_skills / candidate
+                        if candidate_path.exists():
+                            source = candidate_path
+                            break
+
+                    if not source:
+                        repairs_attempted.append({"action": action, "target": target, "result": "not_found"})
+                        continue
+
+                    dest = starsystem_skills_dir / source.name
+                    try:
+                        if dest.exists():
+                            shutil.copytree(str(source), str(dest), dirs_exist_ok=True)
+                        else:
+                            shutil.copytree(str(source), str(dest))
+
+                        # Generate rule from skill metadata
+                        when_text = "working in this domain"
+                        meta_file = source / "_metadata.json"
+                        if meta_file.exists():
+                            try:
+                                meta = json.loads(meta_file.read_text())
+                                when_text = meta.get("when", when_text) or when_text
+                            except (json.JSONDecodeError, OSError):
+                                pass
+
+                        rule_content = f"# Use {source.name}\n\nUse the `{source.name}` skill when: {when_text}.\n"
+                        (starsystem_rules_dir / f"use-{source.name}.md").write_text(rule_content)
+
+                        skills_mirrored += 1
+                        skills_with_rules += 1
+                        issues = [i for i in issues if i.get("target") != target]
+                        repairs_attempted.append({"action": action, "target": target, "result": "repaired"})
+                    except Exception as e:
+                        repairs_attempted.append({"action": action, "target": target, "result": f"failed: {e}"})
+
+                elif action == "sync_to_carton":
+                    repairs_attempted.append({"action": action, "target": target, "result": "skipped"})
+
+        # Coverage ratio (recalculated after repair)
+        total_artifacts = max(skills_total, 1)
+        coverage = skills_mirrored / total_artifacts if total_artifacts > 0 else 1.0
+
+        return {
+            "consistent": len(issues) == 0,
+            "coverage": round(coverage, 3),
+            "giint_complete": giint_complete,
+            "giint_levels": giint_data,
+            "skills_total": skills_total,
+            "skills_mirrored": skills_mirrored,
+            "skills_with_rules": skills_with_rules,
+            "issues": issues,
+            "repairs_attempted": repairs_attempted,
+        }
+
+    except Exception as e:
+        logger.warning(f"Graph-filesystem consistency check failed: {e}")
+        return {
+            "consistent": True, "coverage": 1.0, "giint_complete": False,
+            "giint_levels": {}, "skills_total": 0, "skills_mirrored": 0,
+            "skills_with_rules": 0, "issues": [], "repairs_attempted": [], "error": str(e)
+        }
 
 
 SMELL_CACHE_PATH = Path(os.environ.get("HEAVEN_DATA_DIR", "/tmp/heaven_data")) / "codenose_cache.json"
@@ -557,13 +831,17 @@ def get_fleet_health(paths: List[str]) -> Dict[str, Dict[str, Any]]:
         inter = _compute_inter_from_kg(kg)
 
         kg_depth = round(giint * 0.40 + complexity * 0.40 + inter * 0.20, 3)
+        consistency = check_graph_filesystem_consistency(path_obj)
+        giint_penalty = 0.0 if consistency.get("giint_complete", False) else 0.3
+        consistency_score = max(0.0, consistency.get("coverage", 1.0) - giint_penalty)
 
         health = (
-            emanation_score * 0.30 +
-            smells * 0.25 +
-            arch * 0.20 +
+            emanation_score * 0.25 +
+            smells * 0.20 +
+            arch * 0.15 +
             complexity * 0.15 +
-            kg_depth * 0.10
+            kg_depth * 0.10 +
+            consistency_score * 0.15
         )
 
         results[p] = {
@@ -576,13 +854,15 @@ def get_fleet_health(paths: List[str]) -> Dict[str, Dict[str, Any]]:
                 "architecture": arch,
                 "complexity": complexity,
                 "kg_depth": kg_depth,
+                "consistency": consistency_score,
             },
             "weights": {
-                "emanation": 0.30,
-                "smells": 0.25,
-                "architecture": 0.20,
+                "emanation": 0.25,
+                "smells": 0.20,
+                "architecture": 0.15,
                 "complexity": 0.15,
                 "kg_depth": 0.10,
+                "consistency": 0.15,
             }
         }
 
@@ -682,6 +962,7 @@ def format_health_hud(health_data: Dict[str, Any]) -> str:
         f"   🏛️ Arch: {c['architecture']:.2f}",
         f"   📊 L{_score_to_level(c['complexity'])} | {c['complexity']:.2f}",
         f"   🧠 KG: {c['kg_depth']:.2f}",
+        f"   🔗 Consistency: {c['consistency']:.2f}",
     ]
     return "\n".join(lines)
 

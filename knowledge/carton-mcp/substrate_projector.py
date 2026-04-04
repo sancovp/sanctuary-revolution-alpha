@@ -11,6 +11,7 @@ from pathlib import Path
 import os
 import re
 import json
+import shutil
 import yaml
 import logging
 
@@ -159,6 +160,23 @@ def get_concept_content(concept_name: str, description_only: bool) -> str:
 
     concept_data = result["data"][0]
     description = concept_data.get("description", "")
+    # Strip wiki-links iteratively (nested links need multiple passes)
+    for _ in range(5):
+        prev = description
+        # [word](../Path/Path_itself.md) → word
+        description = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', description)
+        # Orphan link targets: (../Path/Path_itself.md) or (/Path_itself.md)
+        description = re.sub(r'\([^)]*_itself\.md\)', '', description)
+        description = re.sub(r'\(\.\./[^)]*\)', '', description)
+        # Bare brackets: [word] → word
+        description = re.sub(r'\[([^\]]+)\]', r'\1', description)
+        if description == prev:
+            break
+    # Strip truncated fragments
+    description = re.sub(r'\(\.\./[^)]*$', '', description)
+    description = re.sub(r'/\w+_itself\.md\)', '', description)
+    # Clean up double spaces and leading/trailing whitespace per line
+    description = re.sub(r'  +', ' ', description)
 
     if description_only:
         return description
@@ -258,6 +276,82 @@ def project_to_env(substrate: EnvSubstrate, content: str) -> str:
     return f"Set env var {substrate.var_name}"
 
 
+def _project_giint_hierarchy_rule(utils, ss_path: str, rules_dir) -> None:
+    """Project the GIINT hierarchy as a rule file into a starsystem's .claude/rules/.
+
+    Queries CartON for the GIINT_Project under this starsystem and renders
+    the full Project → Feature → Component tree as a markdown rule.
+    """
+    from pathlib import Path
+
+    # Find GIINT_Project for this starsystem by walking from Starsystem concept
+    path_slug = ss_path.strip("/").replace("/", "_").replace("-", "_").title()
+    ss_concept = f"Starsystem_{path_slug}"
+
+    # Query: Starsystem → has_project → Starlog_Project, then find GIINT_Project_ under it
+    hierarchy_query = """
+    MATCH (ss:Wiki {n: $ss_name})
+    OPTIONAL MATCH (proj:Wiki)-[:PART_OF]->(ss)
+    WHERE proj.n STARTS WITH 'Giint_Project_'
+    WITH proj
+    WHERE proj IS NOT NULL
+    OPTIONAL MATCH (feat:Wiki)-[:PART_OF]->(proj)
+    WHERE feat.n STARTS WITH 'Giint_Feature_'
+    OPTIONAL MATCH (comp:Wiki)-[:PART_OF]->(feat)
+    WHERE comp.n STARTS WITH 'Giint_Component_'
+    RETURN proj.n as project, feat.n as feature, comp.n as component
+    ORDER BY feat.n, comp.n
+    """
+    result = utils.query_wiki_graph(hierarchy_query, {"ss_name": ss_concept})
+
+    if not result.get("success") or not result.get("data"):
+        logger.info("No GIINT hierarchy found for %s", ss_concept)
+        return
+
+    # Build tree from flat rows
+    projects = {}
+    for row in result["data"]:
+        proj = row.get("project")
+        feat = row.get("feature")
+        comp = row.get("component")
+        if not proj:
+            continue
+        if proj not in projects:
+            projects[proj] = {}
+        if feat:
+            if feat not in projects[proj]:
+                projects[proj][feat] = []
+            if comp and comp not in projects[proj][feat]:
+                projects[proj][feat].append(comp)
+
+    if not projects:
+        return
+
+    # Render as markdown
+    lines = ["# GIINT Hierarchy", "", "This starsystem's project structure:", ""]
+    for proj, features in projects.items():
+        proj_short = proj.replace("Giint_Project_", "")
+        lines.append(f"## {proj_short}")
+        lines.append("")
+        if not features:
+            lines.append("*(No features defined yet)*")
+            lines.append("")
+            continue
+        for feat, components in features.items():
+            feat_short = feat.replace("Giint_Feature_", "")
+            lines.append(f"### {feat_short}")
+            if components:
+                for comp in components:
+                    comp_short = comp.replace("Giint_Component_", "")
+                    lines.append(f"- {comp_short}")
+            else:
+                lines.append("- *(No components yet)*")
+            lines.append("")
+
+    Path(rules_dir / "giint-hierarchy.md").write_text("\n".join(lines) + "\n")
+    logger.info("Projected GIINT hierarchy rule to %s", rules_dir / "giint-hierarchy.md")
+
+
 def project_to_skill(substrate: SkillSubstrate, concept_name: str) -> str:
     """Project CartON concept to skill package + optional ChromaDB skillgraph entry.
 
@@ -353,7 +447,7 @@ def project_to_skill(substrate: SkillSubstrate, concept_name: str) -> str:
             except Exception:
                 pass  # Non-critical — projection continues without backfill
 
-    describes = first_rel("DESCRIBES_COMPONENT")
+    describes = first_rel("HAS_DESCRIBES_COMPONENT") or first_rel("DESCRIBES_COMPONENT")
     starsystem = first_rel("HAS_STARSYSTEM")
 
     # Extract native Claude Code skill fields from typed relationships
@@ -584,7 +678,127 @@ def project_to_skill(substrate: SkillSubstrate, concept_name: str) -> str:
         except Exception as e:
             chromadb_msg = f" (ChromaDB failed: {e})"
 
-    return f"Skill '{skill_name}' projected to {skill_dir}{chromadb_msg}"
+    # Phase 3: Project skill to starsystem .claude/skills/ directory
+    # Walk: Skill → HAS_DESCRIBES_COMPONENT → GIINT_Component → part_of chain → Starsystem_
+    starsystem_msg = ""
+    starsystem_paths = set()
+
+    def _resolve_starsystem_path(starsystem_name: str) -> str | None:
+        """Resolve starsystem concept name to filesystem path.
+
+        Starsystem names are created by starlog init_project:
+            path.strip('/').replace('/', '_').replace('-', '_').title()
+        So /home/GOD/carton_mcp → Starsystem_Home_God_Carton_Mcp
+
+        We reverse this by scanning known parent dirs for matching subdirectories.
+        """
+        slug = starsystem_name
+        if slug.startswith("Starsystem_"):
+            slug = slug[len("Starsystem_"):]
+
+        # Known parent directories where starsystems live
+        parent_dirs = ["/home/GOD", "/tmp", "/home/GOD/gnosys-plugin-v2"]
+
+        for parent in parent_dirs:
+            parent_slug = parent.strip("/").replace("/", "_").replace("-", "_").title()
+            if not slug.startswith(parent_slug):
+                continue
+            remainder = slug[len(parent_slug):]
+            if remainder.startswith("_"):
+                remainder = remainder[1:]
+            if not remainder:
+                continue
+
+            # Try to find matching subdir — check with underscores, hyphens, lowercase
+            # Original transform: .replace("-", "_").title()
+            # So "carton_mcp" → "Carton_Mcp", "sdna-repo" → "Sdna_Repo"
+            lower_remainder = remainder.lower()
+            candidates = [
+                lower_remainder,                              # carton_mcp
+                lower_remainder.replace("_", "-"),            # carton-mcp
+                lower_remainder.replace("_", "-", 1),        # try partial
+            ]
+            for candidate in candidates:
+                full_path = os.path.join(parent, candidate)
+                if os.path.isdir(full_path):
+                    return full_path
+
+            # Also try subdirectories of parent for partial matches
+            if os.path.isdir(parent):
+                for entry in os.listdir(parent):
+                    entry_path = os.path.join(parent, entry)
+                    if not os.path.isdir(entry_path):
+                        continue
+                    entry_slug = entry.replace("-", "_").title()
+                    if entry_slug == remainder or entry_slug == remainder.replace("_", ""):
+                        return entry_path
+
+        return None
+
+    # Strategy 1: Walk from HAS_DESCRIBES_COMPONENT up GIINT hierarchy
+    if describes:
+        try:
+            walk_query = """
+            MATCH (start:Wiki {n: $start_name})
+            MATCH path = (start)-[:PART_OF*1..6]->(ancestor:Wiki)
+            WHERE ancestor.n STARTS WITH 'Starsystem_'
+            RETURN ancestor.n as starsystem_name, ancestor.d as starsystem_desc
+            LIMIT 1
+            """
+            walk_result = utils.query_wiki_graph(walk_query, {"start_name": describes})
+            if walk_result.get("success") and walk_result.get("data"):
+                ss_name = walk_result["data"][0].get("starsystem_name", "")
+                ss_path = _resolve_starsystem_path(ss_name)
+                if ss_path:
+                    starsystem_paths.add(ss_path)
+        except Exception:
+            logger.exception("Failed to walk GIINT hierarchy for starsystem projection")
+
+    # Strategy 2: Direct HAS_STARSYSTEM relationship
+    if starsystem:
+        try:
+            ss_query = "MATCH (s:Wiki {n: $name}) RETURN s.d as desc"
+            ss_path = _resolve_starsystem_path(starsystem)
+            if ss_path:
+                starsystem_paths.add(ss_path)
+        except Exception:
+            logger.exception("Failed to resolve HAS_STARSYSTEM for projection")
+
+    # Project to each found starsystem
+    projected_to = []
+    for ss_path in starsystem_paths:
+        try:
+            target_skills_dir = Path(ss_path) / ".claude" / "skills" / skill_name
+            if target_skills_dir.exists():
+                # Already projected — update in place
+                shutil.copytree(str(skill_dir), str(target_skills_dir), dirs_exist_ok=True)
+            else:
+                target_skills_dir.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copytree(str(skill_dir), str(target_skills_dir))
+
+            # Create accompanying rule
+            rules_dir = Path(ss_path) / ".claude" / "rules"
+            rules_dir.mkdir(parents=True, exist_ok=True)
+            rule_content = f"# Use {skill_name}\n\nUse the `{skill_name}` skill when: {when_text or 'working in this domain'}.\n"
+            (rules_dir / f"use-{skill_name}.md").write_text(rule_content)
+
+            # Project GIINT hierarchy rule if not already present
+            hierarchy_rule_path = rules_dir / "giint-hierarchy.md"
+            if not hierarchy_rule_path.exists():
+                try:
+                    _project_giint_hierarchy_rule(utils, ss_path, rules_dir)
+                except Exception:
+                    logger.exception("Failed to project GIINT hierarchy rule to %s", ss_path)
+
+            projected_to.append(ss_path)
+            logger.info("Projected skill '%s' to starsystem %s", skill_name, ss_path)
+        except Exception:
+            logger.exception("Failed to project skill '%s' to %s", skill_name, ss_path)
+
+    if projected_to:
+        starsystem_msg = f" + projected to {len(projected_to)} starsystem(s): {', '.join(projected_to)}"
+
+    return f"Skill '{skill_name}' projected to {skill_dir}{chromadb_msg}{starsystem_msg}"
 
 
 # Dispatch table
@@ -733,23 +947,21 @@ def compile_memory_tier(tier_num: int = 0, shared_connection=None, active_hyperc
     from carton_mcp.carton_utils import CartOnUtils
 
     utils = CartOnUtils(shared_connection=shared_connection)
-    tier_name = f"Memory_Tier_{tier_num}"
 
     # Tier file paths
     tier_paths = {
         0: os.path.expanduser("~/.claude/projects/-home-GOD/memory/MEMORY.md"),
-        1: os.path.expanduser("~/.claude/rules/hyperclusters-archive.md"),
-        2: os.path.expanduser("~/.claude/rules/faint-memories-L1.md"),
+        1: os.path.expanduser("~/.claude/rules/mid_term_memory.md"),
+        2: os.path.expanduser("~/.claude/rules/long_term_memory.md"),
         3: os.path.expanduser("~/.claude/rules/faintest-memories-L2.md"),
     }
 
     if tier_num not in tier_paths:
         return f"Unknown tier: {tier_num}"
 
-    # Query all Hyperclusters at this tier with their relationships
+    # Query all Hyperclusters (no tier relationship needed)
     query = """
     MATCH (h:Wiki)-[:IS_A]->(ht:Wiki {n: "Hypercluster"})
-    MATCH (h)-[:PART_OF]->(tier:Wiki {n: $tier_name})
     OPTIONAL MATCH (h)-[:HAS_STATUS]->(status:Wiki)
     OPTIONAL MATCH (h)-[:HAS_GIINT_PROJECT]->(giint:Wiki)
     OPTIONAL MATCH (h)-[:HAS_PART]->(part:Wiki)
@@ -759,7 +971,7 @@ def compile_memory_tier(tier_num: int = 0, shared_connection=None, active_hyperc
            collect(DISTINCT part.n) as parts
     ORDER BY h.n
     """
-    result = utils.query_wiki_graph(query, {"tier_name": tier_name})
+    result = utils.query_wiki_graph(query, {})
 
     if not result.get("success"):
         return f"Query failed: {result}"
@@ -837,6 +1049,7 @@ def compile_memory_tier(tier_num: int = 0, shared_connection=None, active_hyperc
         MATCH (h2:Wiki)-[:IS_A]->(:Wiki {n: "Hypercluster"})
         WHERE h1 <> h2
         MATCH (h1)-[r]->(h2)
+        WHERE NOT type(r) IN ['IS_A', 'INSTANTIATES', 'INSTANTIATED_BY', 'PART_OF', 'HAS_PART', 'AUTO_RELATED_TO', 'HAS_STATUS', 'HAS_GIINT_PROJECT', 'HAS_WHY', 'HAS_DISPLAY_NAME', 'HAS_DONE_COLLECTION', 'HAS_INCLUSION_MAP', 'RELATES_TO']
         RETURN h1.n as source, type(r) as rel_type, h2.n as target
         ORDER BY h1.n, type(r)
         """
@@ -845,6 +1058,12 @@ def compile_memory_tier(tier_num: int = 0, shared_connection=None, active_hyperc
 
         lines.extend([
             "# MEMORY - GNO.SYS",
+            "",
+            "## Instructions (compiled — do not edit)",
+            "- **ALL task/concept work MUST go through Dragonbones entity chains** — emit ECs, let the hook compile to CartON, then run `python3 ~/.claude/scripts/project_memory.py` to update this file",
+            "- **NEVER manually write MEMORY.md** — this file is compiler output. Source of truth is CartON.",
+            "- **Task list → Dragonbones EC → CartON → compiler → MEMORY.md** — this is the only valid pipeline",
+            "- **Backup task list to `/tmp/heaven_data/task_list_backup.json`** before session end (Claude Code tasks are ephemeral)",
             "",
             "## UltraMap (HC-to-HC morphisms)",
             "",
@@ -864,27 +1083,10 @@ def compile_memory_tier(tier_num: int = 0, shared_connection=None, active_hyperc
         else:
             lines.append("*(No HC-to-HC morphisms yet — add DEPENDS_ON/BLOCKED_BY between Hyperclusters)*")
 
-        # Compact HC listing with status tags (for HCs not in morphism graph)
-        lines.extend(["", "### All Hyperclusters", ""])
-
-        all_hcs_sorted = sorted(active + blocked + protected, key=lambda h: h["name"])
-        for hc in all_hcs_sorted:
-            display_name = hc["name"].replace("Hypercluster_", "").replace("_", " ")
-            status = hc.get("status", "Active")
-            tag = ""
-            if status == "Blocked":
-                tag = " (BLOCKED)"
-            elif status == "Protected":
-                tag = " (PROTECTED)"
-            why = _clean_why(hc.get("description", "No description"))
-            lines.append(f"- **{display_name}**{tag}: {why}")
-
-        # Done collections (compact)
-        if done_collections:
-            lines.append("")
-            for coll in done_collections:
-                count = coll.get("member_count", 0)
-                lines.append(f"- ~~{coll['name']}~~ ({count} concepts, archived)")
+        # HC count summary (one line — full list is in CartON, not MEMORY.md)
+        total_hcs = len(active) + len(blocked) + len(protected)
+        lines.append(f"")
+        lines.append(f"**{total_hcs} hyperclusters** ({len(active)} active, {len(blocked)} blocked, {len(protected)} protected) — query CartON for full list")
 
         # === SECTION 2: Active Hypercluster (FULLY EXPANDED) ===
         # Show EVERY concept PART_OF the active HC's GIINT project
@@ -901,45 +1103,22 @@ def compile_memory_tier(tier_num: int = 0, shared_connection=None, active_hyperc
                     break
 
         if expanded_hc:
-            display_name = expanded_hc["name"].replace("Hypercluster_", "").replace("_", " ")
-            why = _clean_why(expanded_hc.get("description", "No description"))
-
-            lines.extend([
-                f"## Active Task: {display_name}",
-                f"Why: {why}",
-                "",
-            ])
-
-            # Query ALL concepts PART_OF the GIINT project (full expansion)
-            if expanded_giint:
-                expand_query = """
-                MATCH (c:Wiki)-[:PART_OF]->(g:Wiki {n: $giint_name})
-                RETURN c.n as name, substring(c.d, 0, 100) as snippet
-                ORDER BY c.n
-                """
-                expand_result = utils.query_wiki_graph(expand_query, {"giint_name": expanded_giint})
-                expand_data = expand_result.get("data", []) if expand_result.get("success") else []
-
-                if expand_data:
-                    lines.append(f"### Concepts ({len(expand_data)}):")
-                    for concept in expand_data:
-                        name = concept["name"]
-                        snippet = _clean_why(concept.get("snippet", "").strip())
-                        if snippet:
-                            lines.append(f"- **{name}**: {snippet}")
-                        else:
-                            lines.append(f"- **{name}**")
-                else:
-                    lines.append("*(No concepts PART_OF this GIINT project yet)*")
-            else:
-                # Fallback: show HAS_PART from the HC itself
-                parts = [p for p in expanded_hc.get("parts", []) if p]
-                if parts:
-                    lines.append(f"### Concepts ({len(parts)}):")
-                    for p in parts:
-                        lines.append(f"- {p}")
-                else:
-                    lines.append("*(No concepts in this hypercluster yet)*")
+            # Use ontology_graphs to get the FULL expanded metagraph (names only)
+            try:
+                from carton_mcp.ontology_graphs import get_expanded_metagraph, format_metagraph_for_memory
+                conn = shared_connection or utils._get_connection()[0]
+                metagraph = get_expanded_metagraph(expanded_hc["name"], conn)
+                metagraph_text = format_metagraph_for_memory(metagraph)
+                lines.append(metagraph_text)
+            except Exception as e:
+                # Fallback: minimal display
+                display_name = expanded_hc["name"].replace("Hypercluster_", "").replace("_", " ")
+                why = _clean_why(expanded_hc.get("description", "No description"))
+                lines.extend([
+                    f"## Active Task: {display_name}",
+                    f"Why: {why}",
+                    f"*(Metagraph error: {e})*",
+                ])
         else:
             lines.extend([
                 "## Active Task: None",
@@ -947,54 +1126,86 @@ def compile_memory_tier(tier_num: int = 0, shared_connection=None, active_hyperc
             ])
 
     elif tier_num == 1:
-        # Tier 1: Completed GIINT Projects with hierarchy
-        tier1_query = """
-        MATCH (h:Wiki)-[:IS_A]->(:Wiki {n: "Hypercluster"})
-        MATCH (h)-[:PART_OF]->(:Wiki {n: $tier_name})
-        MATCH (h)-[:HAS_GIINT_PROJECT]->(giint:Wiki)
-        OPTIONAL MATCH (giint)-[:HAS_FEATURE]->(f:Wiki)
-        OPTIONAL MATCH (f)-[:HAS_COMPONENT]->(c:Wiki)
-        OPTIONAL MATCH (c)-[:HAS_DELIVERABLE]->(d:Wiki)
-        OPTIONAL MATCH (d)-[:HAS_TASK]->(t:Wiki)
-        OPTIONAL MATCH (giint)-[:HAS_PART]->(im:Wiki)
-        WHERE im.n STARTS WITH 'Inclusion_Map_'
-        RETURN h.n as name, h.d as description, giint.n as giint_project,
-               collect(DISTINCT f.n) as features,
-               collect(DISTINCT c.n) as components,
-               collect(DISTINCT d.n) as deliverables,
-               collect(DISTINCT t.n) as tasks,
-               collect(DISTINCT im.n) as inclusion_maps
-        ORDER BY h.n
-        """
-        tier1_result = utils.query_wiki_graph(tier1_query, {"tier_name": tier_name})
-        tier1_data = tier1_result.get("data", []) if tier1_result.get("success") else []
-
+        # MTM: Expanded active starsystem (minus the task HC which is on MEMORY.md)
+        # Shows all collections in the current starsystem so agent knows what context is available
         lines.extend([
-            "# Hyperclusters Archive - Completed GIINT Projects",
+            "# Mid-Term Memory (MTM)",
             "",
-            "<!-- Auto-compiled by compile_memory_tier(1) -->",
-            "<!-- Done hyperclusters with complete GIINT hierarchies -->",
+            "Collection name pointers for active starsystem HCs.",
+            "Use `activate_collection()` when you need one.",
             "",
+            "## Active Starsystem HC Collections",
         ])
 
-        for entry in tier1_data:
-            giint_name = entry.get("giint_project", "Unknown")
-            collection_name = f"Done_{giint_name}_Collection"
-            features = [x for x in entry.get("features", []) if x]
-            components = [x for x in entry.get("components", []) if x]
-            deliverables = [x for x in entry.get("deliverables", []) if x]
-            tasks = [x for x in entry.get("tasks", []) if x]
-            inclusion_maps = [x for x in entry.get("inclusion_maps", []) if x]
+        # Find the active HC's starsystem, then list all collections in it
+        active_hc_name = None
+        if not active_hypercluster:
+            active_hc_file = Path("/tmp/active_hypercluster.txt")
+            if active_hc_file.exists():
+                active_hc_name = active_hc_file.read_text().strip()
+        else:
+            active_hc_name = active_hypercluster
 
-            lines.append(f"## {giint_name}")
-            lines.append(f"Collection: {collection_name}")
-            lines.append("Hierarchy:")
-            lines.append(f"  - Features: {', '.join(features) if features else 'None'}")
-            lines.append(f"  - Components: {', '.join(components) if components else 'None'}")
-            lines.append(f"  - Deliverables: {', '.join(deliverables) if deliverables else 'None'}")
-            lines.append(f"  - Tasks: {', '.join(tasks) if tasks else 'None'}")
-            lines.append(f"  - Inclusion_Maps: {', '.join(inclusion_maps) if inclusion_maps else 'None'}")
-            lines.append("")
+        if active_hc_name:
+            # Get all collections that share the same starsystem as the active HC
+            mtm_query = """
+            MATCH (c:Wiki)-[:IS_A]->(:Wiki {n: "Carton_Collection"})
+            WHERE NOT c.n STARTS WITH 'Done_'
+            AND NOT c.n STARTS WITH 'Mcp__'
+            AND NOT c.n STARTS WITH 'Starsystem_Cascade'
+            AND c.d IS NOT NULL AND c.d <> ''
+            RETURN c.n as name, c.d as description
+            ORDER BY c.n
+            LIMIT 50
+            """
+            mtm_result = utils.query_wiki_graph(mtm_query, {})
+            mtm_data = mtm_result.get("data", []) if mtm_result.get("success") else []
+
+            for entry in mtm_data:
+                name = entry.get("name", "")
+                desc = entry.get("description", "")
+                # Clean wiki links and truncate
+                short_desc = _clean_why(desc.split('\n')[0][:80]) if desc else ""
+                lines.append(f"- {name} ({short_desc})")
+        else:
+            lines.append("*(No active hypercluster set)*")
+
+        lines.append("")
+
+    elif tier_num == 2:
+        # LTM: All starsystem names — the bird's eye view
+        lines.extend([
+            "# Long-Term Memory (LTM)",
+            "",
+            "Use `activate_collection()` to load any of these.",
+            "",
+            "## 🚀 Starsystems",
+        ])
+
+        # Query all activatable collections — IS_A any collection type
+        # This is the bird's eye view of everything the agent can load
+        ltm_query = """
+        MATCH (c:Wiki)-[:IS_A]->(t:Wiki)
+        WHERE t.n IN ['Carton_Collection', 'Local_Collection', 'Identity_Collection', 'Hypercluster_Collection']
+        AND NOT c.n STARTS WITH 'Done_'
+        AND NOT c.n STARTS WITH 'Starsystem_Cascade'
+        AND NOT c.n STARTS WITH 'Starsystem_Actualization'
+        AND NOT c.n STARTS WITH 'Mcp__'
+        AND NOT c.n = 'Carton_Collection'
+        AND NOT c.n = 'Local_Collection'
+        AND NOT c.n = 'Identity_Collection'
+        AND NOT c.n = 'Hypercluster_Collection'
+        RETURN DISTINCT c.n as name
+        ORDER BY c.n
+        """
+        ltm_result = utils.query_wiki_graph(ltm_query, {})
+        ltm_data = ltm_result.get("data", []) if ltm_result.get("success") else []
+
+        for entry in ltm_data:
+            name = entry.get("name", "")
+            lines.append(f"- {name}")
+
+        lines.append("")
 
     # Write the compiled file
     output_path = tier_paths[tier_num]
@@ -1010,184 +1221,41 @@ def compile_memory_tier(tier_num: int = 0, shared_connection=None, active_hyperc
 
 
 def prune_memory_tier(tier_num: int = 0, dry_run: bool = False, compress_all: bool = False, shared_connection=None) -> str:
-    """
-    Prune completed hyperclusters from a memory tier to the next tier.
-
-    Pruning is a graph mutation:
-    1. Find Hyperclusters with Done Collections (or all if compress_all=True)
-    2. Move PART_OF from Memory_Tier_N to Memory_Tier_{N+1}
-    3. Recompile both tier files
-    4. Auto-cascade if next tier exceeds 100 lines
-
-    Args:
-        tier_num: Which tier to prune from (default: 0)
-        dry_run: If True, show what would be done without doing it
-        compress_all: If True, move ALL hyperclusters (for cascade compression)
-        shared_connection: Optional shared Neo4j connection for reads
-    """
-    from carton_mcp.carton_utils import CartOnUtils
-
-    utils = CartOnUtils(shared_connection=shared_connection)
-    tier_name = f"Memory_Tier_{tier_num}"
-    next_tier = tier_num + 1
-    next_tier_name = f"Memory_Tier_{next_tier}"
-
-    if next_tier > 3:
-        return f"Cannot prune beyond Tier 3"
-
-    # Find candidates to move
-    if compress_all:
-        find_query = """
-        MATCH (h:Wiki)-[:IS_A]->(:Wiki {n: "Hypercluster"})
-        MATCH (h)-[:PART_OF]->(:Wiki {n: $tier_name})
-        RETURN h.n as hypercluster
-        """
-        result = utils.query_wiki_graph(find_query, {"tier_name": tier_name})
-    else:
-        find_query = """
-        MATCH (h:Wiki)-[:IS_A]->(:Wiki {n: "Hypercluster"})
-        MATCH (h)-[:PART_OF]->(:Wiki {n: $tier_name})
-        MATCH (h)-[:HAS_GIINT_PROJECT]->(giint:Wiki)
-        MATCH (done:Wiki)-[:IS_A]->(:Wiki {n: "Carton_Collection"})
-        WHERE done.n = "Done_" + giint.n + "_Collection"
-        RETURN h.n as hypercluster, giint.n as giint_project
-        """
-        result = utils.query_wiki_graph(find_query, {"tier_name": tier_name})
-
-    if not result.get("success"):
-        return f"Query failed: {result}"
-
-    candidates = result.get("data", [])
-    if not candidates:
-        action = "compress" if compress_all else "prune"
-        return f"No hyperclusters to {action} at {tier_name}"
-
-    names = [c["hypercluster"] for c in candidates]
-
-    if dry_run:
-        action = "compress" if compress_all else "prune"
-        return f"[DRY RUN] Would {action} {len(names)} from {tier_name} to {next_tier_name}:\n" + \
-               "\n".join(f"  - {n}" for n in names)
-
-    # Move PART_OF edges in Neo4j (write operation — needs direct driver)
-    from neo4j import GraphDatabase
-    neo4j_uri = os.environ.get("NEO4J_URI", "bolt://host.docker.internal:7687")
-    neo4j_user = os.environ.get("NEO4J_USER", "neo4j")
-    neo4j_password = os.environ.get("NEO4J_PASSWORD", "password")
-
-    driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_user, neo4j_password))
-    try:
-        with driver.session() as session:
-            session.run("""
-                MATCH (new_tier:Wiki {n: $new_tier})
-                WITH new_tier
-                UNWIND $names AS hc_name
-                MATCH (h:Wiki {n: hc_name})-[r:PART_OF]->(:Wiki {n: $old_tier})
-                DELETE r
-                WITH h, new_tier
-                MERGE (h)-[:PART_OF]->(new_tier)
-            """, names=names, old_tier=tier_name, new_tier=next_tier_name)
-    finally:
-        driver.close()
-
-    # Recompile both tiers
-    old_result = compile_memory_tier(tier_num, shared_connection=shared_connection)
-    new_result = compile_memory_tier(next_tier, shared_connection=shared_connection)
-
-    # Auto-cascade if next tier exceeds 100 lines
-    tier_paths = {
-        0: os.path.expanduser("~/.claude/projects/-home-GOD/memory/MEMORY.md"),
-        1: os.path.expanduser("~/.claude/rules/hyperclusters-archive.md"),
-        2: os.path.expanduser("~/.claude/rules/faint-memories-L1.md"),
-        3: os.path.expanduser("~/.claude/rules/faintest-memories-L2.md"),
-    }
-    cascade_msg = ""
-    next_path = tier_paths.get(next_tier)
-    if next_path and next_tier < 3 and Path(next_path).exists():
-        line_count = len(Path(next_path).read_text().split("\n"))
-        if line_count > 100:
-            cascade_msg = f"\n  Tier {next_tier} at {line_count} lines — cascading compression..."
-            cascade_result = prune_memory_tier(next_tier, compress_all=True, shared_connection=shared_connection)
-            cascade_msg += f"\n  {cascade_result}"
-
-    action = "Compressed" if compress_all else "Pruned"
-    return (
-        f"{action} {len(names)} hyperclusters: {tier_name} -> {next_tier_name}\n"
-        f"  {old_result}\n"
-        f"  {new_result}"
-        f"{cascade_msg}"
-    )
+    """DEPRECATED — Memory tiers are abstract file labels, not CartON relationships. No pruning needed."""
+    return "prune_memory_tier is deprecated. Memory tiers are file labels, not graph relationships."
 
 
 def memory_tier_stats(shared_connection=None) -> str:
-    """
-    Show memory tier system status from CartON graph.
-    All data sourced from Neo4j — no text parsing.
-    """
+    """Show memory system status. Tiers are file labels, not graph relationships."""
     from carton_mcp.carton_utils import CartOnUtils
 
     utils = CartOnUtils(shared_connection=shared_connection)
 
     tier_paths = {
         0: os.path.expanduser("~/.claude/projects/-home-GOD/memory/MEMORY.md"),
-        1: os.path.expanduser("~/.claude/rules/hyperclusters-archive.md"),
-        2: os.path.expanduser("~/.claude/rules/faint-memories-L1.md"),
-        3: os.path.expanduser("~/.claude/rules/faintest-memories-L2.md"),
+        1: os.path.expanduser("~/.claude/rules/mid_term_memory.md"),
+        2: os.path.expanduser("~/.claude/rules/long_term_memory.md"),
     }
-    tier_labels = {0: "MEMORY.md", 1: "L0 Archive", 2: "L1 Faint", 3: "L2 Faintest"}
+    tier_labels = {0: "MEMORY.md (Tier 0)", 1: "MTM (Tier 1)", 2: "LTM (Tier 2)"}
 
     lines = []
     lines.append("=" * 60)
-    lines.append("MEMORY SYSTEM STATUS (CartON Graph-Driven)")
+    lines.append("MEMORY SYSTEM STATUS")
     lines.append("=" * 60)
 
-    for tier_num in range(4):
-        tier_name = f"Memory_Tier_{tier_num}"
-        count_query = """
-        MATCH (h:Wiki)-[:IS_A]->(:Wiki {n: "Hypercluster"})
-        MATCH (h)-[:PART_OF]->(:Wiki {n: $tier_name})
-        RETURN count(h) as count
-        """
-        result = utils.query_wiki_graph(count_query, {"tier_name": tier_name})
-        count = 0
-        if result.get("success") and result.get("data"):
-            count = result["data"][0].get("count", 0)
+    # Total HCs
+    hc_query = "MATCH (h:Wiki)-[:IS_A]->(:Wiki {n: 'Hypercluster'}) RETURN count(h) as count"
+    hc_result = utils.query_wiki_graph(hc_query, {})
+    hc_count = hc_result["data"][0].get("count", 0) if hc_result.get("success") and hc_result.get("data") else 0
+    lines.append(f"\nTotal Hyperclusters: {hc_count}")
 
+    # File line counts
+    for tier_num in range(3):
         path = tier_paths.get(tier_num)
         file_lines = 0
         if path and Path(path).exists():
             file_lines = len(Path(path).read_text().split("\n"))
-
-        status = "NEEDS COMPRESSION" if file_lines > 100 else "ok"
-        lines.append(f"\nTier {tier_num} ({tier_labels[tier_num]}): {count} hyperclusters, {file_lines} lines [{status}]")
-
-    # Done collections count
-    done_query = """
-    MATCH (c:Wiki)-[:IS_A]->(:Wiki {n: "Carton_Collection"})
-    WHERE c.n STARTS WITH "Done_"
-    RETURN count(c) as count
-    """
-    done_result = utils.query_wiki_graph(done_query, {})
-    done_count = 0
-    if done_result.get("success") and done_result.get("data"):
-        done_count = done_result["data"][0].get("count", 0)
-
-    # Find prunable (done hyperclusters at Tier 0)
-    prunable_query = """
-    MATCH (h:Wiki)-[:IS_A]->(:Wiki {n: "Hypercluster"})
-    MATCH (h)-[:PART_OF]->(:Wiki {n: "Memory_Tier_0"})
-    MATCH (h)-[:HAS_GIINT_PROJECT]->(giint:Wiki)
-    MATCH (done:Wiki)-[:IS_A]->(:Wiki {n: "Carton_Collection"})
-    WHERE done.n = "Done_" + giint.n + "_Collection"
-    RETURN h.n as name
-    """
-    prunable_result = utils.query_wiki_graph(prunable_query, {})
-    prunable = prunable_result.get("data", []) if prunable_result.get("success") else []
-
-    lines.append(f"\nDone Collections: {done_count}")
-    lines.append(f"Prunable (done at Tier 0): {len(prunable)}")
-    for p in prunable:
-        lines.append(f"  - {p['name']}")
+        lines.append(f"{tier_labels[tier_num]}: {file_lines} lines")
 
     lines.append("\n" + "=" * 60)
     return "\n".join(lines)

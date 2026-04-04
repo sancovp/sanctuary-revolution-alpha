@@ -1,5 +1,5 @@
 {
-  "nav_tree_order": ["sancrev", "gnosys", "skills", "home"],
+  "nav_tree_order": ["sancrev", "gnosys", "skills", "home", "agent_management", "automations"],
   "coordinate_mapping": {
     "0": "sancrev",
     "0.1": "game",
@@ -105,13 +105,16 @@
     "5": "planetside",
     "5.1": "planetside_home",
     "6": "starport_landing",
-    "6.1": "landing_home"
+    "6.1": "landing_home",
+    "7": "agent_management"
   },
   "family_priorities": {
     "sancrev": 1,
     "gnosys": 2,
     "skills": 3,
-    "home": 0
+    "home": 0,
+    "agent_management": 7,
+    "automations": 8
   },
   "description": "Navigation configuration for Sanctuary Revolution (Game + GNOSYS + Skills + Crystal Forest HOME)",
   "version": "2.0"

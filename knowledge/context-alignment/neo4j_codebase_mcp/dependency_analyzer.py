@@ -1546,6 +1546,42 @@ class CrossFileDependencyAnalyzer:
 
         return self.external_dependencies
 
+    def _has_kwargs_passthrough(self, symbol: Dict[str, Any]) -> bool:
+        """Check if a function/method has **kwargs in its signature.
+
+        If it does, it's a proxy/passthrough — keep drilling.
+        If it doesn't (fully typed args), it owns its interface — stop here.
+        Classes always get drilled (their __init__ may passthrough).
+        """
+        if symbol.get("type") == "class":
+            return True  # always drill into classes
+
+        file_path = Path(symbol["file"])
+        tree = self._file_trees.get(file_path)
+        if tree is None:
+            parsed = self._parse_python_file(file_path)
+            if not parsed:
+                return False
+            _, tree = parsed
+
+        start_line = int(symbol["line_range"][0])
+        node = self._find_node_by_name_and_line(tree, symbol["name"], start_line)
+        if node is None:
+            return False
+
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            return False
+
+        # Check for **kwargs in the function signature
+        if node.args.kwarg is not None:
+            return True
+
+        # Check for *args too — also a passthrough signal
+        if node.args.vararg is not None:
+            return True
+
+        return False
+
     def analyze(self) -> Dict[str, Any]:
         """Analyze the target and return the results."""
         dependencies = self.collect_dependencies()
@@ -1573,6 +1609,108 @@ class CrossFileDependencyAnalyzer:
             },
         }
 
+    def analyze_recursive(self, max_depth: int = 5) -> Dict[str, Any]:
+        """Analyze the target and recursively drill dependencies.
+
+        Recursion rule:
+        - If a dependency has **kwargs or *args → it's a proxy, drill deeper
+        - If a dependency has fully typed args → it owns its interface, stop
+        - Classes always get drilled (check __init__)
+        - max_depth prevents infinite loops
+
+        Returns the same structure as analyze() but with deeper dependency coverage.
+        """
+        result = self.analyze()
+        if result.get("status") != "found" or max_depth <= 0:
+            return result
+
+        all_deps = list(result.get("dependencies", []))
+        all_file_deps = list(result.get("file_dependencies", []))
+        all_inferred = list(result.get("inferred_dependencies", []))
+        all_config = list(result.get("config_lineage", []))
+
+        seen_targets: Set[Tuple[str, str]] = set()  # (name, file) to avoid cycles
+        seen_targets.add((self.target_name, str(self.target_file)))
+
+        def _dep_key(dep: Dict[str, Any]) -> Tuple[str, str]:
+            return (dep["name"], dep["file"])
+
+        queue: List[Tuple[Dict[str, Any], int]] = [
+            (dep, 1) for dep in all_deps
+        ]
+
+        while queue:
+            dep, depth = queue.pop(0)
+            if depth > max_depth:
+                continue
+
+            dep_key = _dep_key(dep)
+            if dep_key in seen_targets:
+                continue
+            seen_targets.add(dep_key)
+
+            # Only drill if this dep is a kwargs passthrough
+            symbol = {
+                "name": dep["name"],
+                "type": dep["type"],
+                "file": dep["file"],
+                "line_range": dep["line_range"],
+            }
+            if not self._has_kwargs_passthrough(symbol):
+                continue  # owns its interface, stop here
+
+            # Create sub-analyzer for this dependency
+            sub = CrossFileDependencyAnalyzer(
+                target_name=dep["name"],
+                search_dirs=[str(d) for d in self.search_dirs],
+                include_same_file=self.include_same_file,
+                target_scope=self.target_scope,
+                include_external_packages=self.include_external_packages,
+                external_depth=self.external_depth,
+            )
+            # Share the already-built indices
+            sub._python_files = self._python_files
+            sub._file_trees = self._file_trees
+            sub._file_codes = self._file_codes
+            sub._symbols_by_name = self._symbols_by_name
+            sub._symbols_by_full_name = self._symbols_by_full_name
+            sub._external_modules_indexed = self._external_modules_indexed
+            sub._external_files_indexed = self._external_files_indexed
+
+            sub_result = sub.analyze()
+            if sub_result.get("status") != "found":
+                continue
+
+            for sub_dep in sub_result.get("dependencies", []):
+                if _dep_key(sub_dep) not in seen_targets:
+                    all_deps.append(sub_dep)
+                    queue.append((sub_dep, depth + 1))
+
+            all_file_deps.extend(sub_result.get("file_dependencies", []))
+            all_inferred.extend(sub_result.get("inferred_dependencies", []))
+            all_config.extend(sub_result.get("config_lineage", []))
+
+        # Dedupe all accumulated results
+        dep_seen: Set[Tuple[str, int, str, str]] = set()
+        deduped_deps: List[Dict[str, Any]] = []
+        for dep in all_deps:
+            key = (dep["file"], dep["line_range"][0], dep["name"], dep["type"])
+            if key not in dep_seen:
+                dep_seen.add(key)
+                deduped_deps.append(dep)
+
+        result["dependencies"] = sorted(
+            deduped_deps,
+            key=lambda d: (-float(d.get("confidence", 0)), d["file"], d["line_range"][0]),
+        )
+        result["file_dependencies"] = all_file_deps
+        result["inferred_dependencies"] = all_inferred
+        result["config_lineage"] = all_config
+        result["analysis_options"]["recursive"] = True
+        result["analysis_options"]["max_depth"] = max_depth
+
+        return result
+
 
 def analyze_dependencies(
     target_name: str,
@@ -1583,6 +1721,8 @@ def analyze_dependencies(
     include_same_file: Optional[bool] = False,
     include_external_packages: Optional[bool] = True,
     external_depth: Optional[int] = 1,
+    recursive: Optional[bool] = False,
+    recursive_depth: Optional[int] = 5,
 ) -> Dict[str, Any]:
     """Analyze dependencies for a given function or class name.
 
@@ -1610,7 +1750,10 @@ def analyze_dependencies(
         include_external_packages=bool(include_external_packages),
         external_depth=int(external_depth or 0),
     )
-    result = analyzer.analyze()
+    if recursive:
+        result = analyzer.analyze_recursive(max_depth=int(recursive_depth or 5))
+    else:
+        result = analyzer.analyze()
 
     if contextualizer:
         result["context"] = {}
