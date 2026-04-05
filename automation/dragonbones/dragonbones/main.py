@@ -39,6 +39,12 @@ def main():
     silenced = not unsilenced
     short_response = len(text) < 100
 
+    # Escape clause: response ending with ONLY 🔍 or 👍 = "I'm showing the user something
+    # via tmux" or "I'm acknowledging a system command". Skip all validation.
+    last_line = text.strip().split("\n")[-1].strip() if text.strip() else ""
+    if last_line in ("🔍", "👍"):
+        sys.exit(0)
+
     # Persist *Logs to CartON every turn
     if not short_response:
         try:
