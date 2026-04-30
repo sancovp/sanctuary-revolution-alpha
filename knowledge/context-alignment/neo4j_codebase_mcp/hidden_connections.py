@@ -47,7 +47,11 @@ MULTI_WRITE_SIGNALS = {
 }
 
 ANNOTATION_RE = re.compile(r'#\s*(?:TRIGGERS|CONNECTS_TO|HIDDEN_DEP)\s*:', re.IGNORECASE)
-SKIP_DIRS = {"__pycache__", ".git", "node_modules", ".egg-info", "build", "dist", ".mypy_cache", "repos"}
+SKIP_DIRS = {
+    "__pycache__", ".git", "node_modules", ".egg-info", "build", "dist",
+    ".mypy_cache", "repos", "tests", "test", "demo", "benchmark",
+    "docs", "venv", "env", ".pytest_cache",
+}
 
 
 def _is_annotated(lines, line_idx):
@@ -129,6 +133,8 @@ def detect_hidden_connections(repo_root):
     for py_file in sorted(root.rglob("*.py")):
         if any(skip in py_file.parts for skip in SKIP_DIRS):
             continue
+        if py_file.name.startswith("test_"):
+            continue
         file_results = scan_file(py_file, root)
         for cat, items in file_results.items():
             all_results[cat].extend(items)
@@ -186,6 +192,14 @@ def store_hidden_connections_neo4j(result, repo_name, neo4j_uri, neo4j_user, neo
                     s.run("MATCH (f:File {path: $p}) MERGE (m:MCPTool {server:$sv, action:$ac}) "
                           "MERGE (f)-[:HIDDEN_CONNECTION {type:'mcp_ref', line:$l, annotated:$a, repo:$r}]->(m)",
                           p=rel, sv=item["server"], ac=item["action"], l=ln, a=ann, r=repo_name)
+                elif cat == "cross_import":
+                    s.run("MATCH (f:File {path: $p}) MERGE (pkg:Package {name: $pkg}) "
+                          "MERGE (f)-[:HIDDEN_CONNECTION {type:'cross_import', line:$l, annotated:$a, repo:$r}]->(pkg)",
+                          p=rel, pkg=item["imports"], l=ln, a=ann, r=repo_name)
+                elif cat == "multi_write":
+                    s.run("MATCH (f:File {path: $p}) MERGE (st:Store {name: $store}) "
+                          "MERGE (f)-[:HIDDEN_CONNECTION {type:'multi_write', line:$l, annotated:$a, repo:$r, signal:$sig}]->(st)",
+                          p=rel, store=item["store"], l=ln, a=ann, r=repo_name, sig=item["signal"])
                 edges += 1
 
         s.run("MATCH (r:Repository {name: $repo}) "

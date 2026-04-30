@@ -518,7 +518,7 @@ class DirectNeo4jExtractor:
         exclude_dirs = {
             'tests', 'test', '__pycache__', '.git', 'venv', 'env',
             'node_modules', 'build', 'dist', '.pytest_cache', 'docs',
-            'examples', 'example', 'demo', 'benchmark'
+            'demo', 'benchmark'
         }
         
         for root, dirs, files in os.walk(repo_path):
