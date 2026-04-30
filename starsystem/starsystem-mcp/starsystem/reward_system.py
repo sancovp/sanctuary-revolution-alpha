@@ -795,6 +795,39 @@ def _get_giint_hierarchy_completeness(path: Path) -> float:
         return 0.0
 
 
+def _get_deepening_score(path: Path) -> dict:
+    """Progressive deepening score (Design_Giint_Progressive_Deepening_Levels).
+    L0=_Unnamed, L1=named, L3=has deliverables. Returns score + level counts."""
+    try:
+        path_slug = str(path).strip("/").replace("/", "_").replace("-", "_").title()
+        ss = f"Starsystem_{path_slug}"
+        cypher = """
+        MATCH (s:Wiki {n: $ss})
+        OPTIONAL MATCH (c:Wiki)-[:PART_OF*1..5]->(s)
+            WHERE c.n STARTS WITH 'Giint_Component_'
+        WITH c WHERE c IS NOT NULL
+        OPTIONAL MATCH (d:Wiki)-[:PART_OF]->(c)
+            WHERE d.n STARTS WITH 'Giint_Deliverable_' AND NOT d.n CONTAINS '_Unnamed'
+        RETURN c.n AS name, c.n CONTAINS '_Unnamed' AS is_unnamed, count(d) > 0 AS has_del
+        """
+        result = _carton_query(cypher, {"ss": ss})
+        if not result or not result.get("success") or not result.get("data"):
+            return {"score": 0.0, "levels": {0: 0, 1: 0, 3: 0}, "total": 0}
+        levels = {0: 0, 1: 0, 3: 0}
+        for row in result["data"]:
+            if not row.get("name"): continue
+            if row.get("is_unnamed"): levels[0] += 1
+            elif row.get("has_del"): levels[3] += 1
+            else: levels[1] += 1
+        total = sum(levels.values())
+        if total == 0: return {"score": 0.0, "levels": levels, "total": 0}
+        avg = sum(lvl * cnt for lvl, cnt in levels.items()) / total
+        return {"score": round(avg / 3.0, 3), "levels": levels, "total": total}
+    except Exception as e:
+        logger.warning(f"Deepening score failed: {e}")
+        return {"score": 0.0, "levels": {0: 0, 1: 0, 3: 0}, "total": 0}
+
+
 def _get_emanation_level_per_component(path: Path, complexity_score: float = None) -> float:
     """
     Query CartON for skills that DESCRIBES components in this STARSYSTEM.
@@ -1235,6 +1268,7 @@ def get_fleet_health(paths: List[str]) -> Dict[str, Dict[str, Any]]:
             complexity = complexity_result["score"]
             arch = _get_architecture_score(path_obj)
             hidden_deps = _get_hidden_deps_score(path_obj)
+            deepening = _get_deepening_score(path_obj)
             smells = _get_cached_smell_score(p)
             giint = _compute_giint_from_kg(kg)
             inter = _compute_inter_from_kg(kg)
@@ -1263,6 +1297,7 @@ def get_fleet_health(paths: List[str]) -> Dict[str, Dict[str, Any]]:
                     "smells": smells,
                     "architecture": arch,
                     "hidden_deps": hidden_deps,
+                    "deepening": deepening,
                     "complexity": complexity,
                     "complexity_details": complexity_result,
                     "kg_depth": kg_depth,

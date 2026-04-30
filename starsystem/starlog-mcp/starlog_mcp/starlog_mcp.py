@@ -77,7 +77,13 @@ def _get_observation_deck(path: str) -> str:
         cl = cd.get("level", "?") if cd else "?"
         hd = c.get('hidden_deps', None)
         hd_str = f" | 🔗 Hidden: {hd:.2f}" if hd is not None else ""
-        deck_parts.append(f"   👃 Smells: {c['smells']:.2f} | 🏛️ Arch: {c['architecture']:.2f} | 📊 L{cl}/6 | 🧠 KG: {c['kg_depth']:.2f}{hd_str}")
+        dp = c.get('deepening')
+        if dp and isinstance(dp, dict):
+            dl = dp.get('levels', {})
+            dp_str = f" | 📐 Depth: L0:{dl.get(0,0)} L1:{dl.get(1,0)} L3:{dl.get(3,0)} ({dp['score']:.0%})"
+        else:
+            dp_str = ""
+        deck_parts.append(f"   👃 Smells: {c['smells']:.2f} | 🏛️ Arch: {c['architecture']:.2f} | 📊 L{cl}/6 | 🧠 KG: {c['kg_depth']:.2f}{hd_str}{dp_str}")
 
         # Detailed complexity breakdown
         if cd and cd.get("met"):
