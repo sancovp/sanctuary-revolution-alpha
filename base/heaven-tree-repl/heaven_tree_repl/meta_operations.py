@@ -953,8 +953,9 @@ class MetaOperationsMixin:
             
             # Import registry functions
             sys.path.insert(0, '/home/GOD/brain-agent')
+            # PARALLEL: uses heaven_base.registry — should migrate to CartON/YOUKNOW
             from heaven_base.tools.registry_tool import registry_util_func
-            
+
             # List all brains from registry
             result = registry_util_func(operation="list", registry_name="brain_configs")
             
@@ -979,8 +980,9 @@ class MetaOperationsMixin:
             
             # Import registry functions
             sys.path.insert(0, '/home/GOD/brain-agent')
+            # PARALLEL: uses heaven_base.registry — should migrate to CartON/YOUKNOW
             from heaven_base.tools.registry_tool import registry_util_func
-            
+
             # Remove brain from registry
             result = registry_util_func(
                 operation="remove",

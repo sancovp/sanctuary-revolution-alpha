@@ -13,7 +13,7 @@ authors = [
     {name = "Isaac Wostrel-Rubin", email = "isaac@sanctuary.systems"}
 ]
 dependencies = [
-    "fastmcp>=2.0.0"
+    "fastmcp==2.9.0"
 ]
 
 [project.scripts]

@@ -104,6 +104,7 @@ def test_good_side_effects():
     If your function writes to a file or database,
     verify that write actually occurred.
     """
+    # CONNECTS_TO: /tmp/test_output.txt (write) — test output verification
     output_path = "/tmp/test_output.txt"
 
     write_report(data, output_path)

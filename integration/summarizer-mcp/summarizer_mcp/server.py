@@ -1684,6 +1684,7 @@ def equip_frame(frame: str) -> str:
     """
     try:
         # Get frames path from env or use default
+        # CONNECTS_TO: /tmp/heaven_data/carton_frames.json (read) — also accessed by add_frame tool
         frames_path = os.getenv('CARTON_FRAMES_PATH', '/tmp/heaven_data/carton_frames.json')
         frames_file = Path(frames_path)
 
@@ -1808,6 +1809,7 @@ def add_frame(frame_name: str, description: str) -> str:
         Prompt instructing LLM to add frame to frames file
     """
     frames_path = os.getenv('CARTON_FRAMES_PATH', '/tmp/heaven_data/carton_frames.json')
+    # CONNECTS_TO: /tmp/heaven_data/carton_frames.json (read) — also accessed by get_observation_prompt
 
     return f"""[ADD FRAME MODE]
 I need you to add a new observation frame to the frames file.

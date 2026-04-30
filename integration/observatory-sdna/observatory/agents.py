@@ -108,7 +108,9 @@ def _get_researcher_mcp_servers():
 # Phase SDNAC factory — one SDNAC per scientific method phase
 # =============================================================================
 
+# CONNECTS_TO: /tmp/heaven_data/observatory/researcher_memory.md (read) — also written by researcher_mcp.py
 RESEARCHER_MEMORY_PATH = "/tmp/heaven_data/observatory/researcher_memory.md"
+# CONNECTS_TO: /tmp/heaven_data/observatory/researcher_prior_concepts.md (read)
 RESEARCHER_CONCEPTS_PATH = "/tmp/heaven_data/observatory/researcher_prior_concepts.md"
 
 
@@ -244,6 +246,7 @@ def _build_grug_dispatch_link():
         logger.info("Dispatching to Grug: %s", task_for_grug[:200])
 
         grug_result = None
+        # TRIGGERS: grug_server:8081/execute via HTTP POST
         endpoints = ["http://repo-lord:8081/execute", "http://localhost:8081/execute"]
 
         for endpoint in endpoints:

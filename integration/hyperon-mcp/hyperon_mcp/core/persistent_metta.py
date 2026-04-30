@@ -11,6 +11,7 @@ import threading
 import logging
 
 try:
+# PARALLEL: uses heaven_base.registry — should migrate to CartON/YOUKNOW
     from heaven_base.registry.registry_service import RegistryService
     REGISTRY_AVAILABLE = True
 except ImportError:
@@ -42,6 +43,7 @@ class PersistentMeTTa:
 
         # Setup registry persistence
         if REGISTRY_AVAILABLE:
+            # PARALLEL: uses heaven_base.registry — should migrate to CartON/YOUKNOW
             self.registry = RegistryService()
             self.registry_name = f"hyperon_metta_{name}"
             self.registry.create_registry(self.registry_name)

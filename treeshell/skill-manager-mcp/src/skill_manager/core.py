@@ -49,12 +49,8 @@ class SkillManager:
         self._persona_file = self.skills_dir / "_active_persona.json"
         self._load_persona_state()
 
-        # ChromaDB for RAG
-        chroma_path = chroma_dir or os.path.join(heaven_data, "skill_chroma")
-        self.chroma_client = chromadb.PersistentClient(
-            path=chroma_path,
-            settings=Settings(anonymized_telemetry=False)
-        )
+        # ChromaDB for RAG — connects to shared HTTP server started by observation_worker_daemon.
+        self.chroma_client = chromadb.HttpClient(host="localhost", port=8101)
         self.collection = self.chroma_client.get_or_create_collection(
             name="skills",
             metadata={"hnsw:space": "cosine"}

@@ -9,7 +9,7 @@ description = "GIINT - General Intuitive Intelligence for Neural Transformers: M
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
-    "fastmcp>=2.12.2",
+    "fastmcp==2.9.0",
 ]
 
 [project.scripts]

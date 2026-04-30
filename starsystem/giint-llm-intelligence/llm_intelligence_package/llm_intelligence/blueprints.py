@@ -51,9 +51,9 @@ def save_blueprint(blueprint_name: str, source_file_path: str, description: Opti
         # Set HEAVEN_DATA_DIR for registry access
         os.environ['HEAVEN_DATA_DIR'] = '/tmp/heaven_data'
         
-        # Import HEAVEN registry
+        # PARALLEL: uses heaven_base.registry — should migrate to CartON/YOUKNOW
         from heaven_base.tools.registry_tool import registry_util_func
-        
+
         # Store metadata in registry
         blueprint_data = {
             "name": blueprint_name,

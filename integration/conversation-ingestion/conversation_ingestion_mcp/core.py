@@ -113,6 +113,12 @@ from .claude_transcript_utils import (
     list_conversations_in_file,
 )
 
+# Converters — JSON transcript files → CartON concepts
+from .utils import (
+    ingest_openai_transcript,
+    ingest_claude_transcript,
+)
+
 # Expose all for * imports
 __all__ = [
     # Navigation
@@ -178,4 +184,7 @@ __all__ = [
     'segment_by_slug',
     'get_conversation_by_slug',
     'list_conversations_in_file',
+    # Converters
+    'ingest_openai_transcript',
+    'ingest_claude_transcript',
 ]

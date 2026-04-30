@@ -9,7 +9,7 @@ description = "STARSHIP MCP - Experiential Captain Identity Bridge"
 authors = [{name = "Isaac"}]
 requires-python = ">=3.8"
 dependencies = [
-    "fastmcp",
+    "fastmcp==2.9.0",
     "starlog-mcp",
     "skill-manager-mcp",
 ]

@@ -35,6 +35,29 @@ TREESHELL_TOOLS = [
     'mcp__sancrev_treeshell__run_conversation_shell',
 ]
 
+# Cache for coordinate -> node_name mapping (from nav_config.json)
+_COORD_CACHE: Optional[Dict[str, str]] = None
+
+def _resolve_coordinate_to_name(coordinate: str) -> Optional[str]:
+    """Resolve a numeric coordinate (e.g. '0.2.1.18') to a node name (e.g. 'tk_add_deliverable')."""
+    global _COORD_CACHE
+    if _COORD_CACHE is None:
+        _COORD_CACHE = {}
+        nav_paths = [
+            # CONNECTS_TO: nav_config.json (read) — maintained by sancrev-treeshell package
+            "/tmp/sanctuary-revolution-treeshell/sanctuary_revolution_treeshell/configs/nav_config.json",
+        ]
+        for nav_path in nav_paths:
+            try:
+                with open(nav_path) as f:
+                    nav = json.load(f)
+                for coord, name in nav.items():
+                    _COORD_CACHE[coord] = name
+            except (json.JSONDecodeError, OSError):
+                continue
+    return _COORD_CACHE.get(coordinate)
+
+
 # Cache for family node -> (server_name, action_name) mapping
 _FAMILY_NODE_CACHE: Optional[Dict[str, Tuple[str, str]]] = None
 
@@ -119,13 +142,18 @@ def _parse_treeshell_command(command: str) -> Tuple[Optional[str], Optional[str]
             pass
 
     # Check for family_node.exec pattern (server/action from default_args in config)
-    family_exec_match = re.match(r'(\w+)\.exec(?:\s+(.+))?', command, re.DOTALL)
+    # Matches both named (tk_add_deliverable.exec) and coordinate (0.2.1.18.exec) syntax
+    family_exec_match = re.match(r'([\w.]+)\.exec(?:\s+(.+))?', command, re.DOTALL)
     if family_exec_match:
         node_name = family_exec_match.group(1)
         args_str = family_exec_match.group(2)
 
+        # Resolve coordinate to node name if needed (e.g. "0.2.1.18" → "tk_add_deliverable")
+        if re.match(r'^\d[\d.]*$', node_name):
+            node_name = _resolve_coordinate_to_name(node_name)
+
         family_map = _load_family_node_map()
-        if node_name in family_map:
+        if node_name and node_name in family_map:
             server_name, action_name = family_map[node_name]
             body_schema = {}
             if args_str:

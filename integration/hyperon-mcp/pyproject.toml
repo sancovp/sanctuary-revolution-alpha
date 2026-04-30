@@ -10,8 +10,8 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "hyperon>=0.2.8",
-    "fastmcp>=0.3.0",
-    "pydantic>=2.0.0",
+    "fastmcp==2.9.0",
+    "pydantic==2.10.6",
     "metta-motto>=0.0.12",
     "snet.sdk>=5.0.0"
 ]

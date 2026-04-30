@@ -580,6 +580,7 @@ class DeliveryRouter:
 
     def _deliver_log(self, result: Any) -> dict:
         """Append to automation log."""
+        # CONNECTS_TO: /tmp/heaven_data/automation_log.jsonl (write)
         log_path = Path("/tmp/heaven_data/automation_log.jsonl")
         log_path.parent.mkdir(parents=True, exist_ok=True)
         from datetime import datetime
@@ -608,6 +609,7 @@ class AutomationRegistry:
 
     def __init__(self, automations_dir: Optional[Path] = None):
         self.automations: dict[str, InputAutomation] = {}
+        # TRIGGERS: CronAutomation hot-reload via file write to /tmp/heaven_data/automations/
         self._dir = automations_dir or Path("/tmp/heaven_data/automations")
         self._dir.mkdir(parents=True, exist_ok=True)
 

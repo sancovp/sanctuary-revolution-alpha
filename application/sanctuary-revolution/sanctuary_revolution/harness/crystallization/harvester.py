@@ -211,6 +211,7 @@ def _write_conductor_proposal(
             cat_str = ", ".join(f"{count} {cat}" for cat, count in sorted(cats.items()))
             lines.append(f"  - {domain}: {len(items)} ({cat_str})")
     lines.append("")
+    # CONNECTS_TO: /tmp/heaven_data/conductor_dynamic/crystallization_rules.json (read) — also accessed by Conductor prompt blocks
     lines.append("Check hot rules at /tmp/heaven_data/conductor_dynamic/crystallization_rules.json")
     lines.append("Apply rules and approve/reject/escalate.")
 

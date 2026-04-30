@@ -15,16 +15,34 @@ import traceback
 from difflib import get_close_matches
 import logging
 
-# YOUKNOW integration - Prolog runtime wraps compiler.youknow() with SHACL + Pellet
-try:
-    from youknow_kernel.prolog_runtime import get_runtime as _get_prolog_runtime
-    _prolog_rt = _get_prolog_runtime()
-    def youknow_validate(statement):
-        result = _prolog_rt.validate(statement)
-        return result["result"]
-    YOUKNOW_AVAILABLE = True
-except ImportError:
-    YOUKNOW_AVAILABLE = False
+# YOUKNOW integration - calls the YOUKNOW HTTP daemon (port 8102).
+# The daemon holds the single global PrologRuntime. Never import pyswip here.
+import urllib.request as _urllib_request
+# TRIGGERS: YOUKNOW daemon via HTTP POST to localhost:8102
+YOUKNOW_URL = "http://localhost:8102/validate"
+
+def youknow_validate(statement):
+    body = json.dumps({"statement": statement}).encode()
+    req = _urllib_request.Request(YOUKNOW_URL, data=body,
+                                  headers={"Content-Type": "application/json"})
+    with _urllib_request.urlopen(req, timeout=120) as resp:
+        data = json.loads(resp.read())
+    return data
+
+def _check_youknow_available():
+    try:
+        # TRIGGERS: YOUKNOW daemon health check via HTTP to localhost:8102
+        with _urllib_request.urlopen("http://localhost:8102/health", timeout=2) as r:
+            return r.status == 200
+    except Exception:
+        return False
+
+YOUKNOW_AVAILABLE = _check_youknow_available()
+if not YOUKNOW_AVAILABLE:
+    logging.getLogger(__name__).error(
+        "YOUKNOW DAEMON NOT RUNNING on port 8102. "
+        "Validation is DISABLED. Start it: python3 -m youknow_kernel.daemon"
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -1783,6 +1801,49 @@ def add_observation(
     # return None
 
 
+def _compute_description_rollup(concept_name: str, relationship_dict: Dict[str, List[str]]) -> str:
+    """D2: compute the authoritative description of a concept from its triples.
+
+    This function replaces the previous pattern of storing the caller's raw
+    prose directly in Neo4j's n.d field. Instead, n.d is derived from the
+    concept's relationships (its triples) so that semantic retrieval matches
+    against structure, not against unstructured prose.
+
+    The rollup format is a simple sentence-form rendering of each relationship:
+        <Concept> is_a <T1>, <T2>.
+        <Concept> part_of <P1>.
+        <Concept> has_X <V1>, <V2>, <V3>.
+
+    Empty relationship_dict produces an empty string — concepts with no
+    triples have no computed description. (The caller's raw prose is
+    preserved separately in the raw_staging field for future d-agent
+    extraction; see D1 and D21.)
+
+    This is the minimal D2 closure: future iterations may enrich the rollup
+    (e.g., by walking one level of grounding for each target, or by using a
+    template for specific `is_a` classes).
+    """
+    if not relationship_dict:
+        return ""
+
+    # Preserve stable ordering: is_a, part_of, instantiates first (the
+    # strong-compression primitives), then everything else alphabetically.
+    primary_order = ("is_a", "part_of", "instantiates")
+    ordered_keys = [k for k in primary_order if k in relationship_dict]
+    other_keys = sorted(k for k in relationship_dict.keys() if k not in primary_order)
+    ordered_keys.extend(other_keys)
+
+    sentences = []
+    for rel_type in ordered_keys:
+        targets = relationship_dict.get(rel_type, [])
+        if not targets:
+            continue
+        targets_str = ", ".join(targets)
+        sentences.append(f"{concept_name} {rel_type} {targets_str}.")
+
+    return " ".join(sentences)
+
+
 def add_concept_tool_func(
     concept_name: str,
     description: Optional[str] = None,
@@ -1792,6 +1853,8 @@ def add_concept_tool_func(
     hide_youknow: bool = False,
     shared_connection=None,
     _skip_ontology_healing: bool = False,
+    source: str = "agent",
+    target_descs: Optional[Dict[str, str]] = None,
 ) -> str:
     """
     Create a new concept with its component files.
@@ -1825,16 +1888,43 @@ def add_concept_tool_func(
         rel_items = rel["related"]
         relationship_dict[rel_type] = rel_items
 
+    # ACCUMULATE: merge existing CartON relationships with new ones so YOUKNOW
+    # validates the FULL set. This enables SOUP→CODE evolution — each add_concept
+    # call fills more fields, and YOUKNOW sees the accumulated state.
+    try:
+        from carton_mcp.carton_utils import CartOnUtils
+        _utils = CartOnUtils(shared_connection=shared_connection)
+        _existing = _utils.query_wiki_graph(
+            "MATCH (c:Wiki {n: $name})-[r]->(t:Wiki) "
+            "WHERE type(r) <> 'REQUIRES_EVOLUTION' "
+            "RETURN toLower(type(r)) as rel, t.n as target",
+            {"name": concept_name}
+        )
+        if _existing.get("success") and _existing.get("data"):
+            for row in _existing["data"]:
+                rel_type = row["rel"].lower()
+                target = row["target"]
+                if rel_type not in relationship_dict:
+                    relationship_dict[rel_type] = [target]
+                elif target not in relationship_dict[rel_type]:
+                    relationship_dict[rel_type].append(target)
+    except Exception:
+        pass  # Can't query — validate with what we have
+
     # YOUKNOW validation BEFORE queuing (warns, doesn't block)
     # Validates EVERY relationship - Carton is a typed hypergraph
     #
     # Response types:
-    #   "OK" = chain complete, added to ONT layer
-    #   "SOUP: ..." = chain incomplete, added to SOUP layer (still success!)
+    #   "CODE: ..." = system type valid, artifact queued for generation
+    #   "OK" = legacy chain complete (non-system-type admitted)
+    #   "SOUP: ..." = chain incomplete, conversational error with what's missing
+    #   "SYSTEM_TYPE_ERROR: ..." = hard block, structurally wrong
     #   anything else = actual validation error
     #
     youknow_msg = ""
     soup_items = []
+    _yk_healed_concepts = []
+    yk_data = {}
     if YOUKNOW_AVAILABLE and not hide_youknow:
         try:
             errors = []
@@ -1847,9 +1937,26 @@ def add_concept_tool_func(
                     triples.append(f"{rel_type} {target}")
             if triples:
                 statement = f"{concept_name} {', '.join(triples)}"
-                result = youknow_validate(statement)
-                if result == "OK":
-                    pass  # Chain complete - added to ONT
+                yk_data = youknow_validate(statement)
+                result = yk_data.get("result", "")
+                _yk_healed_concepts = yk_data.get("healed_concepts", [])
+                # System type _Unnamed fills: merge into relationships so daemon
+                # MERGE auto-creates stub nodes for _Unnamed targets.
+                _st_inferred = yk_data.get("system_type_inferred", {})
+                if _st_inferred:
+                    for _inf_rel, _inf_targets in _st_inferred.items():
+                        if _inf_rel in relationship_dict:
+                            continue  # already provided, don't overwrite
+                        # Add to relationship_dict for YOUKNOW accumulation
+                        relationship_dict[_inf_rel] = _inf_targets
+                        # Add to relationships list for queue file
+                        relationships.append({"relationship": _inf_rel, "related": _inf_targets})
+                # SYSTEM_TYPE_ERROR = hard block. System has complete knowledge,
+                # concept is provably wrong. Not SOUP — just wrong.
+                if result.startswith("SYSTEM_TYPE_ERROR:"):
+                    raise Exception(result)
+                if result == "OK" or result.startswith("CODE:"):
+                    pass  # CODE: system type valid, chain complete
                 elif "|SOUP:" in result or result.startswith("SOUP:"):
                     soup_items.append(result)
                 else:
@@ -1889,9 +1996,21 @@ def add_concept_tool_func(
                         f"Compose on scratchpad, add missing rels, submit when complete."
                     )
 
-    # GIINT validation happens inside youknow() compiler (line 498-553 of compiler.py).
-    # youknow() calls validate_with_reasoning() which runs SHACL + Pellet.
-    # Do NOT duplicate that here — CartON calls youknow(), youknow() runs the reasoner.
+    # GIINT validation happens inside youknow() compiler via system_type_validator
+    # + recursive restriction walk. Do NOT duplicate that here — CartON calls
+    # youknow(), youknow() validates against OWL restrictions and returns CODE/SOUP.
+
+    # D2: Close the n.d prose pollution gap.
+    # Description is a staging area (D1), but it must NOT be stored verbatim
+    # in Neo4j's n.d field because that pollutes semantic retrieval with raw
+    # prose that agents have not yet extracted into triples.
+    #
+    # Instead, we compute a rollup of the concept's relationships and use
+    # THAT as the description to be stored. The caller's raw description is
+    # Description is stored as prose. The caller's text is authoritative.
+    # A coverage score (% of words existing in CartON) is computed separately.
+    # D2 intent: score reaches 100% when every meaningful word is a CartON concept = wiki hyperlink.
+    _caller_raw_description = description or ""
 
     # Write to queue for async processing by daemon
     queue_dir = get_observation_queue_dir()
@@ -1899,18 +2018,37 @@ def add_concept_tool_func(
     unique_id = str(uuid.uuid4())[:8]
     queue_file = queue_dir / f"{timestamp}_{unique_id}_concept.json"
 
+    # Parse CODE status from YOUKNOW result
+    _yk_result = yk_data.get("result", "")
+    _is_code = _yk_result.startswith("CODE:")
+    _gen_target = None
+    if _is_code and "Emits:" in _yk_result:
+        try:
+            _gen_target = _yk_result.split("Emits:")[1].split(".")[0].strip()
+        except Exception:
+            pass
+
     queue_data = {
         "raw_concept": True,
         "concept_name": concept_name,
-        "description": description,
+        "description": _caller_raw_description,
+        "raw_staging": _caller_raw_description,
         "relationships": relationships,
         "desc_update_mode": desc_update_mode,
         "hide_youknow": hide_youknow,
         # SOUP tracking - daemon creates REQUIRES_EVOLUTION relationship if is_soup=True
         "is_soup": len(soup_items) > 0,
         "soup_reason": "; ".join(soup_items) if soup_items else None,
+        # CODE tracking - daemon triggers projection when is_code=True
+        "is_code": _is_code,
+        "gen_target": _gen_target,
         # Ontology healing flag — daemon Phase 2.5 skips concepts with this set
         "skip_ontology_healing": _skip_ontology_healing,
+        # Timeline source — who/what created this concept (agent, dragonbones_hook, precompact, etc.)
+        "source": source,
+        # Target descriptions — cached KV from EC desc= on +{} claims.
+        # Daemon writes these to target nodes when auto-creating relationship targets.
+        "target_descs": target_descs or {},
     }
 
     with open(queue_file, 'w') as f:
@@ -1925,10 +2063,8 @@ def add_concept_tool_func(
     # are stored on the validator singleton after youknow() runs.
     if not _skip_ontology_healing:
         try:
-            from youknow_kernel.compiler import _get_uarl_validator
-            validator = _get_uarl_validator()
-            if validator and hasattr(validator, '_healed_concepts') and validator._healed_concepts:
-                healed = validator._healed_concepts
+            if _yk_healed_concepts:
+                healed = _yk_healed_concepts
                 for h in healed:
                     try:
                         h_rels = [
@@ -1949,7 +2085,6 @@ def add_concept_tool_func(
                         logger.warning(f"[ONTOLOGY] Failed to heal {h['name']}: {he}")
                 if healed:
                     youknow_msg += f" [+{len(healed)} healed from OWL]"
-                validator._healed_concepts = []  # Clear after processing
         except Exception as e:
             logger.warning(f"[ONTOLOGY] OWL self-healing failed for {concept_name}: {e}")
 

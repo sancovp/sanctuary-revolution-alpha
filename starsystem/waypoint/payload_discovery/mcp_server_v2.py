@@ -177,6 +177,7 @@ def _write_to_temp_json(state_data: dict, project_name: str = None):
     if project_name:
         temp_file = f"/tmp/waypoint_state_{project_name}.json"
     else:
+        # CONNECTS_TO: /tmp/waypoint_state.json (write) — also read by _read_temp_json()
         temp_file = "/tmp/waypoint_state.json"
     try:
         with open(temp_file, 'w') as f:
@@ -273,6 +274,8 @@ def _load_guru_reminder() -> str:
     But the agent should still see their vow while working. This reads the guru
     file and appends a compressed reminder to work step prompts.
     """
+    # CONNECTS_TO: /tmp/guru_loop.md (read) — written by autopoiesis guru loop
+    # TRIGGERS: Autopoiesis L2 awareness via guru vow reminder injection
     guru_path = Path("/tmp/guru_loop.md")
     try:
         if guru_path.exists():
@@ -531,11 +534,27 @@ def _read_course_state() -> dict:
     return {}
 
 
+def _validate_starlog_path(starlog_path: str) -> Optional[str]:
+    """Validate starlog_path is a starsystem directory. Returns error string or None."""
+    p = Path(starlog_path)
+    if p.is_file():
+        return f"🚨 ERROR: starlog_path must be a STARSYSTEM DIRECTORY, not a file. Got: {starlog_path}. Use the directory path (e.g., '{p.parent}')."
+    if not p.is_dir():
+        return f"🚨 ERROR: starlog_path directory does not exist: {starlog_path}"
+    if not (p / "starlog.hpi").exists():
+        return f"🚨 ERROR: {starlog_path} is not a STARSYSTEM — no starlog.hpi found. Run starlog.init_project() first."
+    return None
+
+
 @app.tool()
 def start_waypoint_journey(config_path: str, starlog_path: str, notes: str = "") -> str:
     """Initialize a Waypoint learning journey."""
     logger.debug(f"start_waypoint_journey: config={config_path}, starlog={starlog_path}")
-    
+
+    err = _validate_starlog_path(starlog_path)
+    if err:
+        return err
+
     # Check if journey already active for this starlog path
     active_journey = _get_active_journey_info(starlog_path)
     if active_journey:
@@ -691,12 +710,9 @@ def _get_next_prompt_with_notes(starlog_path: str, notes: str = "") -> str:
     config_path = state_data.get("config_path") if state_data else None
     _write_completion_entry(starlog_path, config_path, pd, piece, piece.sequence_number, notes)
 
-    # Add autopoiesis reminder for work steps:
-    # - Step 4: Work loop (always)
-    # - Steps 5 to N-1: work_loop_subchain steps
-    # NOT on: Steps 1-3 (ceremony) or Step N (end session)
-    total = _count_total_pieces(pd)
-    if piece.sequence_number == 4 or (piece.sequence_number >= 5 and piece.sequence_number < total):
+    # Add autopoiesis reminder ONLY on step 4 (work loop entry).
+    # Once autopoiesis is on, the promise loop handles enforcement — no need to repeat.
+    if piece.sequence_number == 4:
         autopoiesis_reminder = "\n\n---\n**REQUIRED: AUTOPOIESIS CHECK** — Is this a sufficiently complex task or amount of work that subtasks need to be broken out with quality gates? Usually yes, sometimes no. Generally, if not a quick thing then need to `be_autopoietic(\"promise\")` to make sure it gets accomplished in the right way. This is important to the user. Start your next response with 'Now I have to do a quick complexity analysis. This task might need be_autopoietic() because {reasons}, and if any qualities aren't directly testable it DOES need it, so my answer is {answer}.' Then act accordingly."
 
         # Inject guru vow reminder if guru loop is active during SESSION
@@ -710,7 +726,9 @@ def _get_next_prompt_with_notes(starlog_path: str, notes: str = "") -> str:
 def navigate_to_next_waypoint(starlog_path: str, notes: str = "") -> str:
     """Navigate to the next waypoint in the learning journey."""
     logger.debug(f"navigate_to_next_waypoint: starlog={starlog_path}")
-    
+    err = _validate_starlog_path(starlog_path)
+    if err:
+        return err
     try:
         return _get_next_prompt_with_notes(starlog_path, notes)
     except Exception as e:
@@ -722,7 +740,9 @@ def navigate_to_next_waypoint(starlog_path: str, notes: str = "") -> str:
 def get_waypoint_progress(starlog_path: str) -> str:
     """Get current progress through waypoint journey."""
     logger.debug(f"get_waypoint_progress: starlog={starlog_path}")
-    
+    err = _validate_starlog_path(starlog_path)
+    if err:
+        return err
     try:
         pd = _load_payload_discovery_from_state(starlog_path)
         if not pd:
@@ -754,7 +774,9 @@ def get_waypoint_progress(starlog_path: str) -> str:
 def abort_waypoint_journey(starlog_path: str, notes: str = "") -> str:
     """Abort active waypoint journey and clear state."""
     logger.debug(f"abort_waypoint_journey: starlog={starlog_path}")
-    
+    err = _validate_starlog_path(starlog_path)
+    if err:
+        return err
     try:
         # Check if there's an active journey
         active_journey = _get_active_journey_info(starlog_path)
@@ -801,13 +823,15 @@ def get_current_step_content(starlog_path: str) -> str:
     without changing journey progress. Safe to call repeatedly.
 
     Args:
-        starlog_path: STARLOG project path with active waypoint journey
+        starlog_path: STARSYSTEM directory path (must match starsystem concept's path)
 
     Returns:
         Current step content, or error message if no active journey
     """
     logger.debug(f"get_current_step_content: starlog={starlog_path}")
-
+    err = _validate_starlog_path(starlog_path)
+    if err:
+        return err
     try:
         pd = _load_payload_discovery_from_state(starlog_path)
         if not pd:
@@ -848,7 +872,9 @@ def get_current_step_content(starlog_path: str) -> str:
 def reset_waypoint_journey(starlog_path: str, notes: str = "") -> str:
     """Reset waypoint journey progress to beginning."""
     logger.debug(f"reset_waypoint_journey: starlog={starlog_path}")
-    
+    err = _validate_starlog_path(starlog_path)
+    if err:
+        return err
     try:
         # Check if there's an active journey first
         active_journey = _get_active_journey_info(starlog_path)

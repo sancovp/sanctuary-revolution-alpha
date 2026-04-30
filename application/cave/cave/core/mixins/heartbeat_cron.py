@@ -16,9 +16,12 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 INBOX_DIR = Path("/tmp/heaven_data/inboxes/conductor")
+# CONNECTS_TO: /tmp/heaven_data/conductor_ops/heartbeat/pending.json (write) — conductor heartbeat queue
 PENDING_FILE = Path("/tmp/heaven_data/conductor_ops/heartbeat/pending.json")
+# CONNECTS_TO: /tmp/heaven_data/conductor_heartbeat_config.json (read/write) — conductor heartbeat config
 CONFIG_PATH = Path("/tmp/heaven_data/conductor_heartbeat_config.json")
 PROCESSING_FLAG = Path("/tmp/heaven_data/conductor_processing.flag")
+# CONNECTS_TO: /tmp/heaven_data/conductor_ops/heartbeat/last_user_message.txt (read/write)
 LAST_USER_MSG = Path("/tmp/heaven_data/conductor_ops/heartbeat/last_user_message.txt")
 
 

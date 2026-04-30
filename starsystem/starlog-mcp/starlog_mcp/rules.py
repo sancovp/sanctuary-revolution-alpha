@@ -50,6 +50,7 @@ class RulesMixin:
             registry_name = f"{project_name}_rules"
             
             # Try to delete from registry (using Heaven registry delete functionality)
+            # PARALLEL: uses heaven_base.registry — should migrate to CartON/YOUKNOW
             from heaven_base.tools.registry_tool import registry_util_func
             result = registry_util_func("delete", registry_name=registry_name, key=rule_id)
             

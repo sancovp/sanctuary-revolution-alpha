@@ -3848,6 +3848,7 @@ You must fix the error before proceeding."""
 
     def create_block_report(self):
         # look up the json file
+        # CONNECTS_TO: /tmp/block_report.json (read) — also accessed by write_block_report_tool.py
         block_report_path = "/tmp/block_report.json"
         
         # Check if the block report file was created

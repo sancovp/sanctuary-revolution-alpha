@@ -161,7 +161,8 @@ def validate_logs(text: str, skill_calls: list[str] = None,
                 exact, fuzzy = lookup_skill(skill_name)
                 if exact:
                     corrections.append(
-                        f"Skill '{skill_name}' EXISTS. Call Skill tool for '{skill_name}', "
+                        f"[🐉🦴 DRAGONBONES] DETECTED PROBLEM: You predicted skill '{skill_name}' but it already EXISTS. "
+                        f"INSTRUCTION TO SOLVE RIGHT NOW: Call Skill tool for '{skill_name}', "
                         f"then emit: 🎯 USING::{parts[1]}::{skill_name} 🎯"
                     )
                     state["skilllog_state"] = "pending"
@@ -169,7 +170,7 @@ def validate_logs(text: str, skill_calls: list[str] = None,
                 else:
                     fuzzy_str = ", ".join(fuzzy) if fuzzy else "(none)"
                     corrections.append(
-                        f"Prediction noted: '{skill_name}' doesn't exist yet. "
+                        f"[🐉🦴 DRAGONBONES] Prediction noted: '{skill_name}' doesn't exist yet. "
                         f"Fuzzy matches: [{fuzzy_str}]. "
                         f"No action required — stashed for Flight Predictor. "
                         f"SkillLog satisfied."
@@ -180,8 +181,8 @@ def validate_logs(text: str, skill_calls: list[str] = None,
             elif claimed_state == "USING":
                 if skill_name not in (skill_calls or []):
                     corrections.append(
-                        f"You said USING '{skill_name}' but didn't use it in this turn. "
-                        f"Call Skill tool with '{skill_name}' first, then report USING."
+                        f"[🐉🦴 DRAGONBONES] DETECTED PROBLEM: You claimed USING '{skill_name}' but Skill tool was NOT called this turn. "
+                        f"INSTRUCTION TO SOLVE RIGHT NOW: Call Skill tool with '{skill_name}' first, then report USING."
                     )
                     break
                 state["skilllog_state"] = "done"
@@ -189,8 +190,8 @@ def validate_logs(text: str, skill_calls: list[str] = None,
             elif claimed_state == "MAKING":
                 if not has_db_skill_block:
                     corrections.append(
-                        f"REPORTED MAKING A SKILL WITHOUT A DB BLOCK THAT MAKES IT. "
-                        f"No 🌟⛓️ EntityChain with is_a=Skill found in turn. INVALID."
+                        f"[🐉🦴 DRAGONBONES] DETECTED PROBLEM: Claimed MAKING a skill but no 🌟⛓️ EntityChain with is_a=Skill found in turn. "
+                        f"INSTRUCTION TO SOLVE RIGHT NOW: Emit a Skill EntityChain, or change to PREDICTING/USING."
                     )
                     break
                 state["skilllog_state"] = "done"
@@ -204,7 +205,7 @@ def validate_logs(text: str, skill_calls: list[str] = None,
         state["pending_retries"] = retry_count
         if retry_count >= 3:
             corrections.append(
-                f"Prediction '{predicted}' expired after {retry_count} turns without followup. "
+                f"[🐉🦴 DRAGONBONES] Prediction '{predicted}' expired after {retry_count} turns without followup. "
                 f"SkillLog auto-resolved. If you still need it, predict again."
             )
             state["skilllog_state"] = "done"
@@ -212,7 +213,8 @@ def validate_logs(text: str, skill_calls: list[str] = None,
             state.pop("pending_retries", None)
         else:
             corrections.append(
-                f"Skill '{predicted}' EXISTS — call Skill tool for '{predicted}', "
+                f"[🐉🦴 DRAGONBONES] DETECTED PROBLEM: Skill '{predicted}' was predicted but never used or dismissed. "
+                f"INSTRUCTION TO SOLVE RIGHT NOW: Call Skill tool for '{predicted}', "
                 f"then emit: 🎯 USING::domain::{predicted} 🎯\n"
                 f"OR dismiss: 🎯 PREDICTING::domain::sufficient 🎯"
             )
@@ -243,8 +245,8 @@ def validate_logs(text: str, skill_calls: list[str] = None,
 
         if del_count >= 10:
             corrections.append(
-                "Consider a DeliverableLog. What happened that's worth showing people? "
-                "Syntax: 📦 type::domain::idea 📦"
+                "[🐉🦴 DRAGONBONES] Consider a DeliverableLog. What happened that's worth showing people? "
+                f"Syntax: {LOG_SYNTAX['DeliverableLog']}"
             )
             try:
                 with open(DELIVERABLE_COUNTER_FILE, 'w') as f:
@@ -261,8 +263,8 @@ def validate_logs(text: str, skill_calls: list[str] = None,
         pass
 
     if not state["coglog_seen"]:
-        corrections.append(f"Missing CogLog. Syntax: {LOG_SYNTAX['CogLog']}")
+        corrections.append(f"[🐉🦴 DRAGONBONES] DETECTED PROBLEM: No CogLog emitted this turn. INSTRUCTION TO SOLVE RIGHT NOW: Emit a CogLog. Syntax: {LOG_SYNTAX['CogLog']}")
     if not skilllog_done and state.get("skilllog_state") is None:
-        corrections.append(f"Missing SkillLog. Syntax: {LOG_SYNTAX['SkillLog']}")
+        corrections.append(f"[🐉🦴 DRAGONBONES] DETECTED PROBLEM: No SkillLog emitted this turn. INSTRUCTION TO SOLVE RIGHT NOW: Emit a SkillLog. Syntax: {LOG_SYNTAX['SkillLog']}")
 
     return corrections

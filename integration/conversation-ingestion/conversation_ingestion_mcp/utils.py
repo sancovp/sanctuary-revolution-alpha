@@ -1,15 +1,11 @@
 """
-Business logic for OpenAI conversation ingestion - V2
+Business logic for conversation ingestion - V2
 
-Data files:
-- canonical_registry.json: Source of truth for canonical frameworks
-- state.json: Conversations, emergent frameworks, publishing sets, concept tags
-- ingestion_waitlist.json: Claude Code conversations flagged for ingestion
+Storage: CartON (Neo4j + ChromaDB). No JSON fallbacks.
+Converters: JSON transcript files (OpenAI, Claude Code, Anthropic) → CartON concepts.
 """
 import json
 import logging
-import os
-from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Tuple, Optional, Literal
 
@@ -21,51 +17,81 @@ from .models import (
 
 logger = logging.getLogger(__name__)
 
-# =============================================================================
-# FILE PATHS
-# =============================================================================
-
+# Bundle output directory (used by bundle_tools for output artifacts)
 CONV_DIR = "/tmp/conversation_ingestion_openai_paiab"
-STATE_FILE = f"{CONV_DIR}/state.json"
-REGISTRY_FILE = f"{CONV_DIR}/canonical_registry.json"
+
+# CartON concept names for state storage
+_STATE_CONCEPT = "Ingestion_State"
+_REGISTRY_CONCEPT = "Ingestion_Registry"
+
+
+def _read_concept_json(concept_name: str) -> Optional[Dict]:
+    """Read a CartON concept description as JSON via carton_mcp."""
+    try:
+        from carton_mcp.carton_utils import shared_neo4j
+        with shared_neo4j.driver.session() as s:
+            result = s.run("MATCH (c:Wiki {n: $name}) RETURN c.d AS desc", name=concept_name).single()
+        if result and result["desc"]:
+            return json.loads(result["desc"])
+    except json.JSONDecodeError:
+        logger.warning("CartON concept %s description is not valid JSON", concept_name)
+    except Exception as e:
+        logger.warning("CartON read failed for %s: %s", concept_name, e)
+    return None
+
+
+def _write_concept_json(concept_name: str, data: Dict, is_a: str = "Ingestion_Data"):
+    """Write a dict as JSON to a CartON concept via add_concept_tool_func."""
+    from carton_mcp.add_concept_tool import add_concept_tool_func
+    desc = json.dumps(data, indent=2, default=str)
+    add_concept_tool_func(
+        concept_name=concept_name,
+        description=desc,
+        relationships=[
+            {"relationship": "is_a", "related": [is_a]},
+            {"relationship": "part_of", "related": ["Ingestion_System"]},
+            {"relationship": "instantiates", "related": [f"{is_a}_Template"]},
+        ],
+        desc_update_mode="replace",
+        hide_youknow=True,
+    )
 
 
 # =============================================================================
 # REGISTRY FUNCTIONS
 # =============================================================================
 
+_DEFAULT_REGISTRY = Registry(strata={
+    "paiab": StrataEntry(
+        name="PAIAB",
+        description="Technical domain knowledge - AI, agents, tools, infrastructure",
+        slots=StrataSlots()
+    ),
+    "sanctum": StrataEntry(
+        name="SANCTUM",
+        description="Personal philosophy - life architecture, coordination, integration",
+        slots=StrataSlots()
+    ),
+    "cave": StrataEntry(
+        name="CAVE",
+        description="Business model - structure, positioning, content, automation, economics",
+        slots=StrataSlots()
+    )
+})
+
+
 def load_registry() -> Registry:
-    """Load canonical registry from JSON file."""
-    if not os.path.exists(REGISTRY_FILE):
-        # Return default registry with 3 strata
-        return Registry(strata={
-            "paiab": StrataEntry(
-                name="PAIAB",
-                description="Technical domain knowledge - AI, agents, tools, infrastructure",
-                slots=StrataSlots()
-            ),
-            "sanctum": StrataEntry(
-                name="SANCTUM",
-                description="Personal philosophy - life architecture, coordination, integration",
-                slots=StrataSlots()
-            ),
-            "cave": StrataEntry(
-                name="CAVE",
-                description="Business model - structure, positioning, content, automation, economics",
-                slots=StrataSlots()
-            )
-        })
-
-    with open(REGISTRY_FILE, 'r') as f:
-        data = json.load(f)
-
-    return Registry.model_validate(data)
+    """Load canonical registry from CartON."""
+    data = _read_concept_json(_REGISTRY_CONCEPT)
+    if data:
+        return Registry.model_validate(data)
+    return _DEFAULT_REGISTRY
 
 
 def save_registry(registry: Registry):
-    """Save canonical registry to JSON file."""
-    with open(REGISTRY_FILE, 'w') as f:
-        json.dump(registry.model_dump(), f, indent=2)
+    """Save canonical registry to CartON."""
+    data = registry.model_dump()
+    _write_concept_json(_REGISTRY_CONCEPT, data, is_a="Ingestion_Registry")
 
 
 def validate_strata(strata_key: str, registry: Registry) -> bool:
@@ -97,26 +123,16 @@ def get_empty_state_v2() -> Dict:
 
 
 def load_state() -> Dict:
-    """Load state file, auto-detecting version."""
-    if not os.path.exists(STATE_FILE):
-        return get_empty_state_v2()
-
-    with open(STATE_FILE, 'r') as f:
-        data = json.load(f)
-
-    # Check version
-    if data.get("version") == 2:
+    """Load state from CartON."""
+    data = _read_concept_json(_STATE_CONCEPT)
+    if data and data.get("version") == 2:
         return data
-
-    # V1 format detected - keep as-is for backward compat
-    # Migration happens explicitly via migrate_state_v1_to_v2()
-    return data
+    return get_empty_state_v2()
 
 
 def save_state(state: Dict):
-    """Save state to disk."""
-    with open(STATE_FILE, 'w') as f:
-        json.dump(state, f, indent=2)
+    """Save state to CartON."""
+    _write_concept_json(_STATE_CONCEPT, state, is_a="Ingestion_State")
 
 
 def is_v2_state(state: Dict) -> bool:
@@ -163,88 +179,76 @@ def migrate_state_v1_to_v2(old_state: Dict) -> Dict:
 
 
 # =============================================================================
-# CONVERSATION LOADING (unchanged from V1)
+# CONVERSATION LOADING — CartON first, JSON file fallback
 # =============================================================================
 
 def load_conversations() -> Dict:
-    """Load all conversation JSON files."""
+    """Load all conversations from CartON."""
     convs = {}
-    for filepath in Path(CONV_DIR).glob("*.json"):
-        # Skip state/registry files
-        if filepath.name in ("state.json", "canonical_registry.json"):
-            continue
-        name = filepath.stem
-        with open(filepath, 'r') as f:
-            convs[name] = json.load(f)
+    from carton_mcp.carton_utils import shared_neo4j
+    with shared_neo4j.driver.session() as s:
+        result = s.run(
+            "MATCH (c:Wiki)-[:IS_A]->(:Wiki {n: 'Conversation'}) "
+            "RETURN c.n AS name"
+        )
+        for r in result:
+            convs[r["name"]] = {"source": "carton", "name": r["name"]}
     return convs
 
 
 def load_conversation(name: str) -> Dict:
-    """Load a single conversation JSON file by name."""
-    filepath = Path(CONV_DIR) / f"{name}.json"
-    if not filepath.exists():
-        raise FileNotFoundError(f"Conversation '{name}' not found")
-    with open(filepath, 'r') as f:
-        return json.load(f)
+    """Load a single conversation from CartON."""
+    from carton_mcp.carton_utils import shared_neo4j
+    with shared_neo4j.driver.session() as s:
+        result = s.run(
+            "MATCH (conv:Wiki {n: $name})-[ir]->(iter:Wiki) "
+            "WHERE type(ir) STARTS WITH 'HAS_ITERATION_' "
+            "OPTIONAL MATCH (iter)-[mr]->(msg:Wiki) "
+            "WHERE type(mr) STARTS WITH 'HAS_USER_MESSAGE_' "
+            "   OR type(mr) STARTS WITH 'HAS_AGENT_MESSAGE_' "
+            "RETURN iter.n AS iter_name, type(mr) AS msg_type, "
+            "       msg.n AS msg_name, msg.d AS msg_content "
+            "ORDER BY iter.n, msg_type",
+            name=name,
+        )
+        rows = list(result)
+
+    if not rows or not rows[0]["iter_name"]:
+        raise FileNotFoundError(f"Conversation '{name}' not found in CartON")
+
+    iterations = {}
+    for row in rows:
+        iter_name = row["iter_name"]
+        if iter_name not in iterations:
+            iterations[iter_name] = {"user": "", "agent": ""}
+        msg_type = row.get("msg_type") or ""
+        content = row.get("msg_content") or ""
+        if "USER_MESSAGE" in msg_type:
+            iterations[iter_name]["user"] += content + "\n"
+        elif "AGENT_MESSAGE" in msg_type:
+            iterations[iter_name]["agent"] += content + "\n"
+
+    return {
+        "source": "carton",
+        "name": name,
+        "iterations": [
+            {"user": v["user"].strip(), "agent": v["agent"].strip()}
+            for v in iterations.values()
+        ],
+    }
 
 
 def extract_io_pairs(conv_data: Dict) -> List[Tuple[str, str, str, str]]:
     """
-    Extract IO pairs from conversation.
+    Extract IO pairs from CartON conversation data.
     Returns: [(user_id, user_msg, assistant_id, assistant_msg), ...]
     """
-    mapping = conv_data['mapping']
-
-    # Find root
-    root_id = None
-    for node_id, node in mapping.items():
-        if node.get('parent') is None:
-            root_id = node_id
-            break
-
-    if not root_id:
-        return []
-
-    # Iterative tree traversal
     pairs = []
-    current_user = None
-    current_user_id = None
-    stack = [root_id]
-
-    while stack:
-        node_id = stack.pop()
-        node = mapping.get(node_id)
-
-        if not node:
-            continue
-
-        msg = node.get('message')
-        if msg and msg.get('author'):
-            role = msg['author']['role']
-            content_obj = msg.get('content', {})
-
-            # OpenAI format has content_type - skip non-text (thoughts, reasoning_recap)
-            # Claude format has no content_type - proceed normally
-            content_type = content_obj.get('content_type')
-            if content_type is not None and content_type != 'text':
-                for child_id in reversed(node.get('children', [])):
-                    stack.append(child_id)
-                continue
-
-            content = content_obj.get('parts', [''])[0]
-
-            if role == 'user':
-                current_user = content
-                current_user_id = node_id
-            elif role == 'assistant' and current_user:
-                pairs.append((current_user_id, current_user, node_id, content))
-                current_user = None
-                current_user_id = None
-
-        # Add children to stack (reverse order for left-to-right traversal)
-        for child_id in reversed(node.get('children', [])):
-            stack.append(child_id)
-
+    for i, iteration in enumerate(conv_data.get("iterations", [])):
+        user_msg = iteration.get("user", "")
+        agent_msg = iteration.get("agent", "")
+        if user_msg and agent_msg:
+            pairs.append((f"u_{i}", user_msg, f"a_{i}", agent_msg))
     return pairs
 
 
@@ -435,22 +439,225 @@ def save_publishing_set(state: Dict, name: str, pub_set: PublishingSet):
 
 
 # =============================================================================
-# DEPRECATED (kept for backward compat)
+# CONVERTERS — JSON transcript files → CartON concepts
 # =============================================================================
 
-PASS_TRACKER_FILE = f"{CONV_DIR}/pass_tracker.json"
+def _extract_pairs_from_openai_mapping(mapping: Dict) -> List[Tuple[str, str, str, str]]:
+    """Walk OpenAI mapping tree and extract (user_id, user_msg, asst_id, asst_msg) tuples."""
+    root_id = None
+    for node_id, node in mapping.items():
+        if node.get('parent') is None:
+            root_id = node_id
+            break
+    if not root_id:
+        return []
+
+    pairs = []
+    current_user = None
+    current_user_id = None
+    stack = [root_id]
+
+    while stack:
+        node_id = stack.pop()
+        node = mapping.get(node_id)
+        if not node:
+            continue
+
+        msg = node.get('message')
+        if msg and msg.get('author'):
+            role = msg['author']['role']
+            content_obj = msg.get('content', {})
+            content_type = content_obj.get('content_type')
+            if content_type is not None and content_type != 'text':
+                for child_id in reversed(node.get('children', [])):
+                    stack.append(child_id)
+                continue
+
+            content = content_obj.get('parts', [''])[0]
+            if role == 'user':
+                current_user = content
+                current_user_id = node_id
+            elif role == 'assistant' and current_user:
+                pairs.append((current_user_id, current_user, node_id, content))
+                current_user = None
+                current_user_id = None
+
+        for child_id in reversed(node.get('children', [])):
+            stack.append(child_id)
+
+    return pairs
 
 
-def load_pass_tracker() -> Dict:
-    """DEPRECATED: Pass tracking removed in V2."""
-    if os.path.exists(PASS_TRACKER_FILE):
-        with open(PASS_TRACKER_FILE, 'r') as f:
-            return json.load(f)
-    return {"conversations": {}, "meta": {"last_updated": None}}
+def _ingest_pairs_to_carton(conv_name: str, pairs: List[Tuple[str, str, str, str]]) -> int:
+    """Create typed CartON concepts for a conversation and its iterations/messages."""
+    from carton_mcp.add_concept_tool import add_concept_tool_func
+
+    # Create Conversation concept
+    add_concept_tool_func(
+        concept_name=conv_name,
+        description=f"Ingested conversation with {len(pairs)} iterations",
+        relationships=[
+            {"relationship": "is_a", "related": ["Conversation"]},
+            {"relationship": "part_of", "related": ["Ingestion_System"]},
+            {"relationship": "instantiates", "related": ["Conversation_Template"]},
+        ],
+        desc_update_mode="replace",
+        hide_youknow=True,
+    )
+
+    for i, (u_id, user_msg, a_id, asst_msg) in enumerate(pairs):
+        iter_name = f"Iteration_{conv_name}_{i}"
+        user_name = f"User_Message_{conv_name}_{i}"
+        agent_name = f"Agent_Message_{conv_name}_{i}"
+
+        # Iteration
+        add_concept_tool_func(
+            concept_name=iter_name,
+            description=f"Iteration {i} of {conv_name}",
+            relationships=[
+                {"relationship": "is_a", "related": ["Iteration"]},
+                {"relationship": "part_of", "related": [conv_name]},
+                {"relationship": "instantiates", "related": ["Iteration_Template"]},
+                {"relationship": f"has_user_message_1", "related": [user_name]},
+                {"relationship": f"has_agent_message_1", "related": [agent_name]},
+            ],
+            desc_update_mode="replace",
+            hide_youknow=True,
+        )
+
+        # User message
+        add_concept_tool_func(
+            concept_name=user_name,
+            description=user_msg,
+            relationships=[
+                {"relationship": "is_a", "related": ["User_Message"]},
+                {"relationship": "part_of", "related": [iter_name]},
+                {"relationship": "instantiates", "related": ["User_Message_Template"]},
+            ],
+            desc_update_mode="replace",
+            hide_youknow=True,
+        )
+
+        # Agent message
+        add_concept_tool_func(
+            concept_name=agent_name,
+            description=asst_msg,
+            relationships=[
+                {"relationship": "is_a", "related": ["Agent_Message"]},
+                {"relationship": "part_of", "related": [iter_name]},
+                {"relationship": "instantiates", "related": ["Agent_Message_Template"]},
+            ],
+            desc_update_mode="replace",
+            hide_youknow=True,
+        )
+
+    # Add HAS_ITERATION_N relationships to conversation
+    iter_rels = [
+        {"relationship": f"has_iteration_{i+1}", "related": [f"Iteration_{conv_name}_{i}"]}
+        for i in range(len(pairs))
+    ]
+    if iter_rels:
+        add_concept_tool_func(
+            concept_name=conv_name,
+            description=f"Ingested conversation with {len(pairs)} iterations",
+            relationships=[
+                {"relationship": "is_a", "related": ["Conversation"]},
+                {"relationship": "part_of", "related": ["Ingestion_System"]},
+                {"relationship": "instantiates", "related": ["Conversation_Template"]},
+            ] + iter_rels,
+            desc_update_mode="replace",
+            hide_youknow=True,
+        )
+
+    return len(pairs)
 
 
-def save_pass_tracker(tracker: Dict):
-    """DEPRECATED: Pass tracking removed in V2."""
-    tracker["meta"]["last_updated"] = datetime.now().isoformat()
-    with open(PASS_TRACKER_FILE, 'w') as f:
-        json.dump(tracker, f, indent=2)
+def ingest_openai_transcript(filepath: str, conv_name: Optional[str] = None) -> str:
+    """Convert OpenAI JSON export to CartON concepts.
+
+    Reads the OpenAI mapping tree format, extracts user/assistant pairs,
+    and creates typed CartON concepts (Conversation, Iteration, User_Message, Agent_Message).
+
+    Args:
+        filepath: Path to OpenAI JSON export file.
+        conv_name: Optional name for the conversation concept. Defaults to filename stem.
+
+    Returns:
+        Summary of ingested data.
+    """
+    path = Path(filepath)
+    if not path.exists():
+        return f"File not found: {filepath}"
+
+    with open(path, 'r') as f:
+        data = json.load(f)
+
+    if 'mapping' not in data:
+        return f"Not an OpenAI export (no 'mapping' key): {filepath}"
+
+    if not conv_name:
+        conv_name = f"Conversation_{path.stem}"
+
+    pairs = _extract_pairs_from_openai_mapping(data['mapping'])
+    if not pairs:
+        return f"No user/assistant pairs found in {filepath}"
+
+    count = _ingest_pairs_to_carton(conv_name, pairs)
+    return f"Ingested {count} pairs from OpenAI export → CartON as {conv_name}"
+
+
+def ingest_claude_transcript(filepath: str, slug: Optional[str] = None) -> str:
+    """Convert Claude Code .jsonl transcript to CartON concepts.
+
+    Uses claude_transcript_utils to parse the JSONL, segments by slug,
+    and creates typed CartON concepts for each conversation.
+
+    Args:
+        filepath: Path to Claude Code .jsonl transcript file.
+        slug: Optional specific slug to ingest. If None, ingests all conversations.
+
+    Returns:
+        Summary of ingested data.
+    """
+    from .claude_transcript_utils import (
+        parse_transcript_file, segment_by_slug
+    )
+
+    path = Path(filepath)
+    if not path.exists():
+        return f"File not found: {filepath}"
+
+    entries = parse_transcript_file(filepath)
+    if not entries:
+        return f"No entries found in {filepath}"
+
+    conversations = segment_by_slug(entries)
+    if slug:
+        if slug not in conversations:
+            return f"Slug '{slug}' not found. Available: {list(conversations.keys())}"
+        conversations = {slug: conversations[slug]}
+
+    results = []
+    for conv_slug, conv in conversations.items():
+        conv_name = f"Conversation_{conv_slug}"
+
+        # Extract user/assistant pairs from transcript entries
+        pairs = []
+        user_entries = conv.user_entries
+        asst_entries = conv.assistant_entries
+
+        # Pair up user and assistant messages in order
+        for i, (u_entry, a_entry) in enumerate(zip(user_entries, asst_entries)):
+            user_text = u_entry.extract_text()
+            asst_text = a_entry.extract_text()
+            if user_text and asst_text:
+                pairs.append((u_entry.uuid, user_text, a_entry.uuid, asst_text))
+
+        if pairs:
+            count = _ingest_pairs_to_carton(conv_name, pairs)
+            results.append(f"  {conv_name}: {count} pairs")
+
+    if not results:
+        return f"No pairs extracted from {filepath}"
+
+    return f"Ingested Claude transcript → CartON:\n" + "\n".join(results)

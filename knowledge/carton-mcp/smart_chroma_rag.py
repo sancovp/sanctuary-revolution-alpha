@@ -107,14 +107,18 @@ class SmartChromaRAG:
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
 
+        # Manifest lives on filesystem (tracks file hashes for incremental ingest).
+        # persist_dir kept for manifest path only — chroma data owned by HTTP server.
         self._manifest_path = Path(persist_dir) / f"{collection_name}.__manifest__.json"
         self._manifest = self._load_manifest()
 
-        # Lazily create / connect to the collection
+        # Connect to the shared ChromaDB HTTP server started by observation_worker_daemon.
+        import chromadb as _chromadb
+        _client = _chromadb.HttpClient(host="localhost", port=8101)
         self.vs = Chroma(
+            client=_client,
             collection_name=collection_name,
             embedding_function=self.embeddings,
-            persist_directory=persist_dir,
         )
 
     # --------- MANIFEST (for incremental ingest) ---------

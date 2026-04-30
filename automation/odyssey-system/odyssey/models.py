@@ -19,5 +19,6 @@ class OdysseyResult:
     event_type: str  # measure_build, measure_narrative, learn_build, learn_narrative
     concept_ref: str
     concepts_created: List[str] = field(default_factory=list)
-    decision: Optional[str] = None  # CONTINUE, REDO, ESCALATE (learn only)
+    decision: Optional[str] = None  # CONTINUE/REDO, CONTINUE/EVOLVE, PIVOT/ESCALATE, PIVOT/REQUIREMENTS
+    chain_to: Optional[str] = None  # next concept to auto-dispatch in pipeline
     error: Optional[str] = None

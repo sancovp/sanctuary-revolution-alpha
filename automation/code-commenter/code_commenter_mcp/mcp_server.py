@@ -16,6 +16,7 @@ from fastmcp import FastMCP
 
 mcp = FastMCP("code-commenter")
 
+# CONNECTS_TO: /tmp/code_commenter_ledger.json (write) — ledger tracking commented blocks
 LEDGER_PATH = Path("/tmp/code_commenter_ledger.json")
 
 # Map file extensions to comment syntax

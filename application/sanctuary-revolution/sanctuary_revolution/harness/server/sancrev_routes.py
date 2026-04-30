@@ -1589,7 +1589,7 @@ class SancrevExtension:
                                 except ValueError:
                                     pass
                                 # Execute stop
-                                result = conductor._handle_stop()
+                                result = await conductor._handle_stop()
                                 conductor._notify(result)
                                 logger.info("Stop watcher: !stop processed")
                                 break
@@ -1629,6 +1629,10 @@ class SancrevExtension:
                 metadata={"type": "tmux", "session": "claude"},
             )
             logger.info("Main agent registered in container_registry")
+
+            # Start agent poll loops — each agent's run_poll_loop() processes its own inbox
+            asyncio.create_task(cave.start_agent_poll_loops())
+            logger.info("Agent poll loops started")
 
             # Start stop watcher — peeks at conductor inbox for !stop even while busy
             asyncio.create_task(ext._conductor_stop_watcher())

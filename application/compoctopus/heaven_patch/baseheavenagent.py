@@ -47,6 +47,7 @@ from uuid import uuid4
 from datetime import datetime
 from .prompts.heaven_variable import RegistryHeavenVariable
 
+# CONNECTS_TO: /tmp/adk_streamlit_debug.txt (write) — debug log for ADK streamlit runs
 ADK_DEBUG_PATH = "/tmp/adk_streamlit_debug.txt"
 
 def _log_run_adk(stage: str, messages):
@@ -3599,6 +3600,7 @@ You must fix the error before proceeding."""
 
     def create_block_report(self):
         # look up the json file
+        # CONNECTS_TO: /tmp/block_report.json (read) — written by autopoiesis block report system
         block_report_path = "/tmp/block_report.json"
         
         # Check if the block report file was created

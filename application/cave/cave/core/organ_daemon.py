@@ -25,7 +25,7 @@ import httpx
 
 from .world import World, WorldEvent, RNGEventSource
 from .discord_source import DiscordChannelSource
-from .sanctum_source import SanctumRitualSource
+
 from .channel import UserDiscordChannel
 from .discord_config import load_discord_config
 
@@ -37,9 +37,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 INBOX_DIR = Path(os.environ.get("HEAVEN_DATA_DIR", "/tmp/heaven_data")) / "inboxes" / "main"
+# CONNECTS_TO: /tmp/paia_hooks/pending_injection.json (write) — paia hooks read this
 INJECTION_FILE = Path("/tmp/paia_hooks/pending_injection.json")
 PID_FILE = Path(os.environ.get("HEAVEN_DATA_DIR", "/tmp/heaven_data")) / "organ_daemon.pid"
 TICK_INTERVAL = 30.0
+# TRIGGERS: CAVE/sancrev:8080 via HTTP POST for organ ticks and ritual dispatches
 CAVE_BASE_URL = os.environ.get("CAVE_URL", "http://localhost:8080")
 
 

@@ -249,7 +249,7 @@ def create_mission(
             "message": f"Created mission: {name} (from {mission_type})" if mission_type else f"Created mission: {name}",
             "session_count": len(sessions),
             "mode": mode,
-            "next_step": f"Start mission with: start_mission('{mission_id}')"
+            "next_step": f"Start mission with: mission_start('{mission_id}')"
         }
 
     except Exception as e:

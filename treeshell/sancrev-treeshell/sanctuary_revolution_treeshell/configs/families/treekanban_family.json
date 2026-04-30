@@ -14,16 +14,15 @@
         "2": "tk_view_board",
         "3": "tk_view_lane",
         "4": "tk_view_card",
-        "5": "tk_create_card",
-        "6": "tk_get_family",
-        "7": "tk_move_above",
-        "8": "tk_move_below",
-        "9": "tk_add_tag",
-        "10": "tk_remove_tag",
-        "11": "tk_move_to_lane",
-        "12": "tk_schedule",
-        "13": "tk_planning",
-        "14": "tk_vendor"
+        "5": "tk_get_family",
+        "6": "tk_move_above",
+        "7": "tk_move_below",
+        "8": "tk_add_tag",
+        "9": "tk_remove_tag",
+        "10": "tk_move_to_lane",
+        "11": "tk_schedule",
+        "12": "tk_planning",
+        "13": "tk_vendor"
       }
     },
 
@@ -31,7 +30,7 @@
       "type": "Callable",
       "prompt": "Get Next Task (Build Lane)",
       "description": "Get highest-priority card from the build lane.",
-      "signature": "tk_next_task(board: str = 'heaven_base_xfer') -> str",
+      "signature": "tk_next_task(from_conductor: bool = true) -> str",
       "import_path": "sanctuary_revolution_treeshell.treekanban_treeshell_functions",
       "import_object": "get_next_task",
       "function_name": "get_next_task"
@@ -41,7 +40,7 @@
       "type": "Callable",
       "prompt": "View Board",
       "description": "View all cards across all lanes on the TreeKanban board.",
-      "signature": "tk_view_board(board: str = 'heaven_base_xfer', show_details: bool = false) -> str",
+      "signature": "tk_view_board(show_details: bool = false) -> str",
       "import_path": "sanctuary_revolution_treeshell.treekanban_treeshell_functions",
       "import_object": "view_board",
       "function_name": "view_board"
@@ -51,7 +50,7 @@
       "type": "Callable",
       "prompt": "View Lane",
       "description": "View cards in a specific lane (plan, build, done, backlog).",
-      "signature": "tk_view_lane(board: str = 'heaven_base_xfer', lane: str = 'build') -> str",
+      "signature": "tk_view_lane(lane: str = 'build') -> str",
       "import_path": "sanctuary_revolution_treeshell.treekanban_treeshell_functions",
       "import_object": "view_lane",
       "function_name": "view_lane"
@@ -61,27 +60,17 @@
       "type": "Callable",
       "prompt": "View Card",
       "description": "View a single card's full details by ID.",
-      "signature": "tk_view_card(board: str = 'heaven_base_xfer', card_id: int = 0) -> str",
+      "signature": "tk_view_card(card_id: int = 0) -> str",
       "import_path": "sanctuary_revolution_treeshell.treekanban_treeshell_functions",
       "import_object": "view_card",
       "function_name": "view_card"
     },
 
-    "tk_create_card": {
-      "type": "Callable",
-      "prompt": "Create Card",
-      "description": "Create a card. Requires starsystem tag and assignee (ai-human/ai-only/human-only for canopy routing). Cards flow: plan→build→measure→learn→done. ai-only cards auto-route to agent.",
-      "signature": "tk_create_card(title: str, starsystem: str, assignee: str, description: str = '', lane: str = 'backlog', tags: str = '[]') -> str",
-      "import_path": "sanctuary_revolution_treeshell.treekanban_treeshell_functions",
-      "import_object": "create_card",
-      "function_name": "create_card"
-    },
-
-    "tk_get_family": {
+"tk_get_family": {
       "type": "Callable",
       "prompt": "Get Family Tree",
       "description": "Get family tree for a card (parent, children, siblings).",
-      "signature": "tk_get_family(board: str = 'heaven_base_xfer', card_id: int = 0) -> str",
+      "signature": "tk_get_family(card_id: int = 0) -> str",
       "import_path": "sanctuary_revolution_treeshell.treekanban_treeshell_functions",
       "import_object": "get_family",
       "function_name": "get_family"
@@ -91,7 +80,7 @@
       "type": "Callable",
       "prompt": "Move Card Above",
       "description": "Move a card above a target card (preserves family structure).",
-      "signature": "tk_move_above(board: str = 'heaven_base_xfer', card_id: int = 0, target_id: int = 0) -> str",
+      "signature": "tk_move_above(card_id: int = 0, target_id: int = 0) -> str",
       "import_path": "sanctuary_revolution_treeshell.treekanban_treeshell_functions",
       "import_object": "move_above",
       "function_name": "move_above"
@@ -101,7 +90,7 @@
       "type": "Callable",
       "prompt": "Move Card Below",
       "description": "Move a card below a target card (preserves family structure).",
-      "signature": "tk_move_below(board: str = 'heaven_base_xfer', card_id: int = 0, target_id: int = 0) -> str",
+      "signature": "tk_move_below(card_id: int = 0, target_id: int = 0) -> str",
       "import_path": "sanctuary_revolution_treeshell.treekanban_treeshell_functions",
       "import_object": "move_below",
       "function_name": "move_below"
@@ -111,7 +100,7 @@
       "type": "Callable",
       "prompt": "Add Tag",
       "description": "Add a tag to a card.",
-      "signature": "tk_add_tag(board: str = 'heaven_base_xfer', card_id: int = 0, tag: str = '') -> str",
+      "signature": "tk_add_tag(card_id: int = 0, tag: str = '') -> str",
       "import_path": "sanctuary_revolution_treeshell.treekanban_treeshell_functions",
       "import_object": "add_tag",
       "function_name": "add_tag"
@@ -121,7 +110,7 @@
       "type": "Callable",
       "prompt": "Remove Tag",
       "description": "Remove a tag from a card.",
-      "signature": "tk_remove_tag(board: str = 'heaven_base_xfer', card_id: int = 0, tag: str = '') -> str",
+      "signature": "tk_remove_tag(card_id: int = 0, tag: str = '') -> str",
       "import_path": "sanctuary_revolution_treeshell.treekanban_treeshell_functions",
       "import_object": "remove_tag",
       "function_name": "remove_tag"
@@ -131,7 +120,7 @@
       "type": "Callable",
       "prompt": "Move Card To Lane",
       "description": "Move a card to a different PBML lane. Valid lanes: backlog, plan, build, measure, learn, done, blocked, archive.",
-      "signature": "tk_move_to_lane(card_id: int, lane: str, board: str = 'heaven_base_xfer') -> str",
+      "signature": "tk_move_to_lane(card_id: int, lane: str) -> str",
       "import_path": "sanctuary_revolution_treeshell.treekanban_treeshell_functions",
       "import_object": "move_to_lane",
       "function_name": "move_to_lane"

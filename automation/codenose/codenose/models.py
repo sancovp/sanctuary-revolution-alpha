@@ -85,6 +85,7 @@ class ThemeConfig(BaseModel):
         "traceback": "\u2620\ufe0f", # ☠️
         "arch": "\U0001f3d7\ufe0f",  # 🏗️
         "facade": "\U0001f9c5",      # 🧅
+        "onion": "\U0001f9c5",       # 🧅
         "dup": "\U0001f46f",         # 👯
         "long": "\U0001f4cf",        # 📏
         "log": "\U0001f4dd",         # 📝

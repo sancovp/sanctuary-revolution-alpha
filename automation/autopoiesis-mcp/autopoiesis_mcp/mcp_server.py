@@ -36,10 +36,13 @@ TEMPLATES_DIR = Path(os.environ.get(
     "AUTOPOIESIS_TEMPLATES_DIR",
     Path(__file__).parent / "templates"
 ))
+# CONNECTS_TO: /tmp/active_promise.md (read/write) — also accessed by autopoiesis_stop_hook.py
+# TRIGGERS: Autopoiesis L1 via file write to /tmp/active_promise.md
 ACTIVE_PROMISE_PATH = Path(os.environ.get(
     "AUTOPOIESIS_ACTIVE_PROMISE_PATH",
     "/tmp/active_promise.md"
 ))
+# CONNECTS_TO: /tmp/block_report.json (read/write) — also accessed by autopoiesis_stop_hook.py
 BLOCK_REPORT_PATH = Path(os.environ.get(
     "AUTOPOIESIS_BLOCK_REPORT_PATH",
     "/tmp/block_report.json"

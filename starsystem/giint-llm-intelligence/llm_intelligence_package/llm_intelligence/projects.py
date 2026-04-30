@@ -19,6 +19,28 @@ from pydantic import BaseModel, Field, validator
 logger = logging.getLogger(__name__)
 
 
+def _get_treekanban_board() -> Optional[str]:
+    """Get board name from env var, falling back to strata config.
+
+    MCPs are isolated subprocesses — env vars only exist inside the MCP process.
+    Library code running in other processes (treeshell, CAVE, etc.) must read
+    from the strata config file.
+    """
+    board = os.getenv("GIINT_TREEKANBAN_BOARD")
+    if board:
+        return board
+    try:
+        strata_path = os.path.expanduser("~/.config/strata/servers.json")
+        with open(strata_path) as f:
+            strata = json.load(f)
+        board = strata.get("mcp", {}).get("servers", {}).get("giint-llm-intelligence", {}).get("env", {}).get("GIINT_TREEKANBAN_BOARD")
+        if board:
+            return board
+    except Exception:
+        pass
+    return None
+
+
 class TaskStatus(str, Enum):
     """Task status enum - exactly as specified by user."""
     READY = "ready"
@@ -532,7 +554,14 @@ class ProjectRegistry:
             return {"error": f"Failed to add component: {e}"}
     
     def add_deliverable_to_component(self, project_id: str, feature_name: str, component_name: str, deliverable_name: str) -> Dict[str, Any]:
-        """Add deliverable to component."""
+        """Add deliverable to component. Requires OMNISANC ON (PostToolUse creates TK card with auto-priority)."""
+        # OMNISANC must be ON — PostToolUse hooks create TK cards with auto-priority
+        omnisanc_disabled = os.path.join(
+            os.environ.get("HEAVEN_DATA_DIR", "/tmp/heaven_data"),
+            "omnisanc_core", ".omnisanc_disabled"
+        )
+        if os.path.exists(omnisanc_disabled):
+            return {"error": "OMNISANC must be ON. GIINT planning requires OMNISANC PostToolUse hooks for TK card creation with auto-priority. Toggle OMNISANC on first."}
         try:
             projects = self._load_projects()
             
@@ -557,24 +586,24 @@ class ProjectRegistry:
             # Save
             self._save_projects(projects)
 
-            # Auto-create TK card on backlog
-            tk_result = self._create_tk_card_for_deliverable(
-                project_id, feature_name, component_name, deliverable_name,
-                projects[project_id].features[feature_name].components[component_name].deliverables[deliverable_name]
-            )
+            # TK card creation handled by OMNISANC PostToolUse (auto-priority assignment).
+            # OMNISANC must be ON for TK integration to work.
 
             logger.info(f"Added deliverable {deliverable_name} to component {component_name}")
-            result = {"success": True, "message": f"Deliverable {deliverable_name} added to component {component_name}"}
-            if tk_result:
-                result["tk_card"] = tk_result
-            return result
+            return {"success": True, "message": f"Deliverable {deliverable_name} added to component {component_name}"}
             
         except Exception as e:
             logger.error(f"Failed to add deliverable {deliverable_name} to component {component_name}: {e}", exc_info=True)
             return {"error": f"Failed to add deliverable: {e}"}
 
     def add_task_to_deliverable(self, project_id: str, feature_name: str, component_name: str, deliverable_name: str, task_id: str, assignee: str, agent_id: Optional[str] = None, human_name: Optional[str] = None, claude_task_id: Optional[str] = None) -> Dict[str, Any]:
-        """Add task to deliverable."""
+        """Add task to deliverable. Requires OMNISANC ON (PostToolUse creates TK card with auto-priority)."""
+        omnisanc_disabled = os.path.join(
+            os.environ.get("HEAVEN_DATA_DIR", "/tmp/heaven_data"),
+            "omnisanc_core", ".omnisanc_disabled"
+        )
+        if os.path.exists(omnisanc_disabled):
+            return {"error": "OMNISANC must be ON. GIINT planning requires OMNISANC PostToolUse hooks for TK card creation with auto-priority. Toggle OMNISANC on first."}
         try:
             projects = self._load_projects()
 
@@ -968,7 +997,7 @@ class ProjectRegistry:
             return None
 
         try:
-            board_name = os.getenv("GIINT_TREEKANBAN_BOARD")
+            board_name = _get_treekanban_board()
             if not board_name:
                 return None
 
@@ -1064,7 +1093,7 @@ class ProjectRegistry:
 
         try:
             client = HeavenBMLSQLiteClient()
-            board_name = os.getenv("GIINT_TREEKANBAN_BOARD")
+            board_name = _get_treekanban_board()
             if not board_name:
                 return {"success": False, "message": "GIINT_TREEKANBAN_BOARD environment variable not set"}
 
@@ -1429,3 +1458,452 @@ def add_spec_to_task(project_id: str, feature_name: str, component_name: str, de
 def update_project_mode(project_id: str, mode: str) -> Dict[str, Any]:
     """Update project mode."""
     return get_registry().update_project_mode(project_id, mode)
+
+
+# ─── TreeKanban integration (library layer — onion inner) ───
+
+def _parse_giint_metadata_from_card(card: dict) -> Optional[dict]:
+    """Extract GIINT metadata from card description/title/tags.
+
+    Works with THREE levels of specificity:
+    1. Full GIINT path in description: GIINT: project/feature/component/deliverable/task
+    2. Starsystem tag + card title: creates placeholder hierarchy with _Unnamed suffixes
+    3. Neither: returns None (no hierarchy creation)
+    """
+    import re
+    desc = card.get("description", "")
+    title = card.get("title", "")
+    combined = f"{title}\n{desc}"
+    tags = json.loads(card.get('tags', '[]')) if isinstance(card.get('tags'), str) else card.get('tags', [])
+
+    starsystem = None
+    for tag in tags:
+        if tag.startswith("starsystem:"):
+            starsystem = tag.split(":", 1)[1].strip()
+            break
+
+    match = re.search(r'GIINT:\s*([^/\s]+)/([^/\s]+)/([^/\s]+)/([^/\s]+)/([^/\s\n]+)', combined)
+    if match:
+        result = {
+            "project_id": match.group(1), "feature": match.group(2),
+            "component": match.group(3), "deliverable": match.group(4),
+            "task_id": match.group(5),
+        }
+        if starsystem:
+            result["starsystem"] = starsystem
+        return result
+
+    if starsystem and title:
+        ss_norm = re.sub(r'[^a-zA-Z0-9_\s]', '', starsystem).strip().replace(' ', '_').replace('-', '_')
+        deliv_norm = re.sub(r'[^a-zA-Z0-9_\s]', '', title).strip().replace(' ', '_')
+        if not deliv_norm:
+            deliv_norm = f"Card_{card.get('id', 'Unknown')}"
+        return {
+            "project_id": ss_norm, "feature": f"{ss_norm}_Unnamed",
+            "component": f"{ss_norm}_Unnamed", "deliverable": f"{ss_norm}_{deliv_norm}",
+            "task_id": None, "starsystem": starsystem,
+        }
+
+    return None
+
+
+def _is_task_ready_in_giint(metadata: dict) -> bool:
+    """Check if GIINT project is ready by querying CartON for non-_Unnamed hierarchy."""
+    if not metadata:
+        return False
+    try:
+        from carton_mcp.carton_utils import CartOnUtils
+        utils = CartOnUtils()
+        project_id = metadata["project_id"].replace("-", "_").replace(" ", "_")
+        project_concept = f"Giint_Project_{project_id}"
+        query = (
+            "MATCH (p:Wiki {n: $proj})"
+            "-[:HAS_FEATURE]->(f:Wiki)"
+            "-[:HAS_COMPONENT]->(c:Wiki)"
+            "-[:HAS_DELIVERABLE]->(d:Wiki) "
+            "WHERE NOT f.n ENDS WITH '_Unnamed' "
+            "AND NOT c.n ENDS WITH '_Unnamed' "
+            "AND NOT d.n ENDS WITH '_Unnamed' "
+            "RETURN count(d) > 0 AS ok"
+        )
+        result = utils.query_wiki_graph(query, {"proj": project_concept})
+        if not result.get("success") or not result.get("data"):
+            return False
+        data = result["data"]
+        first = data[0] if isinstance(data, list) and data else {}
+        return first.get("ok", False)
+    except Exception as e:
+        logger.error(f"Error checking GIINT readiness via CartON: {e}")
+        return False
+
+
+def _tk_priority_sort_key(card):
+    """Sort key for tree-notation priorities."""
+    priority = card.get('priority', 'NA')
+    if priority in ('NA', 'none', ''):
+        return (float('inf'),)
+    try:
+        parts = [int(x) for x in priority.split('.')]
+        return tuple(parts + [0] * (10 - len(parts)))
+    except Exception:
+        return (float('inf'),)
+
+
+def _has_agent_assignee(card: dict) -> bool:
+    """Check if card has assignee:ai-only or assignee:ai-human tag."""
+    tags = json.loads(card.get('tags', '[]')) if isinstance(card.get('tags'), str) else card.get('tags', [])
+    return any(t in ("assignee:ai-only", "assignee:ai-human", "assignee:ai+human") for t in tags)
+
+
+def ensure_giint_hierarchy_in_carton(giint_metadata: dict) -> Optional[str]:
+    """Ensure full GIINT hierarchy exists as typed CartON concepts.
+
+    Creates: HC Collection -> Hypercluster -> Project -> Feature -> Component -> Deliverable -> Task
+    Returns the Hypercluster name, or None on failure.
+    """
+    from pathlib import Path
+    try:
+        from carton_mcp.add_concept_tool import add_concept_tool_func
+    except ImportError:
+        logger.warning("carton_mcp not available — skipping hierarchy creation")
+        return None
+
+    project_id = giint_metadata["project_id"]
+    feature = giint_metadata["feature"]
+    component = giint_metadata["component"]
+    deliverable = giint_metadata["deliverable"]
+    task_id = giint_metadata["task_id"]
+
+    starsystem_name = giint_metadata.get("starsystem")
+    if not starsystem_name:
+        starsystem_name = "Home"
+        # CONNECTS_TO: /tmp/active_starlog_path.txt (read) — also written by starlog, mcp_server.py
+        starlog_path_file = Path("/tmp/active_starlog_path.txt")
+        if starlog_path_file.exists():
+            raw = starlog_path_file.read_text().strip()
+            starsystem_name = Path(raw).name
+    starsystem_name = starsystem_name.replace("-", "_").replace(" ", "_").title()
+
+    def norm(s):
+        return s.replace("-", "_").replace(" ", "_")
+
+    ss_name = norm(starsystem_name)
+    ss_collection = f"Starsystem_{ss_name}_Collection"
+    task_collections = f"Starsystem_{ss_name}_Task_Collections"
+    done_signal_collections = f"Starsystem_{ss_name}_Done_Signal_Collections"
+    completed_collections = f"Starsystem_{ss_name}_Completed_Collections"
+    arch_collections = f"Starsystem_{ss_name}_Architecture_Collections"
+    bug_collections = f"Starsystem_{ss_name}_Bug_Collections"
+    hc_name = f"Hypercluster_{norm(project_id)}"
+    project_name = f"Giint_Project_{norm(project_id)}"
+    feature_name = f"Giint_Feature_{norm(feature)}"
+    component_name = f"Giint_Component_{norm(component)}"
+    deliverable_name = f"Giint_Deliverable_{norm(deliverable)}"
+    task_name = f"Giint_Task_{norm(task_id)}" if task_id else None
+
+    def ensure_concept(name, desc, rels):
+        try:
+            add_concept_tool_func(concept_name=name, description=desc, relationships=rels, desc_update_mode="append", hide_youknow=False)
+        except Exception as e:
+            logger.warning(f"Failed to create {name}: {e}")
+
+    ensure_concept(ss_collection, f"Top-level collection for starsystem {starsystem_name}", [
+        {"relationship": "is_a", "related": ["Starsystem_Collection"]},
+        {"relationship": "instantiates", "related": ["Starsystem_Collection_Template"]},
+        {"relationship": "part_of", "related": ["All_Starsystems"]},
+        {"relationship": "has_part", "related": [task_collections, done_signal_collections, completed_collections, arch_collections, bug_collections]},
+    ])
+    for cat_name, cat_type in [
+        (task_collections, "Task_Collection_Category"),
+        (done_signal_collections, "Done_Signal_Collection_Category"),
+        (completed_collections, "Completed_Collection_Category"),
+        (arch_collections, "Architecture_Collection_Category"),
+        (bug_collections, "Bug_Collection_Category"),
+    ]:
+        ensure_concept(cat_name, f"{cat_type.replace('_', ' ')} for starsystem {starsystem_name}", [
+            {"relationship": "is_a", "related": ["Collection_Category"]},
+            {"relationship": "part_of", "related": [ss_collection]},
+            {"relationship": "instantiates", "related": [cat_type]},
+        ])
+    ensure_concept(hc_name, f"HyperCluster tracking {project_name}. Why: Active work.", [
+        {"relationship": "is_a", "related": ["Hypercluster"]},
+        {"relationship": "part_of", "related": [task_collections, "Memory_Tier_0"]},
+        {"relationship": "instantiates", "related": ["Hypercluster_Template"]},
+        {"relationship": "has_giint_project", "related": [project_name]},
+        {"relationship": "has_status", "related": ["Active"]},
+    ])
+    ensure_concept(project_name, f"GIINT project for {project_id}", [
+        {"relationship": "is_a", "related": ["GIINT_Project"]},
+        {"relationship": "part_of", "related": [hc_name]},
+        {"relationship": "instantiates", "related": ["GIINT_Project_Template"]},
+        {"relationship": "has_feature", "related": [feature_name]},
+    ])
+    ensure_concept(feature_name, f"Feature {feature} in {project_id}", [
+        {"relationship": "is_a", "related": ["GIINT_Feature"]},
+        {"relationship": "part_of", "related": [project_name]},
+        {"relationship": "has_component", "related": [component_name]},
+    ])
+    ensure_concept(component_name, f"Component {component} in {feature}", [
+        {"relationship": "is_a", "related": ["GIINT_Component"]},
+        {"relationship": "part_of", "related": [feature_name]},
+        {"relationship": "has_deliverable", "related": [deliverable_name]},
+    ])
+    ensure_concept(deliverable_name, f"Deliverable {deliverable} in {component}", [
+        {"relationship": "is_a", "related": ["GIINT_Deliverable"]},
+        {"relationship": "part_of", "related": [component_name]},
+    ])
+    if task_name:
+        ensure_concept(task_name, f"Task {task_id} in {deliverable}", [
+            {"relationship": "is_a", "related": ["GIINT_Task"]},
+            {"relationship": "part_of", "related": [deliverable_name]},
+        ])
+
+    # CONNECTS_TO: /tmp/active_hypercluster.txt (write) — also accessed by canopy/schedule.py, mcp_server.py, memory daemon
+    try:
+        with open("/tmp/active_hypercluster.txt", "w") as f:
+            f.write(hc_name)
+    except Exception:
+        pass
+
+    return hc_name
+
+
+def get_next_task_from_treekanban(agent_tasks_only: bool = False) -> str:
+    """Get next task from TreeKanban build lane with auto-ratcheting from plan.
+
+    If build lane is empty, automatically moves next eligible task from plan to build:
+    - GIINT tasks must have is_ready=true
+    - Non-GIINT tasks bypass ready gate
+
+    This is the LIBRARY function. MCP tool and treeshell both call this.
+
+    Args:
+        agent_tasks_only: If True, only return cards tagged assignee:ai-only or
+            assignee:ai-human. Skips human-only and untagged cards.
+
+    Returns:
+        JSON string with next task card details.
+    """
+    omnisanc_disabled = os.path.join(
+        os.environ.get("HEAVEN_DATA_DIR", "/tmp/heaven_data"),
+        "omnisanc_core", ".omnisanc_disabled"
+    )
+    if os.path.exists(omnisanc_disabled):
+        return json.dumps({"success": False, "error": "omnisanc_required", "message": "OMNISANC must be ON to use TreeKanban. Toggle OMNISANC on first."}, indent=2)
+
+    try:
+        from heaven_bml_sqlite.heaven_bml_sqlite_client import HeavenBMLSQLiteClient
+    except ImportError as e:
+        logger.warning(f"TreeKanban client not available: {e}")
+        return json.dumps({"success": False, "message": "TreeKanban not available - heaven_bml_sqlite not installed"}, indent=2)
+
+    try:
+        client = HeavenBMLSQLiteClient()
+        board_name = _get_treekanban_board()
+        if not board_name:
+            return json.dumps({"success": False, "error": "GIINT_TREEKANBAN_BOARD environment variable not set"}, indent=2)
+
+        cards = client.get_all_cards(board_name)
+        if not cards:
+            return json.dumps({"success": False, "message": "No cards found in TreeKanban"}, indent=2)
+
+        # Filter to build lane
+        build_cards = [c for c in cards if c.get("status") == "build"]
+        if agent_tasks_only:
+            build_cards = [c for c in build_cards if _has_agent_assignee(c)]
+
+        # Auto-ratchet if build empty
+        if not build_cards:
+            logger.info("Build lane empty - attempting auto-ratchet from plan")
+            plan_cards = [c for c in cards if c.get("status") == "plan"]
+            if not plan_cards:
+                return json.dumps({"success": False, "message": "Build lane empty and no tasks in plan lane"}, indent=2)
+
+            plan_cards.sort(key=_tk_priority_sort_key)
+
+            eligible_card = None
+            for card in plan_cards:
+                card_tags = json.loads(card.get('tags', '[]')) if isinstance(card.get('tags'), str) else card.get('tags', [])
+                if agent_tasks_only and not _has_agent_assignee(card):
+                    continue
+                is_giint_task = "giint_task" in card_tags
+                if is_giint_task:
+                    metadata = _parse_giint_metadata_from_card(card)
+                    if metadata and _is_task_ready_in_giint(metadata):
+                        eligible_card = card
+                        break
+                else:
+                    eligible_card = card
+                    break
+
+            if not eligible_card:
+                logger.info("No ready tasks - injecting PLANNING_MODE meta-task")
+                return json.dumps({
+                    "success": True, "meta_task": "PLANNING_MODE",
+                    "message": "No ready tasks available. Entering planning mode.",
+                    "instruction": "Your task: Review tasks in plan lane and spec them out until at least one becomes ready.",
+                    "plan_lane_count": len(plan_cards), "planning_needed": True
+                }, indent=2)
+
+            # Move eligible card (and children) to build
+            logger.info(f"Auto-ratcheting card {eligible_card['id']} from plan to build")
+            children_result = client._make_request("GET", f"/api/sqlite/get-children?board={board_name}&parent_id={eligible_card['id']}")
+            cards_to_move = [eligible_card]
+            if children_result and children_result.get('success'):
+                cards_to_move.extend(children_result.get('children', []))
+
+            for card in cards_to_move:
+                update_result = client._make_request("PUT", f"/api/sqlite/cards/{card['id']}", {"board": board_name, "status": "build"})
+                if update_result:
+                    card["status"] = "build"
+
+            build_cards = cards_to_move
+
+        build_cards.sort(key=_tk_priority_sort_key)
+        next_card = build_cards[0]
+        tags = json.loads(next_card.get('tags', '[]')) if isinstance(next_card.get('tags'), str) else next_card.get('tags', [])
+
+        # Determine card type
+        card_type = "unknown"
+        for tag_check, type_name in [("human_ai", "collaborative (AI+Human)"), ("human_only", "human-only"), ("giint_task", "giint_task"), ("operadic_flow", "operadic_flow_pattern"), ("deliverable", "deliverable"), ("task", "task")]:
+            if tag_check in tags:
+                card_type = type_name
+                break
+
+        giint_metadata = _parse_giint_metadata_from_card(next_card)
+        if not giint_metadata:
+            return json.dumps({
+                "success": False, "error": "no_starsystem_tag",
+                "message": f"Card '{next_card.get('title')}' has no starsystem tag. Every task card MUST have a starsystem:<name> tag.",
+                "card_id": next_card.get("id"), "card_title": next_card.get("title"), "tags": tags,
+            }, indent=2)
+
+        result = {
+            "success": True,
+            "card": {
+                "id": next_card.get("id"), "title": next_card.get("title"),
+                "description": next_card.get("description", ""), "priority": next_card.get("priority", "NA"),
+                "tags": tags, "card_type": card_type, "lane": "build", "giint_metadata": giint_metadata
+            },
+            "build_lane_count": len(build_cards),
+            "message": f"Next task: {next_card.get('title')} ({card_type})"
+        }
+
+        if giint_metadata:
+            hc_name = ensure_giint_hierarchy_in_carton(giint_metadata)
+            if hc_name:
+                result["active_hypercluster"] = hc_name
+
+        return json.dumps(result, indent=2)
+
+    except Exception as e:
+        logger.warning(f"TreeKanban unavailable or error: {e}", exc_info=True)
+        return json.dumps({"success": False, "message": "TreeKanban unavailable", "error": str(e)}, indent=2)
+
+
+def check_stubs_ready(component_names: list) -> dict:
+    """Check if GIINT components have file stubs with valid CartON refs.
+
+    For each component with HAS_PATH:
+    1. File must exist on disk
+    2. File must contain CartON ref stubs:
+       - Docstring stubs: \"\"\"Giint_Deliverable_*\"\"\" (new code)
+       - Change comments: # Change: Giint_Task_* (existing code mods)
+    3. Each ref must RESOLVE in CartON (concept exists)
+
+    Components without HAS_PATH are skipped (not code components).
+
+    Returns {"ready": bool, "details": str, "unresolved": list}
+    """
+    import re
+    import os
+
+    try:
+        from carton_mcp.carton_utils import CartOnUtils
+        utils = CartOnUtils()
+    except ImportError:
+        return {"ready": True, "details": "CartON unavailable, skipping stub check", "unresolved": []}
+
+    unresolved = []
+
+    for comp_name in component_names:
+        # Query component's HAS_PATH relationship
+        path_query = (
+            "MATCH (c:Wiki {n: $comp})-[:HAS_PATH]->(p:Wiki) "
+            "RETURN p.n AS path"
+        )
+        path_result = utils.query_wiki_graph(path_query, {"comp": comp_name})
+
+        if not path_result.get("success") or not path_result.get("data"):
+            continue  # No has_path = not a code component, skip
+
+        data = path_result["data"]
+        if not data:
+            continue
+
+        carton_path = data[0].get("path", "")
+        if not carton_path:
+            continue
+
+        # CartON normalizes paths to Title_Case (- becomes _)
+        # Try: original, lowered, lowered with _ replaced by -
+        candidates = [carton_path, carton_path.lower()]
+        # Also try hyphens: /tmp/turn_based -> /tmp/turn-based
+        hyphen_path = carton_path.lower().replace('_', '-')
+        # But keep file extensions correct (.py not .py with hyphens)
+        # Split into dir + filename, only hyphenate dir parts
+        dir_part = os.path.dirname(hyphen_path)
+        file_part = os.path.basename(carton_path.lower()).replace('-', '_')  # filenames keep underscores
+        mixed_path = os.path.join(dir_part, file_part)
+        candidates.append(mixed_path)
+
+        found_paths = [p for p in set(candidates) if os.path.exists(p)]
+        if len(found_paths) > 1:
+            return {
+                "ready": False,
+                "details": f"Component {comp_name} resolves to MULTIPLE paths on disk — tangled web: {found_paths}",
+                "unresolved": found_paths,
+            }
+        elif len(found_paths) == 1:
+            file_path = found_paths[0]
+        else:
+            return {
+                "ready": False,
+                "details": f"Component {comp_name} has_path {carton_path} but file does not exist (tried: {candidates})",
+                "unresolved": [carton_path],
+            }
+
+        # Scan for CartON ref stubs
+        try:
+            with open(file_path, "r") as f:
+                content = f.read()
+        except (OSError, IOError) as e:
+            return {
+                "ready": False,
+                "details": f"Cannot read {file_path}: {e}",
+                "unresolved": [file_path],
+            }
+
+        deliverable_refs = re.findall(r'"""CHECK ON CARTON: (Giint_\w+)"""', content)
+        task_refs = re.findall(r'# CHANGE: CHECK ON CARTON: (Giint_\w+)', content)
+        all_refs = deliverable_refs + task_refs
+
+        if not all_refs:
+            # File exists but no stubs — could be fully implemented already
+            continue
+
+        # Verify each ref resolves in CartON
+        for ref in all_refs:
+            ref_query = "MATCH (c:Wiki {n: $name}) RETURN c.n AS name"
+            ref_result = utils.query_wiki_graph(ref_query, {"name": ref})
+            if not ref_result.get("success") or not ref_result.get("data") or not ref_result["data"]:
+                unresolved.append(ref)
+
+    if unresolved:
+        return {
+            "ready": False,
+            "details": f"Stub refs do not resolve in CartON: {unresolved}",
+            "unresolved": unresolved,
+        }
+
+    return {"ready": True, "details": "All stubs valid", "unresolved": []}

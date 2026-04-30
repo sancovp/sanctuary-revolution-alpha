@@ -3,6 +3,7 @@
 Pydantic configuration model for CAVEAgent runtime.
 Persists to /tmp/heaven_data/cave_agent_config.json
 """
+# CONNECTS_TO: /tmp/heaven_data/cave_agent_config.json (read/write) — CAVE runtime config
 import json
 from pathlib import Path
 import os
@@ -53,6 +54,7 @@ class CAVEConfig(BaseModel):
     # === PAIA Hierarchy ===
     # If parent_url is set, this CAVEAgent is a PAIA that reports to a parent
     # If None, this is the root CAVEAgent (the real one)
+    # TRIGGERS: parent CAVE at :8421 via HTTP heartbeat
     parent_url: Optional[str] = None  # e.g., "http://localhost:8421"
     paia_id: Optional[str] = None  # Identity when reporting to parent
     heartbeat_interval: float = 5.0  # Seconds between heartbeats to parent

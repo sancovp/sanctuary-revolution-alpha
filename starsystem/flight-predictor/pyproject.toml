@@ -11,7 +11,7 @@ dependencies = [
     "mcp",
     "chromadb",
     "neo4j",
-    "pydantic",
+    "pydantic==2.10.6",
 ]
 
 [project.scripts]

@@ -463,13 +463,20 @@ class DirectNeo4jExtractor:
                 DETACH DELETE c
             """, repo_name=repo_name)
             
-            # 4. Delete files (they depend on repository)
+            # 4. Delete PAIA nodes (rules, skills, hooks, agents)
+            for paia_label in ("Rule", "Skill", "Hook", "AgentDef"):
+                await session.run(
+                    f"MATCH (r:Repository {{name: $repo_name}})-[:CONTAINS]->(n:{paia_label}) DETACH DELETE n",
+                    repo_name=repo_name,
+                )
+
+            # 5. Delete files (they depend on repository)
             await session.run("""
                 MATCH (r:Repository {name: $repo_name})-[:CONTAINS]->(f:File)
                 DETACH DELETE f
             """, repo_name=repo_name)
-            
-            # 5. Finally delete the repository
+
+            # 6. Finally delete the repository
             await session.run("""
                 MATCH (r:Repository {name: $repo_name})
                 DETACH DELETE r
@@ -525,7 +532,100 @@ class DirectNeo4jExtractor:
                         python_files.append(file_path)
         
         return python_files
-    
+
+    def get_claude_structure(self, repo_path: str) -> List[Dict]:
+        """Scan .claude/ for PAIA structures. Returns typed items."""
+        items = []
+        claude_dir = os.path.join(repo_path, ".claude")
+        if not os.path.isdir(claude_dir):
+            return items
+
+        # Rules: .claude/rules/*.md
+        rules_dir = os.path.join(claude_dir, "rules")
+        if os.path.isdir(rules_dir):
+            for f in os.listdir(rules_dir):
+                if f.endswith(".md"):
+                    items.append({
+                        "path": os.path.join(rules_dir, f),
+                        "name": f.replace(".md", ""),
+                        "paia_type": "rule",
+                    })
+
+        # Skills: .claude/skills/*/SKILL.md
+        skills_dir = os.path.join(claude_dir, "skills")
+        if os.path.isdir(skills_dir):
+            for d in os.listdir(skills_dir):
+                skill_md = os.path.join(skills_dir, d, "SKILL.md")
+                if os.path.isfile(skill_md):
+                    items.append({
+                        "path": skill_md,
+                        "name": d,
+                        "paia_type": "skill",
+                    })
+
+        # Hooks: .claude/hooks/*.py
+        hooks_dir = os.path.join(claude_dir, "hooks")
+        if os.path.isdir(hooks_dir):
+            for f in os.listdir(hooks_dir):
+                if f.endswith(".py"):
+                    items.append({
+                        "path": os.path.join(hooks_dir, f),
+                        "name": f.replace(".py", ""),
+                        "paia_type": "hook",
+                    })
+
+        # Agents: .claude/agents/*.md
+        agents_dir = os.path.join(claude_dir, "agents")
+        if os.path.isdir(agents_dir):
+            for f in os.listdir(agents_dir):
+                if f.endswith(".md"):
+                    items.append({
+                        "path": os.path.join(agents_dir, f),
+                        "name": f.replace(".md", ""),
+                        "paia_type": "agent",
+                    })
+
+        logger.info(f"Found {len(items)} PAIA items in .claude/ ({sum(1 for i in items if i['paia_type']=='rule')} rules, "
+                     f"{sum(1 for i in items if i['paia_type']=='skill')} skills, "
+                     f"{sum(1 for i in items if i['paia_type']=='hook')} hooks, "
+                     f"{sum(1 for i in items if i['paia_type']=='agent')} agents)")
+        return items
+
+    async def _create_paia_nodes(self, repo_name: str, items: List[Dict]):
+        """Create typed Neo4j nodes for PAIA items (rules, skills, hooks, agents).
+
+        Labels: Rule, Skill, Hook, AgentDef. All connected to Repository via CONTAINS.
+        """
+        label_map = {
+            "rule": "Rule",
+            "skill": "Skill",
+            "hook": "Hook",
+            "agent": "AgentDef",
+        }
+
+        async with self.driver.session() as session:
+            for item in items:
+                label = label_map.get(item["paia_type"])
+                if not label:
+                    continue
+
+                await session.run(
+                    f"CREATE (n:{label} {{name: $name, path: $path, paia_type: $paia_type, created_at: datetime()}})",
+                    name=item["name"],
+                    path=item["path"],
+                    paia_type=item["paia_type"],
+                )
+
+                await session.run(
+                    f"MATCH (r:Repository {{name: $repo_name}}) "
+                    f"MATCH (n:{label} {{path: $path}}) "
+                    f"CREATE (r)-[:CONTAINS]->(n)",
+                    repo_name=repo_name,
+                    path=item["path"],
+                )
+
+        logger.info(f"Created {len(items)} PAIA nodes for {repo_name}")
+
     async def analyze_repository(self, repo_url: str, temp_dir: str = None, keep_local: bool = True):
         """Analyze repository and create nodes/relationships in Neo4j"""
         repo_name = repo_url.split('/')[-1].replace('.git', '')
@@ -581,19 +681,26 @@ class DirectNeo4jExtractor:
             # Create nodes and relationships in Neo4j
             logger.info("Creating nodes and relationships in Neo4j...")
             await self._create_graph(repo_name, modules_data, repo_url)
-            
+
+            # Scan .claude/ for PAIA structures (rules, skills, hooks, agents)
+            claude_items = self.get_claude_structure(str(repo_path))
+            if claude_items:
+                await self._create_paia_nodes(repo_name, claude_items)
+
             # Print summary
             total_classes = sum(len(mod['classes']) for mod in modules_data)
             total_methods = sum(len(cls['methods']) for mod in modules_data for cls in mod['classes'])
             total_functions = sum(len(mod['functions']) for mod in modules_data)
             total_imports = sum(len(mod['imports']) for mod in modules_data)
-            
+            paia_count = len(claude_items) if claude_items else 0
+
             print(f"\\n=== Direct Neo4j Repository Analysis for {repo_name} ===")
             print(f"Files processed: {len(modules_data)}")
             print(f"Classes created: {total_classes}")
             print(f"Methods created: {total_methods}")
             print(f"Functions created: {total_functions}")
             print(f"Import relationships: {total_imports}")
+            print(f"PAIA items: {paia_count}")
             
             logger.info(f"Successfully created Neo4j graph for {repo_name}")
             
@@ -661,13 +768,19 @@ class DirectNeo4jExtractor:
             # Create nodes and relationships in Neo4j
             logger.info("Creating nodes and relationships in Neo4j...")
             await self._create_graph(repo_name, modules_data, f"local:{local_path}")
-            
+
+            # Scan .claude/ for PAIA structures (rules, skills, hooks, agents)
+            claude_items = self.get_claude_structure(str(repo_path))
+            if claude_items:
+                await self._create_paia_nodes(repo_name, claude_items)
+
             # Print summary
             total_classes = sum(len(mod['classes']) for mod in modules_data)
             total_methods = sum(len(cls['methods']) for mod in modules_data for cls in mod['classes'])
             total_functions = sum(len(mod['functions']) for mod in modules_data)
             total_imports = sum(len(mod['imports']) for mod in modules_data)
-            
+            paia_count = len(claude_items) if claude_items else 0
+
             print(f"\\n=== Local Directory Analysis for {repo_name} ===")
             print(f"Directory: {local_path}")
             print(f"Files processed: {len(modules_data)}")
@@ -675,7 +788,8 @@ class DirectNeo4jExtractor:
             print(f"Methods created: {total_methods}")
             print(f"Functions created: {total_functions}")
             print(f"Import relationships: {total_imports}")
-            
+            print(f"PAIA items: {paia_count}")
+
             logger.info(f"Successfully created Neo4j graph for local directory {repo_name}")
             
         except Exception as e:
@@ -888,6 +1002,7 @@ async def main():
     """Example usage"""
     load_dotenv()
     
+    # TRIGGERS: Neo4j database via Bolt protocol on localhost:7687
     neo4j_uri = os.environ.get('NEO4J_URI', 'bolt://localhost:7687')
     neo4j_user = os.environ.get('NEO4J_USER', 'neo4j')
     neo4j_password = os.environ.get('NEO4J_PASSWORD', 'password')

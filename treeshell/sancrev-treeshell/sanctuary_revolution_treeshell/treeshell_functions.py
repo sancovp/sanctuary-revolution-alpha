@@ -15,6 +15,7 @@ from typing import Optional, List, Dict, Any
 from sanctuary_revolution import SanctuaryRevolution
 
 # Harness URL for event emission (container-local)
+# TRIGGERS: sancrev harness:8000 via HTTP POST — event emission to SSE frontend
 HARNESS_URL = os.environ.get("HARNESS_URL", "http://localhost:8000")
 
 

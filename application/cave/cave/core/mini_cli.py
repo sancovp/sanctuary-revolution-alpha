@@ -5,7 +5,7 @@ It listens on a Discord channel, matches commands, fires handlers,
 and sends notifications. Builder pattern for easy creation.
 
 Usage:
-    sanctum_cli = (MiniCLI.builder("sanctum", "1484546922311061625")
+    sanctum_cli = (MiniCLI.builder("sanctum", discord_id=channel_id_from_config)
         .command("done", handle_ritual_done, "Complete a ritual")
         .command("status", handle_status, "Show today's status")
         .command("skip", handle_skip, "Skip a ritual")

@@ -39,6 +39,12 @@ htmlcov/
 .tox/
 .nox/
 
+# CA cached repo copies
+knowledge/context-alignment/neo4j_codebase_mcp/parsers/repos/
+
+# Node modules
+node_modules/
+
 # Distribution
 *.tar.gz
 *.whl

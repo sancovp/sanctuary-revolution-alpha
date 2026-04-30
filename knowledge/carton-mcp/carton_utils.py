@@ -509,6 +509,11 @@ class CartOnUtils:
                 logger.warning(f"[INVARIANT] Ontology materialization failed: {e}")
 
             # --- SKILL ENFORCEMENT ---
+            # BUG (Apr 18 2026): This entire section is broken.
+            # (1) SET sg.t=timestamp() overwrites timestamps every boot — Skillgraph_ always "most recent"
+            # (2) Nodes are flat stubs (PART_OF Skillgraph + IS_A Skillgraph_Entry only) — no real relationships
+            # (3) ChromaDB goes to separate "skillgraphs" collection, invisible to normal chroma_query
+            # Needs full rewrite to create complete skill graphs with all relationships.
             # 1. Get all skill dirs on disk (source of truth)
             skill_names = []
             for entry in skills_dir.iterdir():
@@ -530,8 +535,7 @@ class CartOnUtils:
             existing_chroma = set()
             try:
                 import chromadb
-                chroma_path = os.path.join(heaven_data_dir, "skill_chroma")
-                client = chromadb.PersistentClient(path=chroma_path)
+                client = chromadb.HttpClient(host="localhost", port=8101)
                 collection = client.get_or_create_collection(
                     name="skillgraphs",
                     metadata={"hnsw:space": "cosine"}
@@ -605,7 +609,7 @@ class CartOnUtils:
                     try:
                         graph.execute_query(
                             "MERGE (sg:Wiki {n: $sg_name}) "
-                            "SET sg.t = timestamp() "
+                            "SET sg.t = CASE WHEN sg.t IS NULL THEN datetime() ELSE sg.t END, sg.system_generated = true "
                             "WITH sg "
                             "MATCH (parent:Wiki {n: 'Skillgraph'}) "
                             "MERGE (parent)-[:HAS_INSTANCES]->(sg) "

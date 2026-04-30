@@ -73,6 +73,7 @@ def batch_check_descs_in_carton(concept_names: list[str]) -> dict[str, str]:
         with driver.session() as session:
             result = session.run(
                 "MATCH (c:Wiki) WHERE c.n IN $names AND c.d IS NOT NULL AND c.d <> '' "
+                "AND NOT c.d STARTS WITH 'AUTO CREATED' "
                 "RETURN c.n AS name, c.d AS desc",
                 names=concept_names,
             )
@@ -402,10 +403,14 @@ def compile_concepts(concepts: list[dict], silenced: bool) -> tuple[list[str], i
     compiled_count = 0
     warning_count = 0
 
-    # Batch Neo4j lookup for target descriptions
+    # Batch Neo4j lookup for target descriptions AND source concept names.
+    # Source names are needed so we can RAISE on existing main targets —
+    # dragonbones can only CREATE new concepts; updating existing ones must
+    # go through CartON MCP tools directly.
     all_targets = set()
     for concept in concepts:
         all_targets.update(concept.get("all_targets", []))
+        all_targets.add(concept["concept_name"])
     existing_descs = batch_check_descs_in_carton(list(all_targets))
 
     add_concept = get_add_concept_func()
@@ -529,17 +534,38 @@ def compile_concepts(concepts: list[dict], silenced: bool) -> tuple[list[str], i
         # Known GIINT/structural types MUST be validated by YOUKNOW (never hidden)
         name_lower = concept["concept_name"].lower()
         is_typed_ec = any(name_lower.startswith(p.lower()) for p in GIINT_EC_SHAPES)
+
+        # Dragonbones is CREATE-ONLY. If the main target already exists in
+        # CartON, RAISE — updates must go through CartON MCP tools directly.
+        # This prevents dragonbones from polluting existing concept descriptions
+        # via the append-on-every-emission anti-pattern.
+        if concept["concept_name"] in existing_descs:
+            results.append(
+                f"❌ [{concept['concept_name']}] Main target already exists. "
+                f"It can be updated via CartON MCP tools."
+            )
+            warning_count += 1
+            logger.warning(
+                "Refused to overwrite existing concept %s — use CartON MCP tools to update",
+                concept["concept_name"],
+            )
+            continue
+
         try:
             result = add_concept(
                 concept_name=concept["concept_name"],
                 description=concept["description"],
                 relationships=concept["relationships"],
                 desc_update_mode="append",
-                hide_youknow=silenced and not is_typed_ec,
+                hide_youknow=silenced and not is_typed_ec,  # hide RESPONSE, not the call
+                target_descs=concept.get("target_descs"),
             )
 
             if not silenced:
                 results.append(f"✅ [{concept['concept_name']}] {result}")
+            elif "SOUP" in result or "YOUKNOW error" in result:
+                # ALWAYS surface SOUP/validation errors even in silent mode
+                results.append(f"⚠️ SOUP [{concept['concept_name']}] {result}")
             compiled_count += 1
             logger.info("Compiled %s (silenced=%s)", concept["concept_name"], silenced)
 
@@ -595,20 +621,12 @@ def compile_concepts(concepts: list[dict], silenced: bool) -> tuple[list[str], i
             logger.exception("Error compiling %s", concept["concept_name"])
             results.append(f"❌ [{concept['concept_name']}] ERROR: {traceback.format_exc()}")
 
-        # Rule #6: Write claim descs to target concepts
-        for target_name, target_desc in concept.get("target_descs", {}).items():
-            try:
-                add_concept(
-                    concept_name=target_name,
-                    description=target_desc,
-                    relationships=[{"relationship": "relates_to",
-                                    "related": [concept["concept_name"]]}],
-                    desc_update_mode="append",
-                    hide_youknow=True,
-                )
-                logger.info("Rule#6 enriched %s from %s", target_name, concept["concept_name"])
-            except Exception:
-                logger.exception("Failed to enrich target %s", target_name)
+        # Rule #6 (DELETED 2026-04-07): previously wrote source concept's desc
+        # onto every TARGET concept (e.g. Skill_Foo's desc would be appended to
+        # the Skill base class concept on every emission). This polluted base
+        # type concepts to 1.5M chars. Targets should be pure typed references
+        # via relationships, never desc accumulators. Source concept holds the
+        # desc, period.
 
         # Warnings only shown when UNSILENCED
         if not silenced:
@@ -617,19 +635,6 @@ def compile_concepts(concepts: list[dict], silenced: bool) -> tuple[list[str], i
                     f"❌ ERROR [{concept['concept_name']}] HAS NO DESCRIPTION. "
                     f"FIX NOW: add desc='''...''' to at least one claim.")
                 warning_count += 1
-
-            missing = concept.get("missing_descs", [])
-            if missing:
-                actually_missing = []
-                for m in missing:
-                    target = m.split("=", 1)[1] if "=" in m else m
-                    if target not in existing_descs:
-                        actually_missing.append(m)
-                if actually_missing:
-                    results.append(
-                        f"❌ [{concept['concept_name']}] Claims WITHOUT desc: "
-                        f"{', '.join(actually_missing)}. ADD DESC NOW.")
-                    warning_count += 1
 
             invalid = concept.get("invalid_rels", [])
             if invalid:
@@ -804,6 +809,7 @@ def _flush_to_starlog_diary(concepts: list[dict], active_starlog_project: str | 
                 # Multi-starsystem — route to joint starlog project
                 joint_name = get_joint_starlog_name(list(detected.keys()))
                 try:
+                    # PARALLEL: uses heaven_base.registry — should migrate to CartON/YOUKNOW
                     from heaven_base.tools.registry_tool import registry_util_func
                     registry_util_func("create_registry", registry_name=f"{joint_name}_debug_diary")
                 except Exception:

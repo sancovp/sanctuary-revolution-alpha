@@ -446,6 +446,101 @@ def _analyze_test_function(func_node: ast.FunctionDef, lines: list[str]) -> list
 
 
 # =============================================================================
+# ONION ARCHITECTURE — IMPORT DIRECTION ENFORCEMENT
+# =============================================================================
+
+# Layers from outermost (0) to innermost (3). Higher = deeper.
+_ONION_LAYERS = {
+    "mcp_server.py": 0, "server.py": 0, "api.py": 0, "cli.py": 0, "main.py": 0,
+    "core.py": 1,
+    "utils.py": 2,
+}
+# util_deps/* = layer 3 (handled by directory check)
+# Floating files (no layer constraint): models.py, config.py, constants.py, types.py, exceptions.py, __init__.py
+_ONION_FLOATING = {"models", "config", "constants", "types", "exceptions", "__init__"}
+
+def _module_to_layer(module_leaf: str) -> int | None:
+    """Map a module name to its onion layer. None = floating/external."""
+    fname = module_leaf + ".py"
+    if fname in _ONION_LAYERS:
+        return _ONION_LAYERS[fname]
+    if module_leaf in _ONION_FLOATING:
+        return None  # floating — always allowed
+    if module_leaf == "util_deps" or module_leaf.startswith("util_deps"):
+        return 3
+    return None  # unknown/external — allow
+
+
+def check_onion_imports(content: str, file_path: str) -> list[Smell]:
+    """Check that imports point inward only (onion architecture).
+
+    Layer 0 (outer): server/mcp_server/api/cli/main — can import layer 1+
+    Layer 1 (middle): core — can import layer 2+
+    Layer 2 (inner): utils — can import layer 3+
+    Layer 3 (base): util_deps/ — can import within util_deps only
+    Floating: models/config/constants/types/exceptions — importable from any layer
+    """
+    path = Path(file_path)
+    if not path.name.endswith('.py'):
+        return []
+
+    # Determine current file's layer
+    if path.parent.name == "util_deps" or "util_deps" in path.parts:
+        current_layer = 3
+    elif path.name in _ONION_LAYERS:
+        current_layer = _ONION_LAYERS[path.name]
+    else:
+        return []  # not a canonical onion file — skip
+
+    # Parse imports
+    try:
+        tree = ast.parse(content)
+    except SyntaxError:
+        return []
+
+    smells = []
+    layer_names = {0: "outer(server)", 1: "middle(core)", 2: "inner(utils)", 3: "base(util_deps)"}
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ImportFrom):
+            continue
+        if node.module is None:
+            continue
+        # Only check relative imports (intra-package)
+        if node.level == 0:
+            continue  # absolute import — cross-package, not our concern
+
+        # Get the first component of the relative import
+        module_parts = node.module.split(".")
+        module_leaf = module_parts[0]
+
+        target_layer = _module_to_layer(module_leaf)
+        if target_layer is None:
+            continue  # floating or external — always OK
+
+        imported_names = ", ".join(a.name for a in (node.names or []))
+
+        if target_layer < current_layer:
+            # Importing OUTWARD — critical violation
+            smells.append(Smell(
+                type="onion",
+                line=node.lineno,
+                msg=f"Onion violation: {layer_names.get(current_layer, '?')} imports from {layer_names.get(target_layer, '?')} (from .{node.module} import {imported_names})",
+                critical=True,
+            ))
+        elif target_layer > current_layer + 1 and current_layer < 3:
+            # Skipping layers — server→utils bypasses core
+            smells.append(Smell(
+                type="onion",
+                line=node.lineno,
+                msg=f"Onion skip: {layer_names.get(current_layer, '?')} skips to {layer_names.get(target_layer, '?')}, should go through {layer_names.get(current_layer + 1, '?')} (from .{node.module} import {imported_names})",
+                critical=True,
+            ))
+
+    return smells
+
+
+# =============================================================================
 # BUILTIN RULES REGISTRY
 # =============================================================================
 
@@ -460,6 +555,7 @@ BUILTIN_RULES = {
     "traceback": check_traceback_handling,
     "arch": check_architecture,
     "facade": check_facade_logic,
+    "onion": check_onion_imports,
     "coverage": check_test_coverage,
     "test_quality": check_test_quality,
 }

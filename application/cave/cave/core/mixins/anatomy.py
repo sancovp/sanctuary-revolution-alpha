@@ -369,7 +369,11 @@ class Ears(Organ):
                     from ..organ_daemon import write_to_injection
                     write_to_injection(event)
                 elif event.source == "sanctum":
-                    self._ping_discord(event.content)
+                    from ..discord_config import load_discord_config
+                    sanctum_ch = load_discord_config().get("sanctum_channel_id", "")
+                    self._ping_discord(event.content, channel_id=sanctum_ch)
+                    # Route journal/friendship rituals to autobiographer
+                    self._route_sanctum_trigger(event)
                 else:
                     self._agent_ref.route_message(
                         from_agent=f"world:{event.source}",
@@ -485,16 +489,102 @@ class Ears(Organ):
             logger.info("Ears: Inbox <- discord: %s%s", event.content[:80],
                         " [CMD]" if is_command else "")
 
-    def _ping_discord(self, content: str) -> None:
-        """Send a message to Isaac via Discord. Best-effort, never blocks."""
+    def _ping_discord(self, content: str, channel_id: str = "") -> None:
+        """Send a message to Isaac via Discord. Best-effort, never blocks.
+
+        Args:
+            content: Message text
+            channel_id: Optional override channel. If empty, uses default (private_chat_channel_id).
+        """
         try:
             from ..channel import UserDiscordChannel
-            discord = UserDiscordChannel()
+            if channel_id:
+                discord = UserDiscordChannel(channel_id=channel_id)
+            else:
+                discord = UserDiscordChannel()
             if discord.token and discord.channel_id:
                 discord.deliver({"message": content})
-                logger.info("Ears: Discord ping: %s", content[:60])
+                logger.info("Ears: Discord ping (%s): %s", discord.channel_id[:6], content[:60])
         except Exception as e:
             logger.error("Ears: Discord ping failed: %s", e)
+
+    # Sanctum ritual name → agent trigger mapping
+    _RITUAL_TRIGGERS = {
+        "morning-journal": {"agent": "autobiographer_journal", "mode": "journal_morning", "period": "morning"},
+        "night-journal": {"agent": "autobiographer_journal", "mode": "journal_evening", "period": "evening"},
+        "friendship-saturday": {"agent": "autobiographer_night", "job_type": "friendship"},
+    }
+
+    def _route_sanctum_trigger(self, event) -> None:
+        """Route sanctum ritual events to the appropriate agent.
+
+        When a journal/friendship ritual fires, enqueue a trigger message
+        to the autobiographer or night agent so they start processing.
+        """
+        if not self._agent_ref or not hasattr(self._agent_ref, 'cave_agents'):
+            return
+
+        ritual_name = event.metadata.get("ritual_name", "")
+        trigger = self._RITUAL_TRIGGERS.get(ritual_name)
+        if not trigger:
+            return
+
+        agent_name = trigger.get("agent", "autobiographer")
+        agent = self._agent_ref.cave_agents.get(agent_name)
+        if not agent:
+            logger.warning("Ears: sanctum trigger for %s but agent '%s' not found", ritual_name, agent_name)
+            return
+
+        # Build trigger message based on agent type
+        if "job_type" in trigger:
+            # ServiceAgent (night) — enqueue job dispatch
+            from ..agent import UserPromptMessage, IngressType
+            job_msg = UserPromptMessage(
+                content=f"Run {trigger['job_type']} contextualization",
+                ingress=IngressType.SYSTEM,
+                priority=8,
+            )
+            agent.enqueue(job_msg)
+            logger.info("Ears: sanctum trigger %s → %s job_type=%s", ritual_name, agent_name, trigger["job_type"])
+        else:
+            # ChatAgent (journal) — inject autocontext as prompt
+            from ..agent import UserPromptMessage, IngressType
+            from datetime import datetime as _dt
+            mode = trigger.get('mode', 'journal')
+            period = trigger.get('period', 'morning')
+            today = _dt.now().strftime("%Y_%m_%d")
+            period_cap = period.capitalize()
+
+            # Try to load night agent's compiled autocontext
+            autocontext = ""
+            autocontext_path = Path(os.environ.get("HEAVEN_DATA_DIR", "/tmp/heaven_data")) / f"journal_autocontext_{period}.txt"
+            if autocontext_path.exists():
+                try:
+                    autocontext = autocontext_path.read_text().strip()
+                except Exception:
+                    pass
+
+            if autocontext:
+                content = (
+                    f"Here is the context compiled from since the last journal:\n\n"
+                    f"{autocontext}\n\n"
+                    f"Contextually request my {period} journal now and work it out with me."
+                )
+            else:
+                content = (
+                    f"It's time for my {period} journal. "
+                    f"Check CartON for Journal_Autocontext_{period_cap}_{today} if it exists. "
+                    f"Then ask me for my {period} journal — walk through the 6 dimensions, "
+                    f"ask how I'm feeling, and use journal_entry() to persist."
+                )
+
+            inbox_msg = UserPromptMessage(
+                content=content,
+                ingress=IngressType.SYSTEM,
+                priority=8,
+            )
+            agent.enqueue(inbox_msg)
+            logger.info("Ears: sanctum trigger %s → %s mode=%s period=%s", ritual_name, agent_name, mode, period)
 
     async def poll_loop(self):
         """Async poll loop — inbox + world perception.
@@ -503,9 +593,13 @@ class Ears(Organ):
         Inbox checked every poll_interval (5s).
         World perceived every proprioception_rate (30s), rate-limited internally.
         """
+        logger.info("Ears poll_loop STARTING (poll=%.1fs, perception=%.1fs)", self.poll_interval, self.proprioception_rate)
         while self._running:
-            await self.check_now()
-            self.perceive_world()
+            try:
+                await self.check_now()
+                self.perceive_world()
+            except Exception as e:
+                logger.error("Ears poll_loop error (continuing): %s", e, exc_info=True)
             await asyncio.sleep(self.poll_interval)
 
     def status(self) -> Dict[str, Any]:
@@ -689,7 +783,9 @@ class AnatomyMixin:
 
         LOCK_PATH = _Path("/tmp/heaven_data/heartbeat_user_active.lock")
         LOCK_STALE = 300  # 5 minutes
+        # CONNECTS_TO: /tmp/heaven_data/heartbeat_config.json (read/write) — heartbeat daemon config
         CONFIG_PATH = _Path("/tmp/heaven_data/heartbeat_config.json")
+        # CONNECTS_TO: /tmp/heaven_data/heartbeat_log.jsonl (write) — heartbeat event log
         LOG_PATH = _Path("/tmp/heaven_data/heartbeat_log.jsonl")
 
         def _log(action, details=None):
@@ -759,10 +855,12 @@ class AnatomyMixin:
         from datetime import datetime as _dt
 
         INBOX_DIR = _Path("/tmp/heaven_data/inboxes/conductor")
+        # CONNECTS_TO: /tmp/heaven_data/conductor_ops/heartbeat/pending.json (write) — conductor heartbeat queue
         PENDING_FILE = _Path("/tmp/heaven_data/conductor_ops/heartbeat/pending.json")
+        # CONNECTS_TO: /tmp/heaven_data/conductor_heartbeat_config.json (read/write) — conductor heartbeat config
         CONFIG_PATH = _Path("/tmp/heaven_data/conductor_heartbeat_config.json")
         PROCESSING_FLAG = _Path("/tmp/heaven_data/conductor_processing.flag")
-
+        # CONNECTS_TO: /tmp/heaven_data/conductor_ops/heartbeat/last_user_message.txt (read/write)
         LAST_USER_MSG = _Path("/tmp/heaven_data/conductor_ops/heartbeat/last_user_message.txt")
 
         def _conductor_heartbeat_tick():
@@ -848,9 +946,10 @@ class AnatomyMixin:
         self.ears.proprioception_rate = 30.0
         self.ears.start()  # Sets _running=True
 
-        # Heart tick drives perception — fires async check_now as task
+        # Heart tick drives perception — perceive_world is sync, handles
+        # CentralChannel polling + World sources. check_now is async/legacy
+        # and cannot run from Heart's background thread (no event loop).
         def _perception_tick():
-            asyncio.create_task(self.ears.check_now())
             self.ears.perceive_world()
 
         self.heart.add_tick(Tick(

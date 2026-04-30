@@ -344,30 +344,30 @@ async def planning__add_task_to_deliverable(
     component_name: str,
     deliverable_name: str,
     task_id: str,
-    is_human_only_task: bool,
+    assignee: str,
     agent_id: Optional[str] = None,
     human_name: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Add task to deliverable.
-    
+
     Args:
         project_id: Project identifier
         feature_name: Feature name
         component_name: Component name
         deliverable_name: Deliverable name
         task_id: Task identifier
-        is_human_only_task: Whether task requires human
+        assignee: AI+Human, AI-Only, or Human-Only
         agent_id: Agent ID if AI task
         human_name: Human name if human task
-        
+
     Returns:
         Task addition result
     """
     logger.info(f"Adding task {task_id} to deliverable {deliverable_name}")
     return core_add_task_to_deliverable(
         project_id, feature_name, component_name, deliverable_name, task_id,
-        is_human_only_task, agent_id, human_name
+        assignee, agent_id, human_name
     )
 
 
@@ -609,7 +609,21 @@ async def get_next_task_from_treekanban(agent_tasks_only: bool = False) -> str:
     Returns:
         Next task card details including title, description, tags, and context
     """
-    logger.info("Getting next task from TreeKanban with auto-ratcheting")
+    # Thin wrapper — all logic lives in projects.py (onion architecture)
+    from llm_intelligence.projects import get_next_task_from_treekanban as _lib_get_next
+    return _lib_get_next(agent_tasks_only=agent_tasks_only)
+
+
+# OLD implementation moved to projects.py — keeping _ensure stub for any other callers
+async def _OLD_get_next_task_DELETED(agent_tasks_only: bool = False) -> str:
+    """DELETED — logic moved to projects.get_next_task_from_treekanban()"""
+    logger.info("DEAD CODE — should not be called")
+
+    import os as _os
+    _disabled = _os.path.join(_os.environ.get("HEAVEN_DATA_DIR", "/tmp/heaven_data"), "omnisanc_core", ".omnisanc_disabled")
+    if _os.path.exists(_disabled):
+        import json as _j
+        return _j.dumps({"success": False, "error": "omnisanc_required", "message": "OMNISANC must be ON to use TreeKanban. Toggle OMNISANC on first."}, indent=2)
 
     try:
         from heaven_bml_sqlite.heaven_bml_sqlite_client import HeavenBMLSQLiteClient
@@ -676,35 +690,41 @@ async def get_next_task_from_treekanban(agent_tasks_only: bool = False) -> str:
         return None
 
     def is_task_ready_in_giint(metadata: dict) -> bool:
-        """Check if GIINT task is ready by querying project registry."""
+        """Check if GIINT project is ready by querying CartON for non-_Unnamed hierarchy.
+
+        Same check as has_ready_tasks in omnisanc — does the project have a
+        Feature→Component→Deliverable chain where none are _Unnamed?
+        """
         if not metadata:
             return False
 
         try:
-            registry = get_registry()
-            project = registry._load_projects().get(metadata["project_id"])
-            if not project:
+            from carton_mcp.carton_utils import CartOnUtils
+            utils = CartOnUtils()
+
+            project_id = metadata["project_id"].replace("-", "_").replace(" ", "_")
+            project_concept = f"Giint_Project_{project_id}"
+
+            query = (
+                "MATCH (p:Wiki {n: $proj})"
+                "-[:HAS_FEATURE]->(f:Wiki)"
+                "-[:HAS_COMPONENT]->(c:Wiki)"
+                "-[:HAS_DELIVERABLE]->(d:Wiki) "
+                "WHERE NOT f.n ENDS WITH '_Unnamed' "
+                "AND NOT c.n ENDS WITH '_Unnamed' "
+                "AND NOT d.n ENDS WITH '_Unnamed' "
+                "RETURN count(d) > 0 AS ok"
+            )
+            result = utils.query_wiki_graph(query, {"proj": project_concept})
+
+            if not result.get("success") or not result.get("data"):
                 return False
 
-            feature = project.features.get(metadata["feature"])
-            if not feature:
-                return False
-
-            component = feature.components.get(metadata["component"])
-            if not component:
-                return False
-
-            deliverable = component.deliverables.get(metadata["deliverable"])
-            if not deliverable:
-                return False
-
-            task = deliverable.tasks.get(metadata["task_id"])
-            if not task:
-                return False
-
-            return task.is_ready
+            data = result["data"]
+            first = data[0] if isinstance(data, list) and data else {}
+            return first.get("ok", False)
         except Exception as e:
-            logger.error(f"Error checking GIINT task ready status: {e}")
+            logger.error(f"Error checking GIINT readiness via CartON: {e}")
             return False
 
     def priority_sort_key(card):
@@ -923,6 +943,7 @@ def _ensure_giint_hierarchy_in_carton(giint_metadata: dict) -> str:
     starsystem_name = giint_metadata.get("starsystem")
     if not starsystem_name:
         starsystem_name = "Home"  # default
+        # CONNECTS_TO: /tmp/active_starlog_path.txt (read) — also written by starlog, projects.py
         starlog_path_file = Path("/tmp/active_starlog_path.txt")
         if starlog_path_file.exists():
             raw = starlog_path_file.read_text().strip()
@@ -1033,7 +1054,7 @@ def _ensure_giint_hierarchy_in_carton(giint_metadata: dict) -> str:
             {"relationship": "instantiates", "related": ["GIINT_Task_Template"]},
         ])
 
-    # Set active hypercluster
+    # CONNECTS_TO: /tmp/active_hypercluster.txt (write) — also accessed by canopy/schedule.py, projects.py, memory daemon
     Path("/tmp/active_hypercluster.txt").write_text(hc_name)
     logger.info(f"Full GIINT hierarchy ensured in CartON. Active HC: {hc_name}")
     return hc_name

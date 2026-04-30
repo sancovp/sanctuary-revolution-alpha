@@ -10,6 +10,7 @@ from heaven_base.baseheavenagent import HeavenAgentConfig, ProviderEnum
 from heaven_base.tool_utils.prompt_injection_system_vX1 import (
     PromptInjectionSystemVX1, PromptInjectionSystemConfigVX1
 )
+# PARALLEL: uses heaven_base.registry — should migrate to CartON/YOUKNOW
 from heaven_base.registry.registry_service import RegistryService
 
 from .models import FlightSim, MissionBriefResult, FlightSimError

@@ -66,7 +66,7 @@ class JournalAgent(ChatAgent):
 
             json_config = self._load_agent_json_config(agent_config_path)
 
-            model = "MiniMax-M2.7-highspeed"
+            model = ""  # Read from journal_agent_config.json
             if json_config:
                 model = json_config.get("model", model)
 
@@ -89,66 +89,58 @@ class JournalAgent(ChatAgent):
                 if "prompt_suffix_blocks" in json_config:
                     agent_config.prompt_suffix_blocks = json_config["prompt_suffix_blocks"]
 
-            # Create BaseHeavenAgent — persistent conversational agent with history
-            history = History(messages=[], history_id=self._history_id)
-            self._heaven_agent = BaseHeavenAgent(
-                agent_config, UnifiedChat, history=history, adk=False
-            )
+            # Store config — NEW agent created each call (same pattern as Conductor)
+            self._agent_config = agent_config
+            journal_ref = self
 
-            heaven_agent = self._heaven_agent
-
-            # Async runtime — same pattern as Conductor
             async def journal_run(message: str) -> Dict[str, Any]:
-                """Run journal agent on a message. Persistent conversation."""
+                """Run journal agent on a message. NEW agent per call with history_id."""
                 try:
-                    result = await heaven_agent.run(prompt=message)
+                    from heaven_base.baseheavenagent import BaseHeavenAgent
+                    from heaven_base.unified_chat import UnifiedChat
+                    from heaven_base.docs.examples.heaven_callbacks import BackgroundEventCapture, CompositeCallback
+                    from conductor.event_broadcaster import EventBroadcaster, ConductorDiscordChannel
 
-                    response_text = ""
-                    if isinstance(result, dict):
-                        if "prepared_message" in result:
-                            pm = result["prepared_message"]
-                            # Handle content block format: [{type: 'text', text: '...'}, ...]
-                            if isinstance(pm, list):
-                                text_parts = []
-                                for block in pm:
-                                    if isinstance(block, dict) and block.get("type") == "text":
-                                        text_parts.append(block.get("text", ""))
-                                    elif isinstance(block, str):
-                                        text_parts.append(block)
-                                response_text = "\n".join(text_parts)
-                            elif isinstance(pm, str):
-                                response_text = pm
-                            else:
-                                response_text = str(pm)
-                        elif "history" in result:
-                            msgs = result["history"].messages
-                            for msg in reversed(msgs):
-                                if hasattr(msg, 'content') and msg.__class__.__name__ == "AIMessage":
-                                    content = msg.content
-                                    if isinstance(content, str):
-                                        response_text = content
-                                    elif isinstance(content, list):
-                                        text_parts = []
-                                        for block in content:
-                                            if isinstance(block, dict) and block.get("type") == "text":
-                                                text_parts.append(block.get("text", ""))
-                                            elif isinstance(block, str):
-                                                text_parts.append(block)
-                                        response_text = "\n".join(text_parts)
-                                    else:
-                                        response_text = str(content)
-                                    break
+                    agent_kwargs = dict(
+                        config=journal_ref._agent_config,
+                        unified_chat=UnifiedChat(),
+                        max_tool_calls=20,
+                    )
+                    if journal_ref._history_id:
+                        agent_kwargs["history_id"] = journal_ref._history_id
 
-                        # Update history for conversation continuity
-                        if "history" in result:
-                            heaven_agent.history = result["history"]
+                    agent = BaseHeavenAgent(**agent_kwargs)
 
-                        self._history_id = result.get("history_id", self._history_id)
+                    # Same pattern as Conductor: capture + broadcast every event to Discord
+                    capture = BackgroundEventCapture()
+                    # Get channel from agent's own central_channel (configured in v1_agents.json)
+                    main_ch = journal_ref.central_channel.main() if journal_ref.central_channel else None
+                    if main_ch and hasattr(main_ch, 'channel_id') and main_ch.channel_id:
+                        discord_ch = ConductorDiscordChannel(channel_id=main_ch.channel_id)
+                        discord_ch.degree = "MOV"
+                        broadcaster = EventBroadcaster([discord_ch])
+                        composite = CompositeCallback([capture, broadcaster])
+                    else:
+                        composite = capture
+                    result = await agent.run(prompt=message, heaven_main_callback=composite)
+
+                    # Get response from captured AGENT_MESSAGE events (same as Conductor)
+                    agent_messages = capture.get_events_by_type("AGENT_MESSAGE")
+                    if agent_messages:
+                        last_msg = agent_messages[-1]
+                        response_text = last_msg.get("data", {}).get("content", "")
+                    else:
+                        response_text = ""
+
+                    # history_id from result — persists to disk for next call
+                    new_history_id = result.get("history_id") if isinstance(result, dict) else None
+                    if new_history_id:
+                        journal_ref._history_id = new_history_id
 
                     return {
                         "status": "success",
                         "response": response_text,
-                        "history_id": self._history_id,
+                        "history_id": journal_ref._history_id,
                     }
 
                 except Exception as e:
@@ -230,14 +222,72 @@ class JournalAgent(ChatAgent):
                 "Use assess_sanctuary_degree() after capturing.\n"
                 "After journal is complete, announce that night mode is starting.\n"
             )
+        elif self._mode == "friendship":
+            parts.append(
+                "## Mode: FRIENDSHIP RITUAL — Weekly Act 3B\n"
+                "This is the RETURN. Every week is a Hero's Journey. Saturday is ALWAYS Act 3B.\n"
+                "Either we return with the boon (transformation) or we return to status quo (tragic).\n\n"
+                "The Night agent has prepared a Friendship_Autocontext report. Read it first:\n"
+                "  get_concept('Friendship_Autocontext_{today}')\n\n"
+                "## Step 1: Present BOTH Protagonist Tracks\n"
+                "Query the four timelines:\n"
+                "- get_recent_concepts(n=30, timeline='odyssey') — system narrative (what the system learned)\n"
+                "- get_recent_concepts(n=15, timeline='system') — background daemon health\n"
+                "- get_recent_concepts(n=15, timeline='chat') — conversation actions (what we worked on)\n"
+                "- get_recent_concepts(n=20, timeline='overall') — all interleaved\n"
+                "Also check User_Autobiography_Timeline for this week's life events:\n"
+                "  Ritual completions/skips, journal entries, deposited memories.\n\n"
+                "Present: what the SYSTEM did this week + what ISAAC did this week.\n\n"
+                "## Step 2: TWI Compliance Check (the deeper question)\n"
+                "For EACH active TWI:\n"
+                "  1. Read the TWI: get_concept('Claude_Code_Rule_Twi_Global_Intents')\n"
+                "  2. Which FRAMEWORK encodes this TWI? (each TWI was extracted from a journey boon)\n"
+                "  3. Which CAPABILITIES enforce it? (skills, rules, tools, flights)\n"
+                "  4. DID WE USE THOSE CAPABILITIES this week? Evidence from timelines.\n"
+                "  5. When we DIDN'T use them = central conflict (TWI violation)\n"
+                "  6. When we DID = advancement (TWI embodied)\n"
+                "This is the Act 3B question: did we use the boon we already gained, or ignore it?\n\n"
+                "## Step 3: Decide TWI Changes + Deliverables\n"
+                "Based on the compliance check:\n"
+                "- KEEP: TWI held, capabilities enforced it, evidence confirms\n"
+                "- EVOLVE: TWI partially held but needs refinement\n"
+                "- REMOVE: TWI failed, not useful, or superseded\n"
+                "- NEW: Pattern found this week that needs a new TWI\n"
+                "Deliverables: concrete work items for next week's backlog.\n\n"
+                "## Step 4: Close the Ritual\n"
+                "Get Isaac's weekly sanctuary scores (6 dimensions, each 1-10).\n"
+                "Call friendship_journal() with: reflection, status, scores, TWI changes, deliverables.\n"
+                "This completes the week's story. The narrative system will observe this final act.\n"
+            )
+
+        # Timeline awareness for CHAT mode (always available for deeper conversations)
+        if self._mode == "chat":
+            parts.append(
+                "## System Timelines (for deeper conversations)\n"
+                "If Isaac wants to reflect on system activity, you can query:\n"
+                "- get_recent_concepts(timeline='odyssey') — what the system learned\n"
+                "- get_recent_concepts(timeline='system') — background health\n"
+                "- get_recent_concepts(timeline='overall') — everything interleaved\n"
+            )
 
         # Tools reminder
         parts.append(
             "## Your Tools\n"
-            "- journal_entry(): Record structured journal entries to CartON\n"
+            "- **deposit_memory()**: YOUR PRIMARY TOOL. When Isaac shares a memory, extract:\n"
+            "  - memory_name: short Title_Case name (e.g. 'Learned_Basic', 'Met_Tara')\n"
+            "  - description: what happened, in Isaac's words\n"
+            "  - domain: ONE OF health/wealth/relationships/purpose/growth/environment\n"
+            "  - location: where it happened\n"
+            "  - feeling: how it felt\n"
+            "  - date: exact YYYY-MM-DD if known, else leave empty\n"
+            "  - estimated_daterange: fuzzy range if date unknown ('1993', '2026-03', 'childhood')\n"
+            "  - people_and_entities: JSON list of people/events/topics mentioned\n"
+            "    e.g. '[\"Dad\", \"BASIC_Programming\"]' — each becomes a linked concept\n"
+            "  If info is missing, ask Isaac naturally ('where was that?' 'how did that feel?')\n"
+            "- journal_entry(): Record structured journal entries (morning/evening/friendship)\n"
+            "- friendship_journal(): Close Friendship ritual — emits journal + TWI changes + deliverables\n"
             "- assess_sanctuary_degree(): Score the 6 sanctuary dimensions\n"
             "- view_sanctuary_history(): See past sanctuary assessments\n"
-            "- declare_system_state(): Declare current system state\n"
         )
 
         return "\n".join(parts)
@@ -285,7 +335,7 @@ class JournalAgent(ChatAgent):
 
     def set_mode(self, mode: str) -> None:
         """Set the agent mode. Affects system prompt."""
-        valid = ("chat", "journal_morning", "journal_evening")
+        valid = ("chat", "journal_morning", "journal_evening", "friendship")
         if mode not in valid:
             logger.warning("Invalid journal mode '%s', using 'chat'", mode)
             mode = "chat"
@@ -296,17 +346,61 @@ class JournalAgent(ChatAgent):
     def mode(self) -> str:
         return self._mode
 
+    # ==================== COMMANDS ====================
+
+    def _check_command(self, content: str) -> Optional[str]:
+        """Check for !commands. Returns response string if handled, None if not."""
+        if not content.startswith("!"):
+            return None
+
+        parts = content.split(None, 1)
+        cmd = parts[0].lower()
+        arg = parts[1].strip() if len(parts) > 1 else ""
+
+        if cmd == "!new":
+            self._history_id = None
+            return f"🆕 **New conversation started.** History cleared. Mode: `{self._mode}`"
+
+        if cmd == "!status":
+            return (
+                f"📊 **MOV Status:**\n"
+                f"Mode: `{self._mode}`\n"
+                f"History: `{self._history_id or '(none — new conversation)'}`"
+            )
+
+        if cmd == "!stop":
+            self._processing = False
+            self.inbox.clear()
+            return "🛑 **Stopped.** Queue cleared."
+
+        if cmd == "!help":
+            return (
+                "📖 **MOV Commands:**\n"
+                "`!new` — Start fresh conversation\n"
+                "`!status` — Show mode and history\n"
+                "`!stop` — Cancel and clear queue\n"
+                "`!help` — This help text"
+            )
+
+        return f"❓ Unknown command: `{cmd}`\nUse `!help` for available commands."
+
     # ==================== MCP + TOOLS ====================
 
     def _get_mcp_servers(self) -> dict:
-        """MCP servers for the journal agent — sanctuary system MCP."""
-        return {
+        """MCP servers for the journal agent — sanctuary + CartON."""
+        servers = {
             "sanctuary": {
                 "command": "python",
                 "args": ["/home/GOD/gnosys-plugin-v2/application/sanctuary-mcp/sanctuary_system/mcp_server.py"],
                 "transport": "stdio",
             },
+            "carton": {
+                "command": "carton-mcp",
+                "args": [],
+                "transport": "stdio",
+            },
         }
+        return servers
 
     def _get_tools(self) -> list:
         """Heaven tools for the journal agent."""
@@ -360,26 +454,22 @@ class JournalAgent(ChatAgent):
                 # Strip Discord prefix
                 user_msg = self._extract_user_message(content)
 
-                # Detect mode from trigger
-                if metadata.get("type") == "journal_morning":
-                    self.set_mode("journal_morning")
-                    user_msg = "Time for morning journal."
-                elif metadata.get("type") == "journal_evening":
-                    self.set_mode("journal_evening")
-                    user_msg = "Time for evening journal."
-                elif self._mode.startswith("journal_"):
-                    pass  # Keep journal mode if already in one
-                else:
-                    self.set_mode("chat")
+                # Check !commands
+                cmd_result = self._check_command(user_msg)
+                if cmd_result is not None:
+                    self._notify(cmd_result)
+                    responses.append({"status": "handled", "command": True})
+                    continue
+
+                # Notify processing start
+                self._notify("🏃 Processing...")
 
                 # Run through runtime
                 result = await self.run_with_content(user_msg)
 
-                # Deliver response
+                # Status only — EventBroadcaster already sent the full response to Discord
                 if isinstance(result, dict) and result.get("status") == "success":
-                    response = result.get("response", "")
-                    if response:
-                        self._notify(f"💬 **MOV:**\n{response}")
+                    self._notify("✅ Turn complete.")
                 elif isinstance(result, dict) and result.get("status") == "error":
                     self._notify(f"❌ MOV error: {result.get('error', 'unknown')}")
 

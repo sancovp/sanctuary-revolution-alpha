@@ -109,12 +109,8 @@ def from_toolgraph_name(concept: str) -> str:
 # ============================================================================
 
 def _get_chroma_client():
-    """Get ChromaDB client for tool embeddings."""
-    heaven_data = os.environ.get("HEAVEN_DATA_DIR", "/tmp/heaven_data")
-    return chromadb.PersistentClient(
-        path=os.path.join(heaven_data, "chroma_db"),
-        settings=Settings(anonymized_telemetry=False)
-    )
+    """Get ChromaDB client — connects to shared HTTP server started by observation_worker_daemon."""
+    return chromadb.HttpClient(host="localhost", port=8101)
 
 
 @dataclass

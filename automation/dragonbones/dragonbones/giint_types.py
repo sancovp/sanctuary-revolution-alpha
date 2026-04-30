@@ -1,7 +1,28 @@
-"""GIINT type injection and validation for entity chains.
+"""GIINT type injection — PRE-PROCESSING before YOUKNOW/OWL validation.
 
-Injects GIINT typing based on naming conventions and validates
-required relationships for each entity chain shape.
+PURPOSE: Dragonbones parses raw EC text into concept dicts. Those dicts may be
+missing is_a/instantiates (agent forgot to write them). This module INJECTS those
+fields based on naming conventions BEFORE the concept reaches YOUKNOW.
+
+WITHOUT THIS MODULE: A concept named Bug_Foo without is_a=Bug would reach YOUKNOW
+as an untyped concept. YOUKNOW wouldn't know it's a Bug and couldn't validate it
+against Bug's OWL restrictions.
+
+WHAT THIS MODULE DOES (active code):
+  1. Injects is_a + instantiates from name prefix (Bug_ → is_a=Bug, instantiates=Bug_Pattern)
+  2. Blocks deprecated prefixes (Architecture_ → error)
+  3. Pre-checks required_rels as EARLY FAIL before YOUKNOW runs full OWL validation
+  4. Checks conditional_rels (has_starsystem → must have has_describes_component)
+
+WHAT THIS MODULE DOES NOT DO (commented out, OWL handles it):
+  - Target prefix validation (OWL someValuesFrom enforces this)
+  - Parent hint validation (OWL someValuesFrom(partOf, X) enforces this)
+  - Skill category-dependent GIINT anchor validation (unclear if OWL covers this)
+
+RELATIONSHIP TO OWL: The required_rels here are a SUBSET pre-check. OWL has the
+FULL set of restrictions (e.g., Skill has 22 minCard restrictions in OWL, but only
+8 are checked here). This catches the most common mistakes early; YOUKNOW catches
+everything else.
 """
 
 import logging
@@ -98,12 +119,18 @@ GIINT_EC_SHAPES = {
     },
     "Skill_": {
         "is_a": "Skill",
+        # Pre-check subset of OWL's 22 minCard restrictions on Skill.
+        # OWL does NOT require hasContent on Skill (only on Claude_Code_Rule).
+        # Skill projection (substrate_projector.py:project_to_skill) uses the
+        # concept's own description as SKILL.md body — has_content is ignored.
         "required_rels": {
             "has_domain", "has_category", "has_what", "has_when", "has_produces",
-            "has_personal_domain", "has_subdomain", "has_content",
+            "has_personal_domain", "has_subdomain",
             "has_requires",
         },
-        # has_describes_component is required WHEN has_starsystem is present (conditional, checked in inject)
+        # has_describes_component is required WHEN has_starsystem is present.
+        # This is a conditional rule that OWL can't express (OWL restrictions are
+        # unconditional per class). So this stays in Python.
         "conditional_rels": {
             "has_starsystem": {"has_describes_component"},
         },
@@ -211,7 +238,10 @@ def inject_giint_types(concept: dict) -> tuple[dict, list[str]]:
                     f"❌ BLOCKED: {name} ({expected_isa}) has {trigger_rel} so it MUST have: {rel}"
                 )
 
-    # # 4. Validate target prefixes for relationships that have them
+    # COMMENTED OUT 2026-03: Target prefix validation moved to OWL.
+    # OWL someValuesFrom(hasComponent, Giint_Component) enforces that hasComponent
+    # targets are Giint_Component instances. YOUKNOW validates this via the reasoner.
+    # Keeping dead code for reference only.
     # target_prefixes = matched_shape.get("target_prefixes", {})
     # for rel in rels:
         # rel_name = rel["relationship"]
@@ -224,7 +254,9 @@ def inject_giint_types(concept: dict) -> tuple[dict, list[str]]:
                         # f"should start with '{expected_prefix}'"
                     # )
 
-    # # 5. Check parent_hint for part_of validation
+    # COMMENTED OUT 2026-03: Parent validation moved to OWL.
+    # OWL someValuesFrom(partOf, Giint_Component) on Bug enforces that Bug must be
+    # partOf a Giint_Component. Same for all other GIINT types. YOUKNOW validates this.
     # parent_hint = matched_shape["parent_hint"]
     # if parent_hint and current_partof:
         # valid_parent = any(p.startswith(parent_hint) for p in current_partof)
@@ -241,7 +273,12 @@ def inject_giint_types(concept: dict) -> tuple[dict, list[str]]:
                     # f"expected parent prefix: {parent_hint}"
                 # )
 
-    # # 6. Skill category-dependent GIINT anchor validation
+    # COMMENTED OUT 2026-03: Skill anchor validation. UNCLEAR if OWL covers this.
+    # This checked that understand skills have has_describes_component, STP skills
+    # have part_of GIINT, preflight skills have part_of or describes. The OWL does
+    # NOT have per-category subtypes with these restrictions yet (see task #21).
+    # If re-enabling: create Skill subtypes in OWL (Emanation_Skill, etc.) with
+    # per-subtype restrictions, then remove this Python code.
     # if expected_isa == "Skill":
         # category_targets = []
         # for r in rels:

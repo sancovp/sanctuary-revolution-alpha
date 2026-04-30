@@ -1879,10 +1879,13 @@ async def _register_conductor():
     except Exception as e:
         logger.error("Conductor CAVE registration failed (non-blocking): %s", e)
 
-    # Start background inbox processor
-    asyncio.create_task(_conductor_inbox_loop())
+    # Start agent poll loops — each agent's run_poll_loop() calls check_inbox()
+    # This replaces the legacy _conductor_inbox_loop standalone function.
+    import cave.server.http_server as _cave_http_ref
+    if _cave_http_ref.cave is not None:
+        asyncio.create_task(_cave_http_ref.cave.start_agent_poll_loops())
     asyncio.create_task(_conductor_stop_watcher())
-    logger.info("Conductor inbox processor + stop watcher started")
+    logger.info("Agent poll loops + stop watcher started")
 
     # Start CaveAgent Ears poll_loop — World perception + Discord routing.
     # ARCHITECTURE RULE (Isaac, Mar 01 2026): CaveAgent is the ONLY thing
@@ -1900,6 +1903,7 @@ async def _register_conductor():
         logger.error("CaveAgent not initialized — Ears poll_loop NOT started")
 
     # Register main agent in sancrev agent_registry so /agents/main/inject works.
+    # TRIGGERS: CAVE/sancrev:8080/self/inject via HTTP POST — relays to tmux:claude
     # Route: /agents/main/inject → relay to http://localhost:8080/self/inject → tmux:claude
     _agent_registry["main"] = PAIAContainerRegistration(
         agent_id="main",
@@ -2005,6 +2009,7 @@ async def _conductor_inbox_loop():
                             # Notify Discord: run started — show input
                             is_heartbeat = metadata.get("type") == "heartbeat"
                             # Reset heartbeat timer on EVERY message (user, command, compact, heartbeat)
+                            # CONNECTS_TO: /tmp/heaven_data/conductor_ops/heartbeat/last_user_message.txt (write) — read by heartbeat_loop to check staleness
                             _ts_path = Path("/tmp/heaven_data/conductor_ops/heartbeat/last_user_message.txt")
                             _ts_path.parent.mkdir(parents=True, exist_ok=True)
                             _ts_path.write_text(datetime.utcnow().isoformat())
@@ -2042,6 +2047,7 @@ async def _conductor_inbox_loop():
                         if _flag.exists():
                             _flag.unlink(missing_ok=True)
                         # Check for pending heartbeat queued while we were busy
+                        # CONNECTS_TO: /tmp/heaven_data/conductor_ops/heartbeat/pending.json (read+delete) — written by heartbeat_loop when Conductor is busy
                         _pending = Path("/tmp/heaven_data/conductor_ops/heartbeat/pending.json")
                         if _pending.exists():
                             try:
@@ -2077,7 +2083,12 @@ async def _conductor_stop_watcher():
     """
     while True:
         try:
-            if _conductor_processing and _conductor_instance:
+            has_running_task = (
+                _conductor_instance
+                and _conductor_instance._current_task
+                and not _conductor_instance._current_task.done()
+            )
+            if has_running_task:
                 agent = _get_agent("conductor")
                 if agent:
                     # Peek at all queued messages for !stop

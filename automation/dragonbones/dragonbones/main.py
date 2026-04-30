@@ -90,7 +90,7 @@ def main():
     if silenced and not help_requested:
         if compiled_count:
             logger.info("Silent compile: %d concepts", compiled_count)
-        carton_errors = [r for r in compile_results if "ERROR" in r]
+        carton_errors = [r for r in compile_results if "ERROR" in r or "SOUP" in r or "BLOCKED" in r]
         all_errors = carton_errors + log_errors
         if all_errors:
             sys.stderr.write("\n".join(all_errors) + "\n")

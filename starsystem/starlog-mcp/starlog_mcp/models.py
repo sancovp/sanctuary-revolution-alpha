@@ -14,6 +14,41 @@ from payload_discovery.core import PayloadDiscovery
 logger = logging.getLogger(__name__)
 
 
+class ArchitectureFeature(BaseModel):
+    """A feature with its component files. Every field MUST have a description."""
+    feature: str = Field(..., min_length=1, description="GIINT feature name (e.g., 'Game_Core')")
+    feature_description: str = Field(..., min_length=1, description="What this feature does. CANNOT be empty.")
+    files: Dict[str, str] = Field(..., description="Map of {filepath: component_description}. Every file MUST have a description.")
+
+
+class ArchitectureTree(BaseModel):
+    """Validated architecture tree for init_project. Feature→files mapping with enforced descriptions."""
+    features: List[ArchitectureFeature] = Field(..., min_length=1, description="Features with component files")
+
+    @classmethod
+    def from_list(cls, raw: list) -> "ArchitectureTree":
+        """Validate raw list into ArchitectureTree. Fails loud on empty descriptions."""
+        features = []
+        for entry in raw:
+            if not isinstance(entry, dict):
+                raise ValueError(f"Architecture entry must be dict, got {type(entry)}")
+            feat = entry.get("feature", "")
+            feat_desc = entry.get("feature_description", "")
+            files = entry.get("files", {})
+            if not feat or not feat.strip():
+                raise ValueError(f"Feature name CANNOT be empty: {entry}")
+            if not feat_desc or not feat_desc.strip():
+                raise ValueError(f"Feature description CANNOT be empty for '{feat}'")
+            if not files or not isinstance(files, dict):
+                raise ValueError(f"Files must be a non-empty dict for feature '{feat}'")
+            for fp, desc in files.items():
+                if not desc or not desc.strip():
+                    raise ValueError(f"File description CANNOT be empty for '{fp}' in feature '{feat}'")
+            features.append(ArchitectureFeature(feature=feat, feature_description=feat_desc, files=files))
+        return cls(features=features)
+
+
+
 class RulesEntry(BaseModel):
     """Model for project rules/guidelines with intelligent brain-agent enforcement.
     

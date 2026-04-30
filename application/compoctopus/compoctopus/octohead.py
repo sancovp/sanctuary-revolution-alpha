@@ -12,6 +12,17 @@ Usage:
 from __future__ import annotations
 
 from typing import List, Optional, Type
+import json, os
+from pathlib import Path
+
+# Model config from user JSON — no hardcoded values
+_octo_cfg_path = Path(os.environ.get("HEAVEN_DATA_DIR", "/tmp/heaven_data")) / "conductor_agent_config.json"
+_OCTO_CFG = {}
+if _octo_cfg_path.exists():
+    try:
+        _OCTO_CFG = json.loads(_octo_cfg_path.read_text())
+    except (json.JSONDecodeError, OSError):
+        pass
 
 
 # Default OctoHead system prompt
@@ -116,12 +127,12 @@ def make_octohead(
         name=name,
         system_prompt=prompt,
         tools=all_tools,
-        model="MiniMax-M2.5-highspeed",
+        model=_OCTO_CFG.get("model", ""),
         use_uni_api=False,
         max_tokens=8000,
         temperature=0.7,
         skillset="octohead",
-        extra_model_kwargs={"anthropic_api_url": "https://api.minimax.io/anthropic"},
+        extra_model_kwargs=_OCTO_CFG.get("extra_model_kwargs", {}),
         mcp_servers={
             "llm-intelligence": {
                 "transport": "stdio",

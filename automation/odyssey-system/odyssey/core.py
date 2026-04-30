@@ -8,12 +8,13 @@ All logic delegated to utils.
 from dataclasses import dataclass, field
 from typing import Any, Dict
 
+from cave.core.mixins.anatomy import Organ
 from .models import OdysseyResult
 from . import utils
 
 
 @dataclass
-class OdysseyOrgan:
+class OdysseyOrgan(Organ):
     """Organ that auto-verifies GNOSYS BUILD output via adversarial SDNAC agents.
 
     Installed into WakingDreamer via AnatomyMixin.add_organ().
@@ -40,20 +41,24 @@ class OdysseyOrgan:
             "processed_count": self._processed_count,
         }
 
-    def process(self, concept_ref: str) -> OdysseyResult:
-        """THE single public method. WakingDreamer calls ONLY this."""
+    def process(self, concept_ref: str) -> list:
+        """THE single public method. Auto-chains through full ML pipeline.
+
+        Returns list of OdysseyResults from the chain:
+          done_signal → measure_build → learn_build → measure_narrative → learn_narrative
+        """
         if not self.enabled:
-            return OdysseyResult(
+            return [OdysseyResult(
                 success=False,
                 event_type="disabled",
                 concept_ref=concept_ref,
                 error="OdysseyOrgan is disabled",
-            )
+            )]
 
         self._processing = True
         try:
-            result = utils.dispatch(concept_ref)
+            results = utils.dispatch_chain(concept_ref)
             self._processed_count += 1
-            return result
+            return results
         finally:
             self._processing = False

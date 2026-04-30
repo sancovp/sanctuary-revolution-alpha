@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 # Import Heaven registry system
 try:
+    # PARALLEL: uses heaven_base.registry — should migrate to CartON/YOUKNOW
     from heaven_base.tools.registry_tool import registry_util_func
     from heaven_base.registry.registry_service import RegistryService
 except ImportError:
@@ -225,11 +226,128 @@ class Starlog(DebugDiaryMixin, StarlogSessionsMixin, RulesMixin, HpiSystemMixin)
         except Exception as e:
             logger.warning(f"Error ensuring flight configs registry: {e}", exc_info=True)
     
-    def init_project(self, path: str, name: str, description: str = "", giint_project_id: str = None) -> str:
-        """Create new STARSYSTEM project with .claude/ scaffold, registries, starlog.hpi, and GIINT project.
+    _PLACEHOLDER_COMMENTS = {
+        ".py": '"""{content}"""',
+        ".js": "/* {content} */",
+        ".ts": "/* {content} */",
+        ".sh": "# {content}",
+        ".md": "{content}",
+        ".yaml": "# {content}",
+        ".yml": "# {content}",
+        ".json": "{}",
+        ".html": "<!-- {content} -->",
+        ".css": "/* {content} */",
+    }
+
+    def _create_placeholder_file(self, filepath: str, component_name: str, desc: str) -> bool:
+        """Create a placeholder file with component description. Returns True if created, False if exists."""
+        if os.path.exists(filepath):
+            return False
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        ext = os.path.splitext(filepath)[1].lower()
+        content = f"AUTO-GENERATED PLACEHOLDER — Starsystem Terraform\nComponent: {component_name}\nDescription: {desc}\n\nReplace this content to implement the component."
+        template = self._PLACEHOLDER_COMMENTS.get(ext, "# {content}")
+        if template == "{}":
+            file_content = "{}"
+        else:
+            file_content = template.format(content=content)
+        with open(filepath, 'w') as f:
+            f.write(file_content + "\n")
+        return True
+
+    # TRIGGERS: CAVE/sancrev:8080/hook/posttooluse via HTTP POST — triggers OMNISANC/CAVE PostToolUse pipeline
+    def _post_to_omnisanc(self, tool_name: str, tool_input: dict, tool_response: str = '{"success": true}'):
+        """POST to CAVE /hook/posttooluse — triggers OMNISANC directly for internal calls.
+
+        When code calls GIINT functions internally (Python import), Claude Code hooks
+        don't fire. This mimics the PostToolUse event so OMNISANC creates TK cards.
+        Same pattern as mcp_server_sse.py _post_to_cave_hook().
+        """
+        import urllib.request
+        import urllib.error
+        # TRIGGERS: CAVE/sancrev:8080/hook/posttooluse via HTTP POST
+        cave_url = os.environ.get("CAVE_URL", "http://localhost:8080")
+        hook_data = json.dumps({
+            "tool_name": tool_name,
+            "tool_input": tool_input,
+            "tool_response": tool_response,
+        }).encode()
+        try:
+            req = urllib.request.Request(
+                f"{cave_url}/hook/posttooluse",
+                data=hook_data,
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                resp.read()
+        except Exception as e:
+            logger.warning(f"OMNISANC POST failed (non-fatal): {e}")
+
+    # TRIGGERS: OMNISANC/CAVE PostToolUse pipeline via _post_to_omnisanc() for each GIINT planning call
+    def _build_architecture(self, path: str, giint_project_id: str, architecture: list) -> list:
+        """Create placeholder files + GIINT features/components from validated architecture tree.
+
+        Calls GIINT planning functions directly, then POSTs to CAVE /hook/posttooluse
+        to trigger OMNISANC TK card creation (internal calls don't fire Claude Code hooks).
+        """
+        from starlog_mcp.models import ArchitectureTree
+        msgs = []
+
+        # OMNISANC REQUIRED — TK card creation depends on OMNISANC processing the POSTs
+        omnisanc_disabled = os.path.join(
+            os.environ.get("HEAVEN_DATA_DIR", "/tmp/heaven_data"),
+            "omnisanc_core", ".omnisanc_disabled"
+        )
+        if os.path.exists(omnisanc_disabled):
+            return ["ERROR: OMNISANC must be ON for architecture build. TK cards require OMNISANC. Toggle OMNISANC on first."]
+
+        # Validate through Pydantic — fails loud on empty descriptions
+        tree = ArchitectureTree.from_list(architecture)
+
+        try:
+            from llm_intelligence.projects import (
+                add_feature_to_project, add_component_to_feature, add_deliverable_to_component
+            )
+        except ImportError:
+            return ["llm_intelligence not available — architecture skipped"]
+
+        for feat in tree.features:
+            add_feature_to_project(giint_project_id, feat.feature, path=path)
+            self._post_to_omnisanc(
+                "mcp__giint-llm-intelligence__planning__add_feature_to_project",
+                {"project_id": giint_project_id, "feature_name": feat.feature, "path": path}
+            )
+            msgs.append(f"  Feature: {feat.feature} — {feat.feature_description[:60]}")
+
+            for filepath, comp_desc in feat.files.items():
+                full_path = os.path.join(path, filepath)
+                created = self._create_placeholder_file(full_path, feat.feature, comp_desc)
+                file_msg = "created" if created else "exists"
+                component_name = os.path.splitext(os.path.basename(filepath))[0].replace("-", "_").replace(" ", "_").title()
+                add_component_to_feature(giint_project_id, feat.feature, component_name, path=full_path)
+                self._post_to_omnisanc(
+                    "mcp__giint-llm-intelligence__planning__add_component_to_feature",
+                    {"project_id": giint_project_id, "feature_name": feat.feature, "component_name": component_name, "path": full_path}
+                )
+                deliverable_name = f"Implement_{component_name}"
+                add_deliverable_to_component(giint_project_id, feat.feature, component_name, deliverable_name)
+                self._post_to_omnisanc(
+                    "mcp__giint-llm-intelligence__planning__add_deliverable_to_component",
+                    {"project_id": giint_project_id, "feature_name": feat.feature, "component_name": component_name, "deliverable_name": deliverable_name}
+                )
+                msgs.append(f"    {filepath} [{file_msg}] -> {component_name} -> {deliverable_name}: {comp_desc[:50]}")
+
+        return msgs
+
+    def init_project(self, path: str, name: str, description: str = "", giint_project_id: str = None, architecture: list = None) -> str:
+        """Create new STARSYSTEM project with .claude/ scaffold, registries, starlog.hpi, GIINT project, and optional architecture.
 
         A STARSYSTEM is: directory + starlog project + GIINT project + .claude/ (rules + skills).
-        If giint_project_id is not provided, one is auto-created.
+
+        Args:
+            architecture: Optional list of {filepath: {feature_name: description}} dicts.
+                Creates placeholder files + GIINT features/components. Existing files kept.
         """
         try:
             # Create project directory if it doesn't exist
@@ -279,11 +397,25 @@ class Starlog(DebugDiaryMixin, StarlogSessionsMixin, RulesMixin, HpiSystemMixin)
             # Create STARSYSTEM entity in CartON
             starsystem_name = self._create_starsystem_entity(path, name, description, giint_project_id)
 
+            # Auto-generate architecture from CA if code exists in Neo4j and no manual architecture provided
+            if not architecture and parse_status in ("parsed", "already_parsed") and giint_project_id:
+                architecture = self._auto_architecture_from_ca(path)
+                if architecture:
+                    logger.info(f"Auto-generated architecture from CA: {len(architecture)} features")
+
+            # Build architecture if available (creates files + GIINT features/components)
+            arch_msgs = []
+            if architecture and giint_project_id:
+                arch_msgs = self._build_architecture(path, giint_project_id, architecture)
+                if arch_msgs:
+                    logger.info(f"Built architecture: {len(arch_msgs)} entries")
+
             giint_msg = f" (GIINT: '{giint_project_id}')" if giint_project_id else " (⚠️ no GIINT — K1 not achievable)"
             parse_msg = f" [code parsed]" if parse_status == "parsed" else ""
+            arch_msg = f"\nArchitecture ({len(arch_msgs)} files):\n" + "\n".join(arch_msgs) if arch_msgs else ""
             logger.info(f"Initialized STARSYSTEM '{name}' at {path}{giint_msg}")
             return f"✅ Initialized STARSYSTEM '{name}' with .claude/ scaffold, starlog.hpi, and GIINT project{giint_msg}{parse_msg}" + \
-                   f" [STARSYSTEM: {starsystem_name}] [Persona: starship-pilot-{name}]"
+                   f" [STARSYSTEM: {starsystem_name}] [Persona: starship-pilot-{name}]{arch_msg}"
 
         except Exception as e:
             logger.error(f"Failed to initialize project: {traceback.format_exc()}")
@@ -339,17 +471,24 @@ class Starlog(DebugDiaryMixin, StarlogSessionsMixin, RulesMixin, HpiSystemMixin)
         except Exception as e:
             return f"❌ Upgrade failed: {e}"
 
+    @staticmethod
+    def _neo4j_creds():
+        """Return (uri, user, password) from env."""
+        return (
+            os.environ.get("NEO4J_URI", "bolt://host.docker.internal:7687"),
+            os.environ.get("NEO4J_USER", "neo4j"),
+            os.environ.get("NEO4J_PASSWORD", "password"),
+        )
+
     def _parse_codebase_to_neo4j(self, path: str) -> str:
         """Parse codebase into Neo4j via context-alignment's DirectNeo4jExtractor. Non-fatal."""
         try:
             import sys
-            sys.path.insert(0, "/home/GOD/context_alignment_utils/neo4j_codebase_mcp")
+            sys.path.insert(0, "/home/GOD/gnosys-plugin-v2/knowledge/context-alignment/neo4j_codebase_mcp")
             from parsers.parse_repo_into_neo4j import DirectNeo4jExtractor
             import asyncio
 
-            neo4j_uri = os.environ.get("NEO4J_URI", "bolt://host.docker.internal:7687")
-            neo4j_user = os.environ.get("NEO4J_USER", "neo4j")
-            neo4j_password = os.environ.get("NEO4J_PASSWORD", "password")
+            neo4j_uri, neo4j_user, neo4j_password = self._neo4j_creds()
 
             repo_name = os.path.basename(os.path.normpath(path))
 
@@ -393,6 +532,69 @@ class Starlog(DebugDiaryMixin, StarlogSessionsMixin, RulesMixin, HpiSystemMixin)
         except Exception as e:
             logger.warning(f"Codebase parse failed (non-fatal): {e}")
             return f"failed: {e}"
+
+    def _auto_architecture_from_ca(self, path: str) -> list:
+        """Query CA Neo4j graph for parsed repo structure, return architecture list.
+
+        Groups files by parent directory (module→feature). Each file's classes/functions
+        become its component description. Returns [] if no code files or CA unavailable.
+        """
+        try:
+            from neo4j import GraphDatabase
+            neo4j_uri, neo4j_user, neo4j_password = self._neo4j_creds()
+            repo_name = os.path.basename(os.path.normpath(path))
+
+            driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_user, neo4j_password))
+            with driver.session() as session:
+                # Get all files with their classes and functions
+                records = session.run(
+                    "MATCH (r:Repository {name: $repo})-[:CONTAINS]->(f:File) "
+                    "OPTIONAL MATCH (f)-[:DEFINES]->(c:Class) "
+                    "OPTIONAL MATCH (f)-[:DEFINES]->(fn:Function) "
+                    "RETURN f.path AS path, "
+                    "collect(DISTINCT c.name) AS classes, "
+                    "collect(DISTINCT fn.name) AS functions",
+                    repo=repo_name
+                ).data()
+            driver.close()
+
+            if not records:
+                return []
+
+            # Group files by parent directory (module = feature)
+            modules = {}
+            for rec in records:
+                fpath = rec["path"]
+                if not fpath or not fpath.endswith(".py"):
+                    continue
+                parent = os.path.dirname(fpath) or repo_name
+                modules.setdefault(parent, []).append(rec)
+
+            architecture = []
+            for module_path, files in sorted(modules.items()):
+                mod_name = module_path.replace("/", "_").replace("-", "_")
+                mod_name = "_".join(w.capitalize() for w in mod_name.split("_") if w)
+                file_map = {}
+                for rec in files:
+                    parts = []
+                    if rec["classes"]:
+                        parts.append(f"Classes: {', '.join(rec['classes'][:5])}")
+                    if rec["functions"]:
+                        parts.append(f"Functions: {', '.join(rec['functions'][:5])}")
+                    desc = "; ".join(parts) if parts else "Python module"
+                    file_map[rec["path"]] = desc
+
+                if file_map:
+                    architecture.append({
+                        "feature": mod_name,
+                        "feature_description": f"Module {module_path} ({len(file_map)} files)",
+                        "files": file_map,
+                    })
+
+            return architecture
+        except Exception as e:
+            logger.debug(f"Auto-architecture from CA failed (non-fatal): {e}")
+            return []
 
     def _create_claude_scaffold(self, path: str, name: str):
         """Create .claude/ directory with STARSYSTEM scaffold."""

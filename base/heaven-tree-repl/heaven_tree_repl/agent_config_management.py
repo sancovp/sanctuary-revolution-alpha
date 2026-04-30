@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 _dynamic_config = {}
 
 # Persistence file path
+# CONNECTS_TO: /tmp/heaven_data/agent_dynamic_config.json (read/write) — agent dynamic config shared across treeshell sessions
 DYNAMIC_CONFIG_PATH = "/tmp/heaven_data/agent_dynamic_config.json"
 
 # ---------------------------------------------------------------------------

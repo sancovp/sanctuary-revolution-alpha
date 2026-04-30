@@ -23,7 +23,7 @@ from starlog_mcp.starlog_mcp import (
     internal_read_starlog_flight_config_instruction_manual
 )
 
-# Import registry function needed by internal functions
+# PARALLEL: uses heaven_base.registry — should migrate to CartON/YOUKNOW
 from heaven_base.tools.registry_tool import registry_util_func
 
 # Import PayloadDiscovery models

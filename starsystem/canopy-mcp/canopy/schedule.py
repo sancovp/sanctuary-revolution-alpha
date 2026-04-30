@@ -18,6 +18,7 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 # Import HEAVEN registry
+# PARALLEL: uses heaven_base.registry — should migrate to CartON/YOUKNOW
 try:
     from heaven_base.tools.registry_tool import registry_util_func
 except ImportError:
@@ -276,6 +277,7 @@ def _set_active_hc_from_item(item: Dict[str, Any]) -> None:
             # Normalize: strip Giint_Project_ prefix if present
             hc_name = project_name.replace("Giint_Project_", "").replace("GIINT_Project_", "")
             hc_concept = f"Hypercluster_{hc_name}"
+            # CONNECTS_TO: /tmp/active_hypercluster.txt (write) — also accessed by giint mcp_server.py, projects.py, memory daemon
             Path("/tmp/active_hypercluster.txt").write_text(hc_concept)
             logger.info(f"Active HC set to {hc_concept} from schedule item {item.get('item_id')}")
     except Exception as e:

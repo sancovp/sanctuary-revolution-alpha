@@ -271,6 +271,7 @@ def record_observation(
         # OVERWRITE — only the latest proposal matters
         if phase == "proposal":
             proposal_concept = data["insight_moment"][0]["name"]
+            # CONNECTS_TO: /tmp/heaven_data/observatory/researcher_memory.md (write) — also read by agents.py
             memory_path = Path("/tmp/heaven_data/observatory/researcher_memory.md")
             memory_path.parent.mkdir(parents=True, exist_ok=True)
             memory_path.write_text(f"## LATEST PROPOSAL CONCEPT\n{proposal_concept}\n")
@@ -449,6 +450,7 @@ def run_experiment(investigation_name: str) -> str:
         # 1. Find the proposal concept — check memory file first (avoids CartON queue lag)
         concept_name = None
         concept_description = None
+        # CONNECTS_TO: /tmp/heaven_data/observatory/researcher_memory.md (read) — also written by proposal phase above
         memory_path = Path("/tmp/heaven_data/observatory/researcher_memory.md")
         if memory_path.exists():
             import re as _re
@@ -491,6 +493,7 @@ def run_experiment(investigation_name: str) -> str:
         try:
             result = subprocess.run(
                 ["docker", "exec", "repo-lord", "bash", "-c",
+                 # CONNECTS_TO: /tmp/experiment.md (write) — inside repo-lord container, read by grug dispatch
                  f"echo '{b64_content}' | base64 -d > /tmp/experiment.md"],
                 capture_output=True, text=True, timeout=30,
             )
@@ -502,6 +505,7 @@ def run_experiment(investigation_name: str) -> str:
         # 4. Dispatch Grug — fire and forget via docker exec → curl to /dispatch
         import subprocess as _sp
 
+        # CONNECTS_TO: /tmp/experiment.md (ref) — inside repo-lord container
         dispatch_json = json.dumps({
             "task": "Read the file /tmp/experiment.md and follow the instructions exactly. Execute all experiments described in it.",
             "investigation_name": investigation_name,
@@ -509,6 +513,7 @@ def run_experiment(investigation_name: str) -> str:
         })
 
         try:
+            # TRIGGERS: grug_server:8081/dispatch via HTTP POST
             result = _sp.run(
                 ["docker", "exec", "repo-lord", "curl", "-s", "-X", "POST",
                  "http://localhost:8081/dispatch",

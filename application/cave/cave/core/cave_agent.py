@@ -88,7 +88,7 @@ from .mixins import (
 )
 from .config_snapshots import MainAgentConfigManager
 from .world import World, RNGEventSource
-from .sanctum_source import SanctumRitualSource
+from .sanctum_automations import sync_ritual_automations
 
 
 class CAVEAgent(
@@ -175,6 +175,18 @@ class CAVEAgent(
             every=60.0,
         ))
 
+        # === SANCTUM CATCH-UP — fires 30s after startup, then every 5 min ===
+        from .sanctum_automations import catch_up_missed_rituals
+        import time as _time
+        def _sanctum_catchup_tick():
+            catch_up_missed_rituals()
+        self.heart.add_tick(Tick(
+            name="sanctum_catchup",
+            callback=_sanctum_catchup_tick,
+            every=300.0,
+        ))
+        self.heart.ticks["sanctum_catchup"]._last_run = _time.time() - 270.0
+
         # === MINI CLIs — system-level Discord channels with commands ===
         self.mini_clis = {}
         try:
@@ -248,8 +260,8 @@ class CAVEAgent(
         # UserDiscordChannel.receive() polls Discord REST API
         # Ears.perceive_world() polls CentralChannel.receive_all()
 
-        # Deterministic: SANCTUM ritual reminders (auto-disables if no sanctum)
-        self.world.add_source(SanctumRitualSource.from_config())
+        # SANCTUM rituals: sync to CronAutomations (replaces SanctumRitualSource)
+        sync_ritual_automations()
 
     @property
     def is_paia(self) -> bool:
@@ -469,6 +481,17 @@ class CAVEAgent(
 
         return channel
 
+    async def start_agent_poll_loops(self):
+        """Start run_poll_loop for every registered agent.
+
+        Called from server startup AFTER all runtimes are wired.
+        Each agent's run_poll_loop() calls check_inbox() on interval.
+        """
+        import asyncio
+        for name, agent in self.cave_agents.items():
+            asyncio.create_task(agent.run_poll_loop())
+            logger.info("Started poll loop for agent: %s", name)
+
     def get_cave_agent(self, name: str) -> Optional[Agent]:
         """Get a registered CAVE agent by name."""
         return self.cave_agents.get(name)
@@ -674,8 +697,21 @@ class CAVEAgent(
         Returns:
             Status dict with zone and active hooks
         """
+        # Always-on stop hooks (fire every zone, even when omnisanc disabled)
+        always_on_stop = [
+            "dragonbones",
+            "inbox_injection",
+            "obs_recording",
+            "gnosys_discord_notify",
+        ]
+
         if not self.is_omnisanc_enabled():
-            return {"status": "disabled", "active_hooks": []}
+            self.config.main_agent_config.active_hooks = {
+                "stop": always_on_stop,
+                "pretooluse": [],
+                "posttooluse": ["inbox_notification"],
+            }
+            return {"status": "disabled", "active_hooks": always_on_stop}
 
         state = self.get_omnisanc_state()
         mode = self.get_paia_mode()  # DAY or NIGHT
@@ -716,7 +752,7 @@ class CAVEAgent(
         # Set active hooks for all hook types
         # inbox_notification always fires on posttooluse (perception layer)
         self.config.main_agent_config.active_hooks = {
-            "stop": active,
+            "stop": active + always_on_stop,
             "pretooluse": ["omnisanc_router_pretooluse"],
             "posttooluse": ["omnisanc_router_posttooluse", "inbox_notification"],
         }
@@ -739,6 +775,7 @@ class CAVEAgent(
         For now, reads from file or defaults to DAY.
         """
         from pathlib import Path
+        # CONNECTS_TO: /tmp/heaven_data/paia_mode.txt (read) — also accessed by set_paia_mode(), OMNISANC
         mode_file = Path("/tmp/heaven_data/paia_mode.txt")
         try:
             if mode_file.exists():
@@ -754,6 +791,7 @@ class CAVEAgent(
         MANUAL = user is driving, agent responds to user
         """
         from pathlib import Path
+        # CONNECTS_TO: /tmp/heaven_data/paia_auto.txt (read) — also accessed by set_auto_mode(), OMNISANC
         auto_file = Path("/tmp/heaven_data/paia_auto.txt")
         try:
             if auto_file.exists():
@@ -765,6 +803,7 @@ class CAVEAgent(
     def set_auto_mode(self, mode: str) -> Dict[str, Any]:
         """Set auto mode: AUTO or MANUAL."""
         from pathlib import Path
+        # CONNECTS_TO: /tmp/heaven_data/paia_auto.txt (write) — also accessed by get_auto_mode(), OMNISANC
         auto_file = Path("/tmp/heaven_data/paia_auto.txt")
         mode = mode.upper()
         if mode not in ("AUTO", "MANUAL"):
@@ -776,6 +815,7 @@ class CAVEAgent(
     def set_paia_mode(self, mode: str) -> Dict[str, Any]:
         """Set PAIA mode: DAY or NIGHT."""
         from pathlib import Path
+        # CONNECTS_TO: /tmp/heaven_data/paia_mode.txt (write) — also accessed by get_paia_mode(), OMNISANC
         mode_file = Path("/tmp/heaven_data/paia_mode.txt")
         mode = mode.upper()
         if mode not in ("DAY", "NIGHT"):

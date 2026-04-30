@@ -497,9 +497,13 @@ class Agent(Actor):
         self.inbox._save()
 
     async def run_poll_loop(self):
+        logger.info("Agent '%s' poll_loop STARTING (interval=%.1fs)", self.config.name, self.config.inbox_poll_interval)
         while True:
-            await asyncio.sleep(self.config.inbox_poll_interval)
-            await self.check_inbox()
+            try:
+                await asyncio.sleep(self.config.inbox_poll_interval)
+                await self.check_inbox()
+            except Exception as e:
+                logger.error("Agent '%s' poll_loop error (continuing): %s", self.config.name, e, exc_info=True)
 
 
 class ChatAgent(Agent):
@@ -713,6 +717,7 @@ class ChatAgent(Agent):
     def _log_heartbeat(self, action: str, summary: str = "") -> None:
         """Append heartbeat event to heartbeat_log.md."""
         import json as _json
+        # CONNECTS_TO: /tmp/heaven_data/heartbeat_log.md (write)
         log_path = Path("/tmp/heaven_data/heartbeat_log.md")
         log_path.parent.mkdir(parents=True, exist_ok=True)
 

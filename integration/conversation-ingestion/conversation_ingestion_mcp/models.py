@@ -4,7 +4,7 @@ Pydantic models for conversation ingestion MCP V2.
 These models are the VALIDATION layer. The AI still applies tags via tools.
 The tools use these models to validate operations before applying them.
 
-Storage: JSON files (AI-editable through tools)
+Storage: CartON (Neo4j + ChromaDB)
 Runtime: Pydantic models (validation layer)
 """
 

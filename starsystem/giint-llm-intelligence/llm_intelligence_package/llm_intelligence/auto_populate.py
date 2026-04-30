@@ -440,6 +440,7 @@ giint.planning__add_feature_to_project(
 
 def get_registry_path() -> Path:
     """Get the path to the STARLOG flight configs registry."""
+    # CONNECTS_TO: /tmp/heaven_data/registry/starlog_flight_configs_registry.json (read) — also accessed by starlog, starship
     registry_path = Path("/tmp/heaven_data/registry/starlog_flight_configs_registry.json")
     return registry_path
 

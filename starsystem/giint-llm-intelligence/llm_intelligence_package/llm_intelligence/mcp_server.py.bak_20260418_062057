@@ -1,0 +1,1109 @@
+#!/usr/bin/env python3
+"""
+LLM Intelligence MCP Server (GIINT)
+
+GIINT is the coordination hub where every MCP in the STARSYSTEM gets connected together.
+This is where STARLOG, Carton, Waypoint, and other system MCPs orchestrate 
+compound intelligence workflows through cognitive separation and structured QA tracking.
+SEED sits above GIINT as the identity and guidance layer.
+
+Thin wrapper that imports business logic from core module.
+MCP servers should only contain wrapper functions.
+"""
+
+import logging
+import os
+from typing import List, Dict, Any, Optional
+from fastmcp import FastMCP
+
+from .core import (
+    respond as core_respond,
+    report_tool_usage as core_report_tool_usage,
+    get_qa_context as core_get_qa_context,
+    list_qa_sessions as core_list_qa_sessions,
+    remind_me_what_giint_is as core_giint_reminder,
+)
+
+from .projects import (
+    create_project as core_create_project,
+    get_project as core_get_project,
+    update_project as core_update_project,
+    list_projects as core_list_projects,
+    delete_project as core_delete_project,
+    add_feature_to_project as core_add_feature_to_project,
+    add_component_to_feature as core_add_component_to_feature,
+    add_deliverable_to_component as core_add_deliverable_to_component,
+    add_task_to_deliverable as core_add_task_to_deliverable,
+    update_task_status as core_update_task_status,
+    add_spec_to_feature as core_add_spec_to_feature,
+    add_spec_to_component as core_add_spec_to_component,
+    add_spec_to_deliverable as core_add_spec_to_deliverable,
+    add_spec_to_task as core_add_spec_to_task
+)
+
+# Import auto-population
+from .auto_populate import auto_populate_giint_defaults
+
+# Setup logging
+logger = logging.getLogger(__name__)
+
+# Initialize MCP server
+mcp = FastMCP("llm-intelligence")
+
+
+@mcp.tool()
+async def core__respond(
+    qa_id: str,
+    user_prompt_description: str,
+    one_liner: str,
+    key_tags: List[str],
+    involved_files: List[str],
+    project_path: str,
+    feature: str,
+    component: str,
+    deliverable: str,
+    subtask: str,
+    task: str,
+    workflow_id: str,
+    response_file_path: Optional[str] = None,
+    simple_response_string: Optional[str] = None,
+    is_from_waypoint: bool = False,
+    starlog_path: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    CREATE TEACHABLE CONTENT while you work - synthetic conversations for future AI reference.
+
+    **Core Purpose**: You want to MAKE CONTENT that shows HOW TO DO XYZ while you are in the
+    conversation that discovered it. So you want to IN THAT CONVERSATION make a synthetic
+    conversation that is a ref for future AIs, put it on your knowledge graph, and have it
+    be retrievable intuitively next time.
+
+    **Two Modes**:
+    - Simple: Use `simple_response_string` for quick responses
+    - Complex: Use `response_file_path` for structured content creation
+
+    Args:
+        project_path: STARSYSTEM directory path (one STARSYSTEM = one GIINT project).
+                      Resolved to project_id internally via registry lookup.
+
+    This is a thin wrapper around the core GIINT business logic.
+    """
+    mode = "simple" if simple_response_string else "complex"
+    logger.info(f"Processing respond() for qa_id: {qa_id} in {mode} mode")
+
+    # Call core function but return minimal info to LLM
+    result = core_respond(
+        qa_id=qa_id,
+        user_prompt_description=user_prompt_description,
+        one_liner=one_liner,
+        key_tags=key_tags,
+        involved_files=involved_files,
+        project_path=project_path,
+        feature=feature,
+        component=component,
+        deliverable=deliverable,
+        subtask=subtask,
+        task=task,
+        workflow_id=workflow_id,
+        response_file_path=response_file_path,
+        simple_response_string=simple_response_string,
+        is_from_waypoint=is_from_waypoint,
+        starlog_path=starlog_path
+    )
+    
+    # Return minimal confirmation to reduce token bloat for LLM
+    if result.get("success"):
+        message = f"Response {result['response_id']} harvested for {qa_id}"
+        if result.get("giint_reminder"):
+            message += f"\n\n{result['giint_reminder']}"
+        return {
+            "success": True,
+            "message": message
+        }
+    else:
+        return result  # Return full error details if something went wrong
+
+
+@mcp.tool()
+async def core__report_tool_usage(
+    tools_used: List[str],
+    response_file_path: str,
+    involved_files: List[str]
+) -> Dict[str, Any]:
+    """
+    Archive tool usage details during work.
+    
+    This is a thin wrapper around the core business logic.
+    """
+    logger.info(f"Processing report_tool_usage() for {len(tools_used)} tools")
+    return core_report_tool_usage(
+        tools_used=tools_used,
+        response_file_path=response_file_path,
+        involved_files=involved_files
+    )
+
+
+@mcp.tool()
+async def memory__get_qa_context(
+    qa_id: str,
+    last_n: int = 3
+) -> Dict[str, Any]:
+    """
+    Get context from QA file.
+    
+    This is a thin wrapper around the core business logic.
+    """
+    logger.info(f"Processing get_qa_context() for qa_id: {qa_id}")
+    return core_get_qa_context(qa_id=qa_id, last_n=last_n)
+
+
+@mcp.tool()
+async def memory__list_qa_sessions(
+    project_id: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    List all QA sessions.
+    
+    This is a thin wrapper around the core business logic.
+    """
+    logger.info(f"Processing list_qa_sessions() for project_id: {project_id}")
+    return core_list_qa_sessions(project_id=project_id)
+
+
+@mcp.tool()
+async def core__remind_me_what_giint_is() -> str:
+    """
+    Reminds what GIINT stands for and its purpose.
+    
+    GIINT is what you think it is. General Intuitive Intelligence for Neural Transformers.
+    Welcome to GIINT - the cognitive architecture for true AI intelligence.
+    
+    Returns GIINT definition and welcome message.
+    """
+    logger.info("Providing GIINT definition")
+    return core_giint_reminder()
+
+
+# Project Management Tools
+
+@mcp.tool()
+async def planning__create_project(
+    project_id: str,
+    project_dir: str,
+    starlog_path: Optional[str] = None,
+    github_repo_url: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Create a new project with validation.
+    
+    Args:
+        project_id: Unique project identifier
+        project_dir: Path to project directory
+        starlog_path: Optional path to STARLOG project
+        github_repo_url: Optional GitHub repository URL for issue integration
+        
+    Returns:
+        Project creation result
+    """
+    logger.info(f"Creating project: {project_id}")
+    return core_create_project(project_id, project_dir, starlog_path, github_repo_url)
+
+
+@mcp.tool()
+async def planning__get_project(project_id: str) -> Dict[str, Any]:
+    """
+    Get project by ID.
+    
+    Args:
+        project_id: Project identifier
+        
+    Returns:
+        Project data
+    """
+    logger.info(f"Getting project: {project_id}")
+    return core_get_project(project_id)
+
+
+@mcp.tool()
+async def planning__list_projects() -> Dict[str, Any]:
+    """
+    List all projects.
+    
+    Returns:
+        List of all projects
+    """
+    logger.info("Listing all projects")
+    return core_list_projects()
+
+
+@mcp.tool()
+async def planning__update_project(
+    project_id: str,
+    project_dir: Optional[str] = None,
+    starlog_path: Optional[str] = None,
+    github_repo_url: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Update existing project.
+    
+    Args:
+        project_id: Project identifier
+        project_dir: Optional new project directory
+        starlog_path: Optional new STARLOG path
+        github_repo_url: Optional GitHub repository URL for issue integration
+        
+    Returns:
+        Update result
+    """
+    logger.info(f"Updating project: {project_id}")
+    return core_update_project(project_id, project_dir, starlog_path, github_repo_url)
+
+
+@mcp.tool()
+async def planning__delete_project(project_id: str) -> Dict[str, Any]:
+    """
+    Delete project by ID.
+    
+    Args:
+        project_id: Project identifier
+        
+    Returns:
+        Deletion result
+    """
+    logger.info(f"Deleting project: {project_id}")
+    return core_delete_project(project_id)
+
+
+@mcp.tool()
+async def planning__add_feature_to_project(
+    project_id: str,
+    feature_name: str
+) -> Dict[str, Any]:
+    """
+    Add feature to project.
+    
+    Args:
+        project_id: Project identifier
+        feature_name: Name of feature to add
+        
+    Returns:
+        Feature addition result
+    """
+    logger.info(f"Adding feature {feature_name} to project {project_id}")
+    return core_add_feature_to_project(project_id, feature_name)
+
+
+@mcp.tool()
+async def planning__add_component_to_feature(
+    project_id: str,
+    feature_name: str,
+    component_name: str
+) -> Dict[str, Any]:
+    """
+    Add component to feature.
+    
+    Args:
+        project_id: Project identifier
+        feature_name: Feature name
+        component_name: Component name to add
+        
+    Returns:
+        Component addition result
+    """
+    logger.info(f"Adding component {component_name} to feature {feature_name}")
+    return core_add_component_to_feature(project_id, feature_name, component_name)
+
+
+@mcp.tool()
+async def planning__add_deliverable_to_component(
+    project_id: str,
+    feature_name: str,
+    component_name: str,
+    deliverable_name: str
+) -> Dict[str, Any]:
+    """
+    Add deliverable to component.
+    
+    Args:
+        project_id: Project identifier
+        feature_name: Feature name
+        component_name: Component name
+        deliverable_name: Deliverable name to add
+        
+    Returns:
+        Deliverable addition result
+    """
+    logger.info(f"Adding deliverable {deliverable_name} to component {component_name}")
+    return core_add_deliverable_to_component(project_id, feature_name, component_name, deliverable_name)
+
+
+@mcp.tool()
+async def planning__add_task_to_deliverable(
+    project_id: str,
+    feature_name: str,
+    component_name: str,
+    deliverable_name: str,
+    task_id: str,
+    is_human_only_task: bool,
+    agent_id: Optional[str] = None,
+    human_name: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Add task to deliverable.
+    
+    Args:
+        project_id: Project identifier
+        feature_name: Feature name
+        component_name: Component name
+        deliverable_name: Deliverable name
+        task_id: Task identifier
+        is_human_only_task: Whether task requires human
+        agent_id: Agent ID if AI task
+        human_name: Human name if human task
+        
+    Returns:
+        Task addition result
+    """
+    logger.info(f"Adding task {task_id} to deliverable {deliverable_name}")
+    return core_add_task_to_deliverable(
+        project_id, feature_name, component_name, deliverable_name, task_id,
+        is_human_only_task, agent_id, human_name
+    )
+
+
+@mcp.tool()
+async def planning__update_task_status(
+    project_id: str,
+    feature_name: str,
+    component_name: str,
+    deliverable_name: str,
+    task_id: str,
+    is_done: bool,
+    is_blocked: bool,
+    blocked_description: Optional[str],
+    is_ready: bool,
+    is_measured: bool = False,
+    files_touched: Optional[List[str]] = None,
+    lines_that_matter: Optional[str] = None,
+    context_deps: Optional[List[str]] = None,
+    key_insight: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Update task status with optional context metadata.
+
+    Args:
+        project_id: Project identifier
+        feature_name: Feature name
+        component_name: Component name
+        deliverable_name: Deliverable name
+        task_id: Task identifier
+        is_done: Whether task work is done (→ IN_REVIEW → measure lane)
+        is_blocked: Whether task is blocked
+        blocked_description: Why task is blocked
+        is_ready: Whether task is ready
+        is_measured: Whether task measurement is done (→ DONE → learn lane)
+        files_touched: Files modified while completing this task
+        lines_that_matter: Relevant line ranges (e.g., '42-87')
+        context_deps: Files read to understand this task
+        key_insight: Key pattern or insight discovered
+
+    Returns:
+        Task status update result
+    """
+    logger.info(f"Updating status for task {task_id}")
+    return core_update_task_status(
+        project_id, feature_name, component_name, deliverable_name, task_id,
+        is_done, is_blocked, blocked_description, is_ready, is_measured,
+        files_touched, lines_that_matter, context_deps, key_insight
+    )
+
+
+@mcp.tool()
+async def planning__add_spec_to_feature(
+    project_id: str,
+    feature_name: str,
+    spec_file_path: str
+) -> Dict[str, Any]:
+    """
+    Add spec to feature.
+    
+    Args:
+        project_id: Project identifier
+        feature_name: Feature name
+        spec_file_path: Path to feature spec JSON file
+        
+    Returns:
+        Spec addition result
+    """
+    logger.info(f"Adding spec to feature {feature_name}")
+    return core_add_spec_to_feature(project_id, feature_name, spec_file_path)
+
+
+@mcp.tool()
+async def planning__add_spec_to_component(
+    project_id: str,
+    feature_name: str,
+    component_name: str,
+    spec_file_path: str
+) -> Dict[str, Any]:
+    """
+    Add spec to component.
+    
+    Args:
+        project_id: Project identifier
+        feature_name: Feature name
+        component_name: Component name
+        spec_file_path: Path to component spec JSON file
+        
+    Returns:
+        Spec addition result
+    """
+    logger.info(f"Adding spec to component {component_name}")
+    return core_add_spec_to_component(project_id, feature_name, component_name, spec_file_path)
+
+
+@mcp.tool()
+async def planning__add_spec_to_deliverable(
+    project_id: str,
+    feature_name: str,
+    component_name: str,
+    deliverable_name: str,
+    spec_file_path: str
+) -> Dict[str, Any]:
+    """
+    Add spec to deliverable.
+    
+    Args:
+        project_id: Project identifier
+        feature_name: Feature name
+        component_name: Component name
+        deliverable_name: Deliverable name
+        spec_file_path: Path to deliverable spec JSON file
+        
+    Returns:
+        Spec addition result
+    """
+    logger.info(f"Adding spec to deliverable {deliverable_name}")
+    return core_add_spec_to_deliverable(project_id, feature_name, component_name, deliverable_name, spec_file_path)
+
+
+@mcp.tool()
+async def planning__add_spec_to_task(
+    project_id: str,
+    feature_name: str,
+    component_name: str,
+    deliverable_name: str,
+    task_id: str,
+    spec_file_path: str
+) -> Dict[str, Any]:
+    """
+    Add rollup spec to task.
+    
+    Args:
+        project_id: Project identifier
+        feature_name: Feature name
+        component_name: Component name
+        deliverable_name: Deliverable name
+        task_id: Task identifier
+        spec_file_path: Path to task rollup spec JSON file
+        
+    Returns:
+        Spec addition result
+    """
+    logger.info(f"Adding rollup spec to task {task_id}")
+    return core_add_spec_to_task(project_id, feature_name, component_name, deliverable_name, task_id, spec_file_path)
+
+
+# Blueprint System Tools
+
+@mcp.tool()
+async def workshop__save_blueprint(
+    blueprint_name: str,
+    source_file_path: str,
+    description: Optional[str] = None,
+    domain: str = "respond"
+) -> Dict[str, Any]:
+    """
+    Save a blueprint by copying a template file to storage.
+    
+    Args:
+        blueprint_name: Name of the blueprint
+        source_file_path: Path to the template file to copy
+        description: Optional description of the blueprint
+        domain: Blueprint domain (semantic tag like "greeting", "code_review", etc.)
+        
+    Returns:
+        Save result
+    """
+    logger.info(f"Saving blueprint: {blueprint_name} from {source_file_path}")
+    from .blueprints import save_blueprint as core_save_blueprint
+    return core_save_blueprint(blueprint_name, source_file_path, description, domain)
+
+
+@mcp.tool()
+async def workshop__get_blueprint(blueprint_name: str, target_path: str, domain: str = "respond") -> Dict[str, Any]:
+    """
+    Get a blueprint by copying the stored template file to target location.
+    
+    Args:
+        blueprint_name: Name of the blueprint to retrieve
+        target_path: Where to copy the template file
+        domain: Blueprint domain to search in
+        
+    Returns:
+        Copy result with success status
+    """
+    logger.info(f"Getting blueprint: {blueprint_name} to {target_path}")
+    from .blueprints import get_blueprint as core_get_blueprint
+    return core_get_blueprint(blueprint_name, target_path, domain)
+
+
+@mcp.tool()
+async def workshop__list_blueprints(domain: str = "respond") -> Dict[str, Any]:
+    """
+    List all available blueprints in a domain.
+    
+    Args:
+        domain: Blueprint domain to list (semantic tag)
+    
+    Returns:
+        List of blueprints with metadata
+    """
+    logger.info(f"Listing blueprints in domain: {domain}")
+    from .blueprints import list_blueprints as core_list_blueprints
+    return core_list_blueprints(domain)
+
+
+@mcp.tool()
+async def workshop__add_metastack_model(file_path: str, domain: str, model_name: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Add a MetaStack model Python file to the models directory.
+    
+    Args:
+        file_path: Path to the Python file containing the MetaStack model
+        domain: Domain for organizing models (e.g., "greeting", "code_review") 
+        model_name: Optional name for the model file (defaults to original filename)
+        
+    Returns:
+        Result with success status and storage path
+    """
+    logger.info(f"Adding MetaStack model from {file_path} to domain {domain}")
+    from .blueprints import add_metastack_model as core_add_metastack_model
+    return core_add_metastack_model(file_path, domain, model_name)
+
+
+@mcp.tool()
+async def get_next_task_from_treekanban(agent_tasks_only: bool = False) -> str:
+    """
+    Get next task from TreeKanban build lane with auto-ratcheting from plan.
+
+    If build lane is empty, automatically moves next eligible task from plan to build:
+    - GIINT tasks must have is_ready=true
+    - Non-GIINT tasks bypass ready gate
+
+    Args:
+        agent_tasks_only: If True, only return cards tagged assignee:ai-only or
+            assignee:ai-human. Skips human-only and untagged cards. Use this when
+            the agent is autonomously picking work (e.g. HOME mode).
+
+    Returns:
+        Next task card details including title, description, tags, and context
+    """
+    logger.info("Getting next task from TreeKanban with auto-ratcheting")
+
+    try:
+        from heaven_bml_sqlite.heaven_bml_sqlite_client import HeavenBMLSQLiteClient
+        import json
+        import re
+    except ImportError as e:
+        logger.warning(f"TreeKanban client not available: {e}")
+        return json.dumps({
+            "success": False,
+            "message": "TreeKanban not available - heaven_bml_sqlite not installed"
+        }, indent=2)
+
+    def parse_giint_metadata(card: dict) -> dict:
+        """Extract GIINT metadata from card description/title/tags.
+
+        Works with THREE levels of specificity:
+        1. Full GIINT path in description: GIINT: project/feature/component/deliverable/task
+        2. Starsystem tag + card title: creates placeholder hierarchy with _Unnamed suffixes
+        3. Neither: returns None (no hierarchy creation)
+        """
+        desc = card.get("description", "")
+        title = card.get("title", "")
+        combined = f"{title}\n{desc}"
+        tags = json.loads(card.get('tags', '[]'))
+
+        # Extract starsystem from tags (e.g., "starsystem:giint-llm-intelligence")
+        starsystem = None
+        for tag in tags:
+            if tag.startswith("starsystem:"):
+                starsystem = tag.split(":", 1)[1].strip()
+                break
+
+        # Level 1: Full GIINT path in description
+        match = re.search(r'GIINT:\s*([^/\s]+)/([^/\s]+)/([^/\s]+)/([^/\s]+)/([^/\s\n]+)', combined)
+        if match:
+            result = {
+                "project_id": match.group(1),
+                "feature": match.group(2),
+                "component": match.group(3),
+                "deliverable": match.group(4),
+                "task_id": match.group(5),
+            }
+            if starsystem:
+                result["starsystem"] = starsystem
+            return result
+
+        # Level 2: Starsystem tag + card title → card is a DELIVERABLE
+        # Naming cascades TOP DOWN: starsystem → project → feature → component → deliverable
+        # Tasks are created dynamically by the agent as it works
+        if starsystem and title:
+            ss_norm = re.sub(r'[^a-zA-Z0-9_\s]', '', starsystem).strip().replace(' ', '_').replace('-', '_')
+            deliv_norm = re.sub(r'[^a-zA-Z0-9_\s]', '', title).strip().replace(' ', '_')
+            if not deliv_norm:
+                deliv_norm = f"Card_{card.get('id', 'Unknown')}"
+            return {
+                "project_id": ss_norm,
+                "feature": f"{ss_norm}_Unnamed",
+                "component": f"{ss_norm}_Unnamed",
+                "deliverable": f"{ss_norm}_{deliv_norm}",
+                "task_id": None,
+                "starsystem": starsystem,
+            }
+
+        return None
+
+    def is_task_ready_in_giint(metadata: dict) -> bool:
+        """Check if GIINT project is ready by querying CartON for non-_Unnamed hierarchy.
+
+        Same check as has_ready_tasks in omnisanc — does the project have a
+        Feature→Component→Deliverable chain where none are _Unnamed?
+        """
+        if not metadata:
+            return False
+
+        try:
+            from carton_mcp.carton_utils import CartOnUtils
+            utils = CartOnUtils()
+
+            project_id = metadata["project_id"].replace("-", "_").replace(" ", "_")
+            project_concept = f"Giint_Project_{project_id}"
+
+            query = (
+                "MATCH (p:Wiki {n: $proj})"
+                "-[:HAS_FEATURE]->(f:Wiki)"
+                "-[:HAS_COMPONENT]->(c:Wiki)"
+                "-[:HAS_DELIVERABLE]->(d:Wiki) "
+                "WHERE NOT f.n ENDS WITH '_Unnamed' "
+                "AND NOT c.n ENDS WITH '_Unnamed' "
+                "AND NOT d.n ENDS WITH '_Unnamed' "
+                "RETURN count(d) > 0 AS ok"
+            )
+            result = utils.query_wiki_graph(query, {"proj": project_concept})
+
+            if not result.get("success") or not result.get("data"):
+                return False
+
+            data = result["data"]
+            first = data[0] if isinstance(data, list) and data else {}
+            return first.get("ok", False)
+        except Exception as e:
+            logger.error(f"Error checking GIINT readiness via CartON: {e}")
+            return False
+
+    def priority_sort_key(card):
+        priority = card.get('priority', 'NA')
+        if priority in ['NA', 'none', '']:
+            return (float('inf'),)
+        try:
+            parts = [int(x) for x in priority.split('.')]
+            padded = parts + [0] * (10 - len(parts))
+            return tuple(padded)
+        except:
+            return (float('inf'),)
+
+    def _has_agent_assignee(card: dict) -> bool:
+        """Check if card has assignee:ai-only or assignee:ai-human tag."""
+        tags = json.loads(card.get('tags', '[]'))
+        return any(
+            t in ("assignee:ai-only", "assignee:ai-human", "assignee:ai+human")
+            for t in tags
+        )
+
+    try:
+        client = HeavenBMLSQLiteClient()
+        board_name = os.getenv("GIINT_TREEKANBAN_BOARD")
+        if not board_name:
+            return json.dumps({
+                "success": False,
+                "error": "GIINT_TREEKANBAN_BOARD environment variable not set"
+            }, indent=2)
+        cards = client.get_all_cards(board_name)
+
+        if not cards:
+            return json.dumps({
+                "success": False,
+                "message": "No cards found in TreeKanban"
+            }, indent=2)
+
+        # Filter to build lane (+ agent assignee filter if requested)
+        build_cards = [c for c in cards if c.get("lane") == "build"]
+        if agent_tasks_only:
+            build_cards = [c for c in build_cards if _has_agent_assignee(c)]
+
+        # Auto-ratchet if build empty
+        if not build_cards:
+            logger.info("Build lane empty - attempting auto-ratchet from plan")
+
+            # Get plan lane cards
+            plan_cards = [c for c in cards if c.get("lane") == "plan"]
+            if not plan_cards:
+                return json.dumps({
+                    "success": False,
+                    "message": "Build lane empty and no tasks in plan lane"
+                }, indent=2)
+
+            # Sort plan by priority
+            plan_cards.sort(key=priority_sort_key)
+
+            # Find first eligible task
+            eligible_card = None
+            for card in plan_cards:
+                tags = json.loads(card.get('tags', '[]'))
+
+                # Skip non-agent cards when agent_tasks_only
+                if agent_tasks_only and not _has_agent_assignee(card):
+                    continue
+
+                is_giint_task = "giint_task" in tags
+
+                if is_giint_task:
+                    # GIINT task with explicit tag - check if ready via registry
+                    metadata = parse_giint_metadata(card)
+                    if metadata and is_task_ready_in_giint(metadata):
+                        eligible_card = card
+                        break
+                else:
+                    # Non-GIINT task (including starsystem-tagged cards) - no ready gate
+                    eligible_card = card
+                    break
+
+            if not eligible_card:
+                # META-TASK AUTO-INJECTION: Planning is the base case
+                logger.info("No ready tasks - injecting PLANNING_MODE meta-task")
+                return json.dumps({
+                    "success": True,
+                    "meta_task": "PLANNING_MODE",
+                    "message": "No ready tasks available. Entering planning mode.",
+                    "instruction": "Your task: Review tasks in plan lane and spec them out until at least one becomes ready. Planning is the base case - make something ready to work on.",
+                    "plan_lane_count": len(plan_cards),
+                    "planning_needed": True
+                }, indent=2)
+
+            # Get all children of this card to move the entire family
+            logger.info(f"Auto-ratcheting card {eligible_card['id']} from plan to build (including children)")
+            children_result = client._make_request(
+                "GET",
+                f"/api/sqlite/get-children?board={board_name}&parent_id={eligible_card['id']}"
+            )
+
+            # Build list of all cards to move (parent + children)
+            cards_to_move = [eligible_card]
+            if children_result and children_result.get('success'):
+                cards_to_move.extend(children_result.get('children', []))
+
+            logger.info(f"Moving {len(cards_to_move)} cards (1 parent + {len(cards_to_move)-1} children)")
+
+            # Move all cards in family to build
+            for card in cards_to_move:
+                update_result = client._make_request(
+                    "PUT",
+                    f"/api/sqlite/cards/{card['id']}",
+                    {"board": board_name, "status": "build"}
+                )
+
+                if not update_result:
+                    logger.warning(f"Failed to move card {card['id']} to build lane")
+                else:
+                    card["status"] = "build"
+
+            build_cards = cards_to_move
+            logger.info(f"Successfully auto-ratcheted {len(build_cards)} cards to build")
+
+        # Sort build cards by priority
+        build_cards.sort(key=priority_sort_key)
+
+        # Get top card
+        next_card = build_cards[0]
+
+        # Parse tags
+        tags = json.loads(next_card.get('tags', '[]'))
+
+        # Auto-vendor bml_default if no operadic flow tagged and assignee is AI
+        has_flow = any(t.startswith("operadic_flow:") for t in tags)
+        has_ai_assignee = any(
+            t in ("assignee:ai-only", "assignee:ai-human", "assignee:ai+human")
+            for t in tags
+        )
+        if not has_flow and has_ai_assignee:
+            try:
+                flow_tag = "operadic_flow:bml_default"
+                client._make_request(
+                    "PUT",
+                    f"/api/sqlite/cards/{next_card['id']}/tags/add",
+                    {"board": board_name, "tag": flow_tag}
+                )
+                tags.append(flow_tag)
+                next_card['tags'] = json.dumps(tags)
+                logger.info(f"Auto-vendored bml_default to card {next_card['id']}")
+            except Exception as e:
+                logger.warning(f"Failed to auto-vendor bml_default: {e}")
+
+        # Determine card type from tags
+        card_type = "unknown"
+        if "human_ai" in tags:
+            card_type = "collaborative (AI+Human)"
+        elif "human_only" in tags:
+            card_type = "human-only"
+        elif "giint_task" in tags:
+            card_type = "giint_task"
+        elif "operadic_flow" in tags:
+            card_type = "operadic_flow_pattern"
+        elif "deliverable" in tags:
+            card_type = "deliverable"
+        elif "task" in tags:
+            card_type = "task"
+
+        # Parse GIINT metadata from card (full path, starsystem tag, or None)
+        giint_metadata = parse_giint_metadata(next_card)
+
+        # Every card MUST have a starsystem tag — no tag = not a valid task
+        if not giint_metadata:
+            return json.dumps({
+                "success": False,
+                "error": "no_starsystem_tag",
+                "message": f"Card '{next_card.get('title')}' has no starsystem tag. Every task card MUST have a starsystem:<name> tag.",
+                "card_id": next_card.get("id"),
+                "card_title": next_card.get("title"),
+                "tags": tags,
+            }, indent=2)
+
+        # Build result
+        result = {
+            "success": True,
+            "card": {
+                "id": next_card.get("id"),
+                "title": next_card.get("title"),
+                "description": next_card.get("description", ""),
+                "priority": next_card.get("priority", "NA"),
+                "tags": tags,
+                "card_type": card_type,
+                "lane": "build",
+                "giint_metadata": giint_metadata
+            },
+            "build_lane_count": len(build_cards),
+            "message": f"Next task: {next_card.get('title')} ({card_type})"
+        }
+
+        logger.info(f"Retrieved next task: {next_card.get('title')}")
+
+        # Ensure full GIINT hierarchy in CartON + set active hypercluster
+        if giint_metadata:
+            hc_name = _ensure_giint_hierarchy_in_carton(giint_metadata)
+            if hc_name:
+                result["active_hypercluster"] = hc_name
+
+        return json.dumps(result, indent=2)
+
+    except Exception as e:
+        logger.warning(f"TreeKanban unavailable or error getting next task: {e}", exc_info=True)
+        return json.dumps({
+            "success": False,
+            "message": "TreeKanban unavailable - bridge server may not be running",
+            "error": str(e)
+        }, indent=2)
+
+
+def _ensure_giint_hierarchy_in_carton(giint_metadata: dict) -> str:
+    """
+    Ensure full GIINT hierarchy exists as typed CartON concepts.
+    Creates: HC Collection → Hypercluster → Project → Feature → Component → Deliverable → Task
+    Returns the Hypercluster name, or None on failure.
+    """
+    from pathlib import Path
+    try:
+        from carton_mcp.add_concept_tool import add_concept_tool_func
+    except ImportError:
+        logger.warning("carton_mcp not available — skipping hierarchy creation")
+        return None
+
+    project_id = giint_metadata["project_id"]
+    feature = giint_metadata["feature"]
+    component = giint_metadata["component"]
+    deliverable = giint_metadata["deliverable"]
+    task_id = giint_metadata["task_id"]
+
+    # Resolve starsystem: prefer metadata (from TK tag), fall back to active starlog
+    starsystem_name = giint_metadata.get("starsystem")
+    if not starsystem_name:
+        starsystem_name = "Home"  # default
+        starlog_path_file = Path("/tmp/active_starlog_path.txt")
+        if starlog_path_file.exists():
+            raw = starlog_path_file.read_text().strip()
+            starsystem_name = Path(raw).name
+    # Normalize: replace dashes/spaces, title case
+    starsystem_name = starsystem_name.replace("-", "_").replace(" ", "_").title()
+
+    # Normalize names
+    def norm(s):
+        return s.replace("-", "_").replace(" ", "_")
+
+    ss_name = norm(starsystem_name)
+    ss_collection = f"Starsystem_{ss_name}_Collection"
+    task_collections = f"Starsystem_{ss_name}_Task_Collections"
+    done_signal_collections = f"Starsystem_{ss_name}_Done_Signal_Collections"
+    completed_collections = f"Starsystem_{ss_name}_Completed_Collections"
+    arch_collections = f"Starsystem_{ss_name}_Architecture_Collections"
+    bug_collections = f"Starsystem_{ss_name}_Bug_Collections"
+    hc_name = f"Hypercluster_{norm(project_id)}"
+    project_name = f"Giint_Project_{norm(project_id)}"
+    feature_name = f"Giint_Feature_{norm(feature)}"
+    component_name = f"Giint_Component_{norm(component)}"
+    deliverable_name = f"Giint_Deliverable_{norm(deliverable)}"
+    task_name = f"Giint_Task_{norm(task_id)}" if task_id else None
+
+    def ensure_concept(name, desc, rels):
+        try:
+            add_concept_tool_func(
+                concept_name=name,
+                description=desc,
+                relationships=rels,
+                desc_update_mode="append",
+                hide_youknow=False,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to create {name}: {e}")
+
+    # 1. Starsystem top-level collection
+    ensure_concept(ss_collection, f"Top-level collection for starsystem {starsystem_name}", [
+        {"relationship": "is_a", "related": ["Starsystem_Collection"]},
+        {"relationship": "instantiates", "related": ["Starsystem_Collection_Template"]},
+        {"relationship": "part_of", "related": ["All_Starsystems"]},
+        {"relationship": "has_part", "related": [task_collections, done_signal_collections, completed_collections, arch_collections, bug_collections]},
+    ])
+
+    # 2. Collection categories (nested inside starsystem)
+    for cat_name, cat_type in [
+        (task_collections, "Task_Collection_Category"),
+        (done_signal_collections, "Done_Signal_Collection_Category"),
+        (completed_collections, "Completed_Collection_Category"),
+        (arch_collections, "Architecture_Collection_Category"),
+        (bug_collections, "Bug_Collection_Category"),
+    ]:
+        ensure_concept(cat_name, f"{cat_type.replace('_', ' ')} for starsystem {starsystem_name}", [
+            {"relationship": "is_a", "related": ["Collection_Category"]},
+            {"relationship": "part_of", "related": [ss_collection]},
+            {"relationship": "instantiates", "related": [cat_type]},
+        ])
+
+    # 3. Hypercluster (in Task Collections category)
+    ensure_concept(hc_name, f"HyperCluster tracking {project_name}. Why: Active work.", [
+        {"relationship": "is_a", "related": ["Hypercluster"]},
+        {"relationship": "part_of", "related": [task_collections, "Memory_Tier_0"]},
+        {"relationship": "instantiates", "related": ["Hypercluster_Template"]},
+        {"relationship": "has_giint_project", "related": [project_name]},
+        {"relationship": "has_status", "related": ["Active"]},
+    ])
+
+    # 3. GIINT Project
+    ensure_concept(project_name, f"GIINT project for {project_id}", [
+        {"relationship": "is_a", "related": ["GIINT_Project"]},
+        {"relationship": "part_of", "related": [hc_name]},
+        {"relationship": "instantiates", "related": ["GIINT_Project_Template"]},
+        {"relationship": "has_feature", "related": [feature_name]},
+    ])
+
+    # 4. Feature
+    ensure_concept(feature_name, f"GIINT feature: {feature}", [
+        {"relationship": "is_a", "related": ["GIINT_Feature"]},
+        {"relationship": "part_of", "related": [project_name]},
+        {"relationship": "instantiates", "related": ["GIINT_Feature_Template"]},
+        {"relationship": "has_component", "related": [component_name]},
+    ])
+
+    # 5. Component
+    ensure_concept(component_name, f"GIINT component: {component}", [
+        {"relationship": "is_a", "related": ["GIINT_Component"]},
+        {"relationship": "part_of", "related": [feature_name]},
+        {"relationship": "instantiates", "related": ["GIINT_Component_Template"]},
+        {"relationship": "has_deliverable", "related": [deliverable_name]},
+    ])
+
+    # 6. Deliverable
+    deliverable_rels = [
+        {"relationship": "is_a", "related": ["GIINT_Deliverable"]},
+        {"relationship": "part_of", "related": [component_name]},
+        {"relationship": "instantiates", "related": ["GIINT_Deliverable_Template"]},
+    ]
+    if task_name:
+        deliverable_rels.append({"relationship": "has_task", "related": [task_name]})
+    ensure_concept(deliverable_name, f"GIINT deliverable: {deliverable}", deliverable_rels)
+
+    # 7. Task (only if task_id provided — agent creates tasks dynamically as it works)
+    if task_name:
+        ensure_concept(task_name, f"GIINT task: {task_id}", [
+            {"relationship": "is_a", "related": ["GIINT_Task"]},
+            {"relationship": "part_of", "related": [deliverable_name]},
+            {"relationship": "instantiates", "related": ["GIINT_Task_Template"]},
+        ])
+
+    # Set active hypercluster
+    Path("/tmp/active_hypercluster.txt").write_text(hc_name)
+    logger.info(f"Full GIINT hierarchy ensured in CartON. Active HC: {hc_name}")
+    return hc_name
+
+
+def _auto_populate_flights():
+    """Auto-populate GIINT flight configs if registry exists."""
+    try:
+        auto_populate_status = auto_populate_giint_defaults()
+        logger.info(f"GIINT auto-population status: {auto_populate_status}")
+    except Exception as e:
+        logger.warning(f"Failed to auto-populate GIINT flight configs: {e}", exc_info=True)
+
+
+# DEPRECATED: be_myself now handled by flight_predictor MCP
+# def _register_dynamic_be_myself():
+#     """Dynamically create and register be_myself tool based on loaded schema."""
+#     schema_class = get_schema_class()
+#
+#     if schema_class:
+#         logger.info(f"Creating dynamic be_myself tool with schema: {schema_class.__name__}")
+#
+#         async def core__be_myself(awareness: schema_class) -> str:
+#             """Constrain yourself through the COMPOSE web. MUST be called before any other tool."""
+#             logger.info("Processing be_myself - constraining through COMPOSE web")
+#             return core_be_myself(awareness)
+#
+#         mcp.tool()(core__be_myself)
+#         logger.info("be_myself tool registered successfully")
+#     else:
+#         logger.warning("No schema loaded - registering fallback be_myself")
+#
+#         @mcp.tool()
+#         async def core__be_myself(message: str = "") -> str:
+#             """be_myself requires a schema. Check GIINT_SCHEMA env var and schema files."""
+#             return "ERROR: No self-awareness schema loaded. Check GIINT_SCHEMA env var and files in HEAVEN_DATA_DIR/giint/self_awareness_schemas/"
+
+
+def main():
+    """Entry point for console script."""
+    _auto_populate_flights()
+    # _register_dynamic_be_myself()  # DEPRECATED: handled by flight_predictor MCP
+    mcp.run()
+
+
+if __name__ == "__main__":
+    main()

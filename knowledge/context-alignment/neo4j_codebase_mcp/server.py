@@ -24,6 +24,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Neo4j connection
+# TRIGGERS: Neo4j database via Bolt protocol on localhost:7687
 NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
 NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "password")
@@ -458,6 +459,89 @@ async def query_codebase_graph(cypher_query: str) -> str:
     except Exception:
         logger.error(f"Error executing Cypher query: {cypher_query}", exc_info=True)
         raise
+
+@mcp.tool()
+async def detect_code_patterns(
+    search_dirs: List[str],
+    repo_name: Optional[str] = None,
+    store_in_neo4j: bool = False,
+) -> str:
+    """
+    Auto-discover code patterns from shared base classes across files.
+
+    Any base class used by 2+ files = a pattern. Returns fingerprints,
+    similarity scores, breakpoint detection, and sub-pattern clustering.
+
+    Args:
+        search_dirs: Directories to scan for Python files
+        repo_name: Repository name (required if store_in_neo4j=True)
+        store_in_neo4j: Whether to persist Pattern nodes and FOLLOWS_PATTERN edges
+
+    Returns:
+        JSON with discovered patterns, similarity matrix, and sub-patterns
+    """
+    try:
+        from pattern_detector import detect_patterns, store_patterns_neo4j
+
+        result = detect_patterns(search_dirs)
+
+        if store_in_neo4j and repo_name:
+            store_result = store_patterns_neo4j(
+                result, repo_name, NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD,
+                repo_root=search_dirs[0] if search_dirs else None,
+            )
+            result["neo4j_store"] = store_result
+
+        return json.dumps(result, default=str)
+    except Exception:
+        logger.error("Error detecting patterns", exc_info=True)
+        raise
+
+
+@mcp.tool()
+async def detect_hidden_connections(
+    repo_path: str,
+    repo_name: Optional[str] = None,
+    store_in_neo4j: bool = False,
+) -> str:
+    """
+    Find invisible coupling that AST parsing misses: HTTP calls between services,
+    file writes that trigger daemons, hook bridges, MCP tool refs in strings,
+    cross-package imports, /tmp/ state file lifecycle, multi-write drift.
+
+    Returns annotation score: how many hidden connections have # TRIGGERS: or
+    # CONNECTS_TO: comments vs total. Score shows up in orient().
+
+    Args:
+        repo_path: Root directory to scan
+        repo_name: Repository name (for Neo4j storage, defaults to dir name)
+        store_in_neo4j: Persist HIDDEN_CONNECTION edges and score on Repository node
+    """
+    try:
+        from hidden_connections import detect_hidden_connections as _detect, store_hidden_connections_neo4j
+
+        result = _detect(repo_path)
+        rname = repo_name or os.path.basename(os.path.normpath(repo_path))
+
+        if store_in_neo4j:
+            store_result = store_hidden_connections_neo4j(
+                result, rname, NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD,
+            )
+            result["neo4j_store"] = store_result
+
+        # Summary without full connection list (too large for MCP response)
+        summary = {k: v for k, v in result.items() if k != "connections"}
+        summary["top_unannotated"] = []
+        for cat, items in result.get("connections", {}).items():
+            for item in items:
+                if not item.get("annotated") and len(summary["top_unannotated"]) < 20:
+                    summary["top_unannotated"].append({"type": cat, **item})
+
+        return json.dumps(summary, default=str)
+    except Exception:
+        logger.error("Error detecting hidden connections", exc_info=True)
+        raise
+
 
 async def main():
     """Run the MCP server"""

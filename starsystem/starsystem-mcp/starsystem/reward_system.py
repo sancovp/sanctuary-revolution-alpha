@@ -65,7 +65,9 @@ def get_starsystem_health(path: Optional[str] = None) -> Dict[str, Any]:
     components = {}
 
     # 1. EMANATION COVERAGE (0.30 weight)
-    components["emanation"] = _get_emanation_score()
+    emanation_result = _get_emanation_score(path)
+    components["emanation"] = emanation_result["score"]
+    components["emanation_details"] = emanation_result
 
     # 2. SMELL CLEANLINESS (0.25 weight)
     components["smells"] = _get_smell_score(path)
@@ -74,7 +76,9 @@ def get_starsystem_health(path: Optional[str] = None) -> Dict[str, Any]:
     components["architecture"] = _get_architecture_score(path)
 
     # 4. COMPLEXITY LEVEL (0.15 weight) - L0=0, L6=1.0
-    components["complexity"] = _get_complexity_score(path)
+    complexity_result = _get_complexity_score(path)
+    components["complexity"] = complexity_result["score"]
+    components["complexity_details"] = complexity_result
 
     # 5. KNOWLEDGE GRAPH DEPTH (0.10 weight) — how complete is the GIINT hierarchy (Unnamed count)
     components["kg_depth"] = _get_kg_depth_score(path, components["complexity"])
@@ -111,19 +115,368 @@ def get_starsystem_health(path: Optional[str] = None) -> Dict[str, Any]:
     }
 
 
-def _get_emanation_score() -> float:
-    """Get emanation coverage as 0-1 score."""
+# OLD EMANATION - REPLACED BY YOUKNOW VERSION BELOW
+# def _get_emanation_score(path: Path) -> float:
+    # """Graph-only emanation score. Queries the FULL required graph shape from CartON.
+
+    # Traces starsystem → GIINT hierarchy + AI integrations (skills, flights, rules).
+    # Then scans filesystem for anything that exists on disk but not in the graph.
+    # Score = completeness of the required graph shape.
+    # """
+    # try:
+        # # Derive starsystem concept name (same slug as get_fleet_health uses)
+        # path_slug = str(path).strip("/").replace("/", "_").replace("-", "_").title()
+        # ss_name = f"Starsystem_{path_slug}"
+
+        # # Query the ENTIRE graph shape in one shot
+        # shape_query = """
+        # OPTIONAL MATCH (ss:Wiki {n: $ss_name})
+        # WITH ss
+
+        # OPTIONAL MATCH (proj:Wiki)-[:PART_OF]->(ss)
+        # WHERE proj.n STARTS WITH 'Giint_Project_'
+        # WITH ss, collect(DISTINCT proj.n) as projects
+
+        # OPTIONAL MATCH (feat:Wiki)-[:PART_OF]->(:Wiki)-[:PART_OF]->(ss:Wiki {n: $ss_name})
+        # WHERE feat.n STARTS WITH 'Giint_Feature_'
+        # WITH ss, projects, collect(DISTINCT feat.n) as features
+
+        # OPTIONAL MATCH (comp:Wiki)-[:PART_OF*1..3]->(ss:Wiki {n: $ss_name})
+        # WHERE comp.n STARTS WITH 'Giint_Component_'
+        # WITH ss, projects, features, collect(DISTINCT comp.n) as components
+
+        # OPTIONAL MATCH (skill:Wiki)-[:HAS_STARSYSTEM]->(ss:Wiki {n: $ss_name})
+        # WHERE skill.n STARTS WITH 'Skill_'
+        # WITH ss, projects, features, components, collect(DISTINCT skill.n) as skills
+
+        # OPTIONAL MATCH (flight:Wiki)-[:PART_OF]->(ss:Wiki {n: $ss_name})
+        # WHERE flight.n STARTS WITH 'Flight_Config_'
+        # WITH ss, projects, features, components, skills, collect(DISTINCT flight.n) as flights
+
+        # OPTIONAL MATCH (rule:Wiki)-[:HAS_STARSYSTEM]->(ss:Wiki {n: $ss_name})
+        # WHERE rule.n STARTS WITH 'Claude_Code_Rule_'
+        # WITH ss, projects, features, components, skills, flights, collect(DISTINCT rule.n) as rules
+
+        # OPTIONAL MATCH (deliv:Wiki)-[:PART_OF*1..4]->(ss:Wiki {n: $ss_name})
+        # WHERE deliv.n STARTS WITH 'Giint_Deliverable_'
+        # WITH projects, features, components, skills, flights, rules, collect(DISTINCT deliv.n) as deliverables
+
+        # OPTIONAL MATCH (task:Wiki)-[:PART_OF*1..5]->(ss:Wiki {n: $ss_name})
+        # WHERE task.n STARTS WITH 'Giint_Task_'
+
+        # RETURN projects, features, components, deliverables,
+               # collect(DISTINCT task.n) as tasks,
+               # skills, flights, rules
+        # """
+
+        # result = _carton_query(shape_query, {"ss_name": ss_name})
+        # if not result.get("success") or not result.get("data"):
+            # return 0.0
+
+        # d = result["data"][0]
+        # projects = d.get("projects") or []
+        # features = d.get("features") or []
+        # components = d.get("components") or []
+        # deliverables = d.get("deliverables") or []
+        # tasks = d.get("tasks") or []
+        # skills = d.get("skills") or []
+        # flights = d.get("flights") or []
+        # rules = d.get("rules") or []
+
+        # # Score: completeness of the required graph shape
+        # # Each partial is 0-1, weighted equally
+        # n_comp = max(len(components), 1)
+        # partials = [
+            # 1.0 if projects else 0.0,                          # Has GIINT project
+            # 1.0 if features else 0.0,                          # Has features defined
+            # 1.0 if components else 0.0,                        # Has components defined
+            # min(len(deliverables) / n_comp, 1.0),              # Deliverable coverage
+            # min(len(tasks) / n_comp, 1.0),                     # Task coverage
+            # min(len(skills) / n_comp, 1.0),                    # Skill coverage per component
+            # min(len(flights) / 3.0, 1.0) if flights else 0.0,  # Flight coverage (3+ = full)
+            # min(len(rules) / 3.0, 1.0) if rules else 0.0,     # Rule coverage (3+ = full)
+        # ]
+        # score = sum(partials) / len(partials)
+
+        # # Scan filesystem for untracked items (skills/rules that exist on disk but not in graph)
+        # _heal_emanation_gaps(path, ss_name, skills, rules)
+
+        # return round(score, 3)
+
+    # except Exception as e:
+        # logger.warning(f"Could not get emanation score for {path}: {e}")
+        # return 0.0
+
+
+# def _heal_emanation_gaps(path: Path, ss_name: str, graph_skills: list, graph_rules: list):
+    # """Check filesystem for skills/rules that exist on disk but aren't in the graph. Log gaps."""
+    # try:
+        # # Check .claude/skills/
+        # skills_dir = path / ".claude" / "skills"
+        # if skills_dir.is_dir():
+            # disk_skills = [d.name for d in skills_dir.iterdir() if d.is_dir() and not d.name.startswith("_")]
+            # graph_skill_names = {s.replace("Skill_", "").lower().replace("_", "-") for s in graph_skills}
+            # for ds in disk_skills:
+                # if ds.lower() not in graph_skill_names:
+                    # logger.info(f"HEAL: skill '{ds}' exists at {skills_dir}/{ds} but not in graph for {ss_name}")
+
+        # # Check .claude/rules/
+        # rules_dir = path / ".claude" / "rules"
+        # if rules_dir.is_dir():
+            # disk_rules = [f.stem for f in rules_dir.glob("*.md")]
+            # graph_rule_names = {r.replace("Claude_Code_Rule_", "").lower().replace("_", "-") for r in graph_rules}
+            # for dr in disk_rules:
+                # if dr.lower() not in graph_rule_names:
+                    # logger.info(f"HEAL: rule '{dr}' exists at {rules_dir}/{dr}.md but not in graph for {ss_name}")
+    # except Exception as e:
+        # logger.debug(f"Heal check failed for {path}: {e}")
+
+
+def _heal_emanation_gaps(gaps: list, repo_path: Path) -> int:
+    """Auto-create CartON concepts for disk items we can fully deduce.
+
+    For rules: we know name, content, scope, starsystem — everything.
+    For skills/hooks/agents: same pattern.
+
+    Returns number of concepts healed.
+    """
     try:
-        from llm_intelligence.carton_sync import get_emanation_gaps
-        result = get_emanation_gaps()
-        if result.get("success"):
-            gaps = result.get("gaps", {})
-            coverage = gaps.get("coverage_percent", 0)
-            return coverage / 100.0
-        return 0.0
+        from carton_mcp.add_concept_tool import add_concept_tool_func
+    except ImportError:
+        logger.warning("Cannot import add_concept_tool — healing disabled")
+        return 0
+
+    repo_name = repo_path.name.replace("-", "_").title().replace(" ", "_")
+    home_claude = Path.home() / ".claude"
+
+    healed = 0
+    for concept_name, item_type, disk_path in gaps:
+        try:
+            disk_p = Path(disk_path)
+
+            if str(disk_p).startswith(str(home_claude)):
+                scope = "global"
+                part_of = ["Gnosys_Collection"]
+            else:
+                scope = "project"
+                part_of = [f"Starsystem_{repo_name}"]
+
+            if disk_p.is_dir():
+                skill_md = disk_p / "SKILL.md"
+                content = skill_md.read_text()[:2000] if skill_md.exists() else f"Skill at {disk_path}"
+            elif disk_p.is_file():
+                content = disk_p.read_text()[:2000]
+            else:
+                continue
+
+            type_map = {
+                "rule": "Claude_Code_Rule",
+                "skill": "Skill",
+                "hook": "Hook",
+                "agent": "Agent",
+            }
+            owl_type = type_map.get(item_type, "Entity")
+
+            rels = [
+                {"relationship": "is_a", "related": [owl_type]},
+                {"relationship": "part_of", "related": part_of},
+                {"relationship": "instantiates", "related": [owl_type]},
+            ]
+            if item_type == "rule":
+                rels.append({"relationship": "has_scope", "related": [scope]})
+
+            add_concept_tool_func(
+                concept_name=concept_name,
+                description=content,
+                relationships=rels,
+                hide_youknow=False,
+                source="emanation_healer",
+            )
+            healed += 1
+            logger.info(f"HEALED: {concept_name} ({item_type}) — created in CartON")
+
+        except Exception as e:
+            logger.warning(f"Failed to heal {concept_name}: {e}")
+
+    return healed
+
+
+def _get_emanation_score(path: Path) -> float:
+    """Emanation score via YOUKNOW validation.
+
+    1. Scan .claude/skills/ and .claude/rules/ on disk — ground truth for what exists
+    2. For each, derive CartON concept name and query its relationships
+    3. Call youknow_validate() on the daemon — CODE = complete, SOUP = incomplete
+    4. Score = fraction that pass YOUKNOW validation (CODE)
+    5. Log gaps (missing from CartON) and SOUP reasons
+    6. HEAL gaps where we can fully deduce the concept from disk
+    """
+    try:
+        import urllib.request as _urllib_req
+
+        try:
+            # TRIGGERS: YOUKNOW daemon:8102/health via HTTP GET
+            with _urllib_req.urlopen("http://localhost:8102/health", timeout=2) as r:
+                if r.status != 200:
+                    return 0.0
+        except Exception:
+            logger.warning("YOUKNOW daemon not running — emanation score unavailable")
+            return 0.0
+
+        disk_items = []
+
+        skills_dir = path / ".claude" / "skills"
+        if skills_dir.is_dir():
+            for d in skills_dir.iterdir():
+                if d.is_dir() and not d.name.startswith("_"):
+                    # Strip "skill-" prefix if present to avoid double Skill_Skill_
+                    name = d.name
+                    if name.startswith("skill-"):
+                        name = name[6:]
+                    slug = name.replace("-", "_").title().replace(" ", "_")
+                    disk_items.append((f"Skill_{slug}", "skill", str(d)))
+
+        rules_dir = path / ".claude" / "rules"
+        if rules_dir.is_dir():
+            for f in rules_dir.glob("*.md"):
+                slug = f.stem.replace("-", "_").title().replace(" ", "_")
+                disk_items.append((f"Claude_Code_Rule_{slug}", "rule", str(f)))
+
+        hooks_dir = path / ".claude" / "hooks"
+        if hooks_dir.is_dir():
+            for f in hooks_dir.glob("*.py"):
+                slug = f.stem.replace("-", "_").title().replace(" ", "_")
+                disk_items.append((f"Hook_{slug}", "hook", str(f)))
+
+        agents_dir = path / ".claude" / "agents"
+        if agents_dir.is_dir():
+            for f in agents_dir.glob("*.md"):
+                slug = f.stem.replace("-", "_").title().replace(" ", "_")
+                disk_items.append((f"Agent_{slug}", "agent", str(f)))
+
+        if not disk_items:
+            return 0.0
+
+        names = [item[0] for item in disk_items]
+        rel_query = (
+            "UNWIND $names AS name "
+            "OPTIONAL MATCH (c:Wiki {n: name})-[r]->(t:Wiki) "
+            "WHERE type(r) <> 'AUTO_RELATED_TO' "
+            "RETURN name, collect(type(r) + ' ' + t.n) as rels"
+        )
+        rel_result = _carton_query(rel_query, {"names": names})
+        rels_by_name = {}
+        if rel_result.get("success"):
+            for row in rel_result.get("data", []):
+                rels_by_name[row["name"]] = row.get("rels", [])
+
+        code_count = 0
+        soup_items = []
+        missing_items = []
+
+        for concept, item_type, disk_path in disk_items:
+            rels = rels_by_name.get(concept, [])
+            if not rels:
+                missing_items.append((concept, item_type, disk_path))
+                continue
+
+            statement = f"{concept} {', '.join(rels)}"
+            try:
+                body = json.dumps({"statement": statement}).encode()
+                # TRIGGERS: YOUKNOW daemon:8102/validate via HTTP POST
+                req = _urllib_req.Request(
+                    "http://localhost:8102/validate",
+                    data=body,
+                    headers={"Content-Type": "application/json"}
+                )
+                with _urllib_req.urlopen(req, timeout=30) as resp:
+                    yk_data = json.loads(resp.read())
+
+                result_str = yk_data.get("result", "")
+                if result_str.startswith("CODE:"):
+                    code_count += 1
+                else:
+                    soup_items.append((concept, result_str[:150]))
+            except Exception as e:
+                soup_items.append((concept, f"validation error: {e}"))
+
+        total = len(disk_items)
+        missing_names = {m[0] for m in missing_items}
+        soup_names = {s[0] for s in soup_items}
+        failed = missing_names | soup_names
+
+        def _count(typ):
+            t = sum(1 for _, tt, _ in disk_items if tt == typ)
+            c = sum(1 for cn, tt, _ in disk_items if tt == typ and cn not in failed)
+            return c, t
+
+        skill_code, skill_total = _count("skill")
+        rule_code, rule_total = _count("rule")
+        hook_code, hook_total = _count("hook")
+        agent_code, agent_total = _count("agent")
+
+        for concept, item_type, disk_path in missing_items:
+            logger.info(f"EMANATION GAP: {item_type} '{concept}' at {disk_path} NOT in CartON")
+        for concept, reason in soup_items:
+            logger.info(f"EMANATION SOUP: {concept} — {reason}")
+
+        # Heal gaps where we can fully deduce the concept from disk
+        if missing_items:
+            healed = _heal_emanation_gaps(missing_items, path)
+            if healed > 0:
+                logger.info(f"HEALED {healed} gaps — re-validating")
+                # Re-query healed concepts and validate
+                healed_names = [m[0] for m in missing_items]
+                re_query = (
+                    "UNWIND $names AS name "
+                    "OPTIONAL MATCH (c:Wiki {n: name})-[r]->(t:Wiki) "
+                    "WHERE type(r) <> 'AUTO_RELATED_TO' "
+                    "RETURN name, collect(type(r) + ' ' + t.n) as rels"
+                )
+                re_result = _carton_query(re_query, {"names": healed_names})
+                if re_result.get("success"):
+                    for row in re_result.get("data", []):
+                        rels = row.get("rels", [])
+                        if not rels:
+                            continue
+                        statement = f"{row['name']} {', '.join(rels)}"
+                        try:
+                            body = json.dumps({"statement": statement}).encode()
+                            # TRIGGERS: YOUKNOW daemon:8102/validate via HTTP POST
+                            req = _urllib_req.Request(
+                                "http://localhost:8102/validate",
+                                data=body,
+                                headers={"Content-Type": "application/json"}
+                            )
+                            with _urllib_req.urlopen(req, timeout=30) as resp:
+                                yk_data = json.loads(resp.read())
+                            if yk_data.get("result", "").startswith("CODE:"):
+                                code_count += 1
+                                failed.discard(row["name"])
+                        except Exception:
+                            pass
+                # Recount after healing
+                skill_code, skill_total = _count("skill")
+                rule_code, rule_total = _count("rule")
+                hook_code, hook_total = _count("hook")
+                agent_code, agent_total = _count("agent")
+
+        score = round(code_count / total, 3) if total > 0 else 0.0
+        return {
+            "score": score,
+            "total": total,
+            "code": code_count,
+            "skills": f"{skill_code}/{skill_total}",
+            "rules": f"{rule_code}/{rule_total}",
+            "hooks": f"{hook_code}/{hook_total}",
+            "agents": f"{agent_code}/{agent_total}",
+            "gaps": [(c, t, p) for c, t, p in missing_items],
+            "soup": [(c, r) for c, r in soup_items],
+        }
+
     except Exception as e:
-        logger.warning(f"Could not get emanation score: {e}")
-        return 0.5  # Neutral if unavailable
+        logger.warning(f"Could not get emanation score for {path}: {e}")
+        return {"score": 0.0, "total": 0, "code": 0, "skills": "0/0", "rules": "0/0", "hooks": "0/0", "agents": "0/0", "gaps": [], "soup": []}
 
 
 def _get_smell_score(path: Path) -> float:
@@ -192,24 +545,103 @@ def _get_architecture_score(path: Path) -> float:
         return 0.5
 
 
-def _get_complexity_score(path: Path) -> float:
+def _get_hidden_deps_score(path: Path) -> float:
+    """Hidden connections annotation score. 1.0 = all annotated, 0.0 = none."""
+    try:
+        import sys
+        sys.path.insert(0, "/home/GOD/gnosys-plugin-v2/knowledge/context-alignment/neo4j_codebase_mcp")
+        from hidden_connections import detect_hidden_connections
+        result = detect_hidden_connections(str(path))
+        return result.get("score", 0.5)
+    except Exception:
+        return 0.5
+
+
+def _check_cicd(path: Path) -> bool:
+    """Check if repo has CICD artifacts."""
+    indicators = [
+        path / ".github" / "workflows",
+        path / "Dockerfile",
+        path / "docker-compose.yml",
+        path / "deploy",
+    ]
+    return any(p.exists() for p in indicators)
+
+
+def _detect_complexity_level(
+    total_skills: int, total_flights: int, total_mcps: int,
+    total_personas: int, path: Path = None, emanation_score: float = None,
+) -> dict:
+    """Shared progressive level detection for complexity ladder.
+
+    Returns dict with level (int 0-6), score (float 0.0-1.0),
+    met (list of satisfied requirements), missing (list of next gaps).
+
+    Levels (from guru loop _get_level_requirements, autopoiesis_stop_hook.py:318):
+      L0: Nothing
+      L1: 1+ skill + rules
+      L2: L1 + flight config
+      L3: L2 + MCP tool
+      L4: L3 + persona (frame + skillset + MCP set)
+      L5: K2 Stellar — starsystem auto-provides (emanation >= 0.6)
+      L6: All L5 + CICD pipeline
     """
-    Detect complexity level (L0-L6) by checking .claude/ inventory against CartON.
+    met = []
+    missing = []
 
-    Two-part check:
-    A) Inventory .claude/ folder - check each item exists in CartON with correct relationships
-    B) Query CartON for remote emanations - things that describe this project but live elsewhere
+    # L1: skills exist
+    has_skills = total_skills > 0
+    if has_skills:
+        met.append("L1: skills")
+    else:
+        missing.append("L1: needs 1+ skill in .claude/skills/")
 
-    L0 = 0.0:   Nothing in .claude/ or CartON
-    L1 = 0.17:  Has skill(s) properly connected
-    L2 = 0.33:  Has skill + flight config
-    L3 = 0.67:  Has MCP or TreeShell + flights
-    L4 = 0.83:  Has persona properly connected
-    L5 = 0.92:  Has scoring + goldenization
-    L6 = 1.0:   Deployed, documented, distributed
+    # L2: L1 + flight config
+    has_flights = total_flights > 0
+    if has_skills and has_flights:
+        met.append("L2: flights")
+    elif has_skills:
+        missing.append("L2: needs flight config in CartON")
+
+    # L3: L2 + MCP
+    has_mcps = total_mcps > 0
+    if has_skills and has_flights and has_mcps:
+        met.append("L3: MCPs")
+    elif has_skills and has_flights:
+        missing.append("L3: needs MCP tool")
+
+    # L4: L3 + persona
+    has_persona = total_personas > 0
+    if has_skills and has_flights and has_mcps and has_persona:
+        met.append("L4: persona")
+    elif has_skills and has_flights and has_mcps:
+        missing.append("L4: needs persona (frame + skillset + MCP set)")
+
+    # L5: K2 Stellar (auto from emanation score)
+    is_stellar = (emanation_score or 0) >= 0.6
+    if is_stellar and has_persona:
+        met.append("L5: K2 Stellar (auto)")
+    elif has_persona:
+        missing.append("L5: needs emanation >= 0.6 for K2 Stellar")
+
+    # L6: CICD
+    has_cicd = _check_cicd(path) if path else False
+    if has_cicd and is_stellar:
+        met.append("L6: CICD + deployment")
+    elif is_stellar:
+        missing.append("L6: needs CICD pipeline (.github/workflows/, Dockerfile)")
+
+    level = len(met)
+    score = round(level / 6.0, 3)
+    return {"level": level, "score": score, "met": met, "missing": missing}
+
+
+def _get_complexity_score(path: Path) -> dict:
+    """Detect complexity level L0-L6 by checking .claude/ inventory against CartON.
+
+    Returns dict: {level: int, score: float, met: [...], missing: [...]}
     """
     try:
-        # Convert path to starsystem concept name (Title_Case to match CartON convention)
         path_slug = str(path).strip("/").replace("/", "_").replace("-", "_").title()
         starsystem_name = f"Starsystem_{path_slug}"
 
@@ -217,52 +649,31 @@ def _get_complexity_score(path: Path) -> float:
         claude_dir = path / ".claude"
         local_skills = []
         local_agents = []
-        local_hooks = []
-        local_commands = []
 
         if claude_dir.exists():
             skills_dir = claude_dir / "skills"
             if skills_dir.exists():
                 local_skills = [d.name for d in skills_dir.iterdir() if d.is_dir()]
-
             agents_dir = claude_dir / "agents"
             if agents_dir.exists():
                 local_agents = [f.stem for f in agents_dir.glob("*.md")]
 
-            hooks_dir = claude_dir / "hooks"
-            if hooks_dir.exists():
-                local_hooks = [f.stem for f in hooks_dir.glob("*.py")]
-
-            commands_dir = claude_dir / "commands"
-            if commands_dir.exists():
-                local_commands = [f.stem for f in commands_dir.glob("*.md")]
-
-        # PART B: Query CartON for what's connected to this starsystem
-        # This includes both local items that were synced AND remote emanations
-        # Use OWL-defined relationships + IS_A type checks (ontology is truth)
+        # PART B: Query CartON for connected emanations
         cypher = """
         MATCH (s:Wiki {n: $starsystem_name})
         OPTIONAL MATCH (skill:Wiki)-[:HAS_STARSYSTEM|PART_OF]->(s) WHERE (skill)-[:IS_A]->(:Wiki {n: "Skill"})
-        OPTIONAL MATCH (agent:Wiki)-[:PART_OF]->(s) WHERE (agent)-[:IS_A]->(:Wiki {n: "Agent"})
-        OPTIONAL MATCH (hook:Wiki)-[:PART_OF]->(s) WHERE (hook)-[:IS_A]->(:Wiki {n: "Hook"})
-        OPTIONAL MATCH (cmd:Wiki)-[:PART_OF]->(s) WHERE (cmd)-[:IS_A]->(:Wiki {n: "Slash_Command"})
         OPTIONAL MATCH (flight:Wiki)-[:PART_OF]->(s) WHERE (flight)-[:IS_A]->(:Wiki {n: "Flight_Config"})
         OPTIONAL MATCH (persona:Wiki)-[:CONFIGURES]->(s) WHERE (persona)-[:IS_A]->(:Wiki {n: "Persona"})
         OPTIONAL MATCH (mcp:Wiki)-[:PART_OF]->(s) WHERE (mcp)-[:IS_A]->(:Wiki {n: "MCP_Server"})
         RETURN
             count(DISTINCT skill) as carton_skills,
-            count(DISTINCT agent) as carton_agents,
-            count(DISTINCT hook) as carton_hooks,
-            count(DISTINCT cmd) as carton_commands,
             count(DISTINCT flight) as carton_flights,
             count(DISTINCT persona) as carton_personas,
             count(DISTINCT mcp) as carton_mcps
         """
-
         result = _carton_query(cypher, {"starsystem_name": starsystem_name})
 
         carton_skills = 0
-        carton_agents = 0
         carton_flights = 0
         carton_personas = 0
         carton_mcps = 0
@@ -270,33 +681,22 @@ def _get_complexity_score(path: Path) -> float:
         if result and result.get("success") and result.get("data"):
             data = result["data"][0] if result["data"] else {}
             carton_skills = data.get("carton_skills", 0)
-            carton_agents = data.get("carton_agents", 0)
             carton_flights = data.get("carton_flights", 0)
             carton_personas = data.get("carton_personas", 0)
             carton_mcps = data.get("carton_mcps", 0)
 
-        # Total emanations = local inventory + remote from CartON
         total_skills = max(len(local_skills), carton_skills)
-        total_agents = max(len(local_agents), carton_agents)
-        total_flights = carton_flights  # flights typically not in .claude/
+        total_flights = carton_flights
         total_personas = carton_personas
         total_mcps = carton_mcps
 
-        # Determine level based on what's properly connected
-        if total_personas > 0:
-            return 0.83  # L4 - Has persona
-        elif total_mcps > 0 and total_flights > 0:
-            return 0.67  # L3 - Has MCP + flights
-        elif total_skills > 0 and total_flights > 0:
-            return 0.33  # L2 - Has skill + flight
-        elif total_skills > 0 or total_agents > 0:
-            return 0.17  # L1 - Has skill or agent
-        else:
-            return 0.0   # L0 - Nothing
+        return _detect_complexity_level(
+            total_skills, total_flights, total_mcps, total_personas, path
+        )
 
     except Exception as e:
         logger.warning(f"Could not get complexity score: {e}")
-        return 0.0
+        return {"level": 0, "score": 0.0, "met": [], "missing": []}
 
 
 def _get_kg_depth_score(path: Path, complexity_score: float = None) -> float:
@@ -739,10 +1139,7 @@ def get_fleet_health(paths: List[str]) -> Dict[str, Dict[str, Any]]:
 
     # KG queries go through CartON MCP HTTP — no direct Neo4j
 
-    # 1. Emanation score — GLOBAL, call once for all starships
-    emanation_score = _get_emanation_score()
-
-    # 2. Build starsystem concept names for all paths
+    # 1. Build starsystem concept names for all paths
     path_to_name = {}
     for p in paths:
         path_obj = Path(p)
@@ -824,47 +1221,67 @@ def get_fleet_health(paths: List[str]) -> Dict[str, Dict[str, Any]]:
         ss_name = path_to_name[p]
         kg = kg_results.get(ss_name, {})
 
-        complexity = _compute_complexity_from_kg(path_obj, kg)
-        arch = _get_architecture_score(path_obj)
-        smells = _get_cached_smell_score(p)
-        giint = _compute_giint_from_kg(kg)
-        inter = _compute_inter_from_kg(kg)
+        try:
+            emanation_result = _get_emanation_score(path_obj)
+            emanation_score = emanation_result["score"]
+            complexity_result = _detect_complexity_level(
+                max(len([d for d in (path_obj / ".claude" / "skills").iterdir() if d.is_dir()]) if (path_obj / ".claude" / "skills").is_dir() else 0, kg.get("skills", 0)),
+                kg.get("flights", 0),
+                kg.get("mcps", 0),
+                kg.get("personas", 0),
+                path_obj,
+                emanation_score,
+            )
+            complexity = complexity_result["score"]
+            arch = _get_architecture_score(path_obj)
+            hidden_deps = _get_hidden_deps_score(path_obj)
+            smells = _get_cached_smell_score(p)
+            giint = _compute_giint_from_kg(kg)
+            inter = _compute_inter_from_kg(kg)
 
-        kg_depth = round(giint * 0.40 + complexity * 0.40 + inter * 0.20, 3)
-        consistency = check_graph_filesystem_consistency(path_obj)
-        giint_penalty = 0.0 if consistency.get("giint_complete", False) else 0.3
-        consistency_score = max(0.0, consistency.get("coverage", 1.0) - giint_penalty)
+            kg_depth = round(giint * 0.40 + complexity * 0.40 + inter * 0.20, 3)
+            consistency = check_graph_filesystem_consistency(path_obj)
+            giint_penalty = 0.0 if consistency.get("giint_complete", False) else 0.3
+            consistency_score = max(0.0, consistency.get("coverage", 1.0) - giint_penalty)
 
-        health = (
-            emanation_score * 0.25 +
-            smells * 0.20 +
-            arch * 0.15 +
-            complexity * 0.15 +
-            kg_depth * 0.10 +
-            consistency_score * 0.15
-        )
+            health = (
+                emanation_score * 0.25 +
+                smells * 0.20 +
+                arch * 0.15 +
+                complexity * 0.15 +
+                kg_depth * 0.10 +
+                consistency_score * 0.15
+            )
 
-        results[p] = {
-            "health": round(health, 3),
-            "health_percent": round(health * 100, 1),
-            "path": p,
-            "components": {
-                "emanation": emanation_score,
-                "smells": smells,
-                "architecture": arch,
-                "complexity": complexity,
-                "kg_depth": kg_depth,
-                "consistency": consistency_score,
-            },
-            "weights": {
-                "emanation": 0.25,
-                "smells": 0.20,
-                "architecture": 0.15,
-                "complexity": 0.15,
-                "kg_depth": 0.10,
-                "consistency": 0.15,
+            results[p] = {
+                "health": round(health, 3),
+                "health_percent": round(health * 100, 1),
+                "path": p,
+                "components": {
+                    "emanation": emanation_score,
+                    "emanation_details": emanation_result,
+                    "smells": smells,
+                    "architecture": arch,
+                    "hidden_deps": hidden_deps,
+                    "complexity": complexity,
+                    "complexity_details": complexity_result,
+                    "kg_depth": kg_depth,
+                    "consistency": consistency_score,
+                },
+                "weights": {
+                    "emanation": 0.25,
+                    "smells": 0.20,
+                    "architecture": 0.15,
+                    "complexity": 0.15,
+                    "kg_depth": 0.10,
+                    "consistency": 0.15,
+                }
             }
-        }
+        except Exception as e:
+            logger.warning(f"Fleet health failed for {p}: {e}")
+            results[p] = {"health": 0.0, "health_percent": 0.0, "path": p, "components": {
+                "emanation": 0.0, "smells": 0.5, "architecture": 0.0, "complexity": 0.0, "kg_depth": 0.0
+            }, "weights": {}}
 
     return results
 
@@ -873,7 +1290,6 @@ def _compute_complexity_from_kg(path: Path, kg_data: dict) -> float:
     """Compute complexity score from pre-fetched KG data + local .claude/ inventory."""
     claude_dir = path / ".claude"
     local_skills = []
-    local_agents = []
 
     if claude_dir.exists():
         skills_dir = claude_dir / "skills"
@@ -882,29 +1298,16 @@ def _compute_complexity_from_kg(path: Path, kg_data: dict) -> float:
                 local_skills = [d.name for d in skills_dir.iterdir() if d.is_dir()]
             except Exception:
                 pass
-        agents_dir = claude_dir / "agents"
-        if agents_dir.exists():
-            try:
-                local_agents = [f.stem for f in agents_dir.glob("*.md")]
-            except Exception:
-                pass
 
     total_skills = max(len(local_skills), kg_data.get("skills", 0))
-    total_agents = max(len(local_agents), kg_data.get("agents", 0))
     total_flights = kg_data.get("flights", 0)
     total_personas = kg_data.get("personas", 0)
     total_mcps = kg_data.get("mcps", 0)
 
-    if total_personas > 0:
-        return 0.83  # L4
-    elif total_mcps > 0 and total_flights > 0:
-        return 0.67  # L3
-    elif total_skills > 0 and total_flights > 0:
-        return 0.33  # L2
-    elif total_skills > 0 or total_agents > 0:
-        return 0.17  # L1
-    else:
-        return 0.0   # L0
+    result = _detect_complexity_level(
+        total_skills, total_flights, total_mcps, total_personas, path
+    )
+    return result["score"]
 
 
 def _compute_giint_from_kg(kg_data: dict) -> float:

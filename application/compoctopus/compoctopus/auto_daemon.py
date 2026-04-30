@@ -153,6 +153,7 @@ def commit_and_pr(focus: str) -> bool:
         f"Review carefully before merging."
     )
     # Write PR body to temp file to avoid shell escaping issues
+    # CONNECTS_TO: /tmp/pr_body.md (write) — read by gh pr create --body-file below
     pr_body_file = Path("/tmp/pr_body.md")
     pr_body_file.write_text(pr_body)
 

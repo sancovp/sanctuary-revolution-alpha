@@ -151,12 +151,14 @@ def batch_create_concepts_neo4j(concepts_data: list, shared_connection) -> dict:
         name = c.get('name', '')
         if not name:
             continue
+        name = normalize_concept_name(name)
         concept_rows.append({
             'name': name,
             'canonical': name.lower().replace(' ', '_'),
             'description': c.get('description', f'No description for {name}'),
             'timestamp': c.get('timestamp'),  # Pass through original timestamp if available
             'update_mode': c.get('desc_update_mode', 'append'),  # append/prepend/replace
+            'source': c.get('source', 'agent'),  # Timeline source — who/what created this concept
             # NOTE: layer is determined by REQUIRES_EVOLUTION relationship, not a property
             # SOUP = has REQUIRES_EVOLUTION, ONT = no REQUIRES_EVOLUTION
         })
@@ -188,6 +190,7 @@ def batch_create_concepts_neo4j(concepts_data: list, shared_connection) -> dict:
         SET n.t = CASE WHEN n.t IS NULL THEN (CASE WHEN c.timestamp IS NOT NULL THEN datetime(c.timestamp) ELSE datetime() END) ELSE n.t END
         SET n.last_modified = datetime()
         SET n.linked = false
+        SET n.source = CASE WHEN n.source IS NULL THEN c.source ELSE n.source END
         """
         graph.execute_query(create_query, {'concepts': concept_rows})
         print(f"[UNWIND] Created {len(concept_rows)} concept nodes", file=sys.stderr)
@@ -198,15 +201,14 @@ def batch_create_concepts_neo4j(concepts_data: list, shared_connection) -> dict:
     # Flatten all relationships and group by type
     rels_by_type = defaultdict(list)
     for c in concepts_data:
-        source = c.get('name', '')
+        source = normalize_concept_name(c.get('name', ''))
         if not source:
             continue
         relationships = c.get('relationships', {})
         for rel_type, targets in relationships.items():
             rel_type_upper = rel_type.upper()
             for target in targets:
-                # Normalize target name
-                target_normalized = target.replace(' ', '_').title().replace(' ', '_')
+                target_normalized = normalize_concept_name(target)
                 rels_by_type[rel_type_upper].append({
                     'source': source,
                     'target': target_normalized
@@ -234,6 +236,9 @@ def batch_create_concepts_neo4j(concepts_data: list, shared_connection) -> dict:
             UNWIND $rels AS r
             MATCH (source:Wiki {{n: r.source}})
             MERGE (target:Wiki {{n: r.target}})
+            ON CREATE SET target.d = 'AUTO CREATED: stub node referenced as {rel_type} target by ' + r.source + '. Not yet fully defined.',
+                          target.linked = false,
+                          target.t = datetime()
             MERGE (source)-[rel:{rel_type}]->(target)
             SET rel.ts = datetime()
             """
@@ -300,10 +305,11 @@ def check_and_promote_soup_items(graph, new_concept_names: list) -> int:
             # Re-validate via YOUKNOW — the reasoner confirms chain now completes
             try:
                 from youknow_kernel.compiler import youknow as youknow_validate
-                # Reconstruct statement from concept's relationships in Neo4j
+                # Reconstruct statement from ALL concept relationships in Neo4j
+                # Must query ALL rels so Skills (22 fields) can be fully re-validated
                 rel_query = """
                 MATCH (c:Wiki {n: $name})-[r]->(t:Wiki)
-                WHERE type(r) IN ['IS_A', 'PART_OF', 'PRODUCES']
+                WHERE type(r) <> 'REQUIRES_EVOLUTION'
                 RETURN type(r) as rel, t.n as target
                 """
                 rels = graph.execute_query(rel_query, {'name': name})
@@ -393,6 +399,16 @@ def parse_queue_file_to_concepts(queue_file: Path) -> list:
                 'timestamp': data.get('timestamp'),  # Pass through original timestamp
                 'desc_update_mode': data.get('desc_update_mode', 'append'),  # append/prepend/replace
                 'skip_ontology_healing': data.get('skip_ontology_healing', False),
+                # YOUKNOW CODE decision — triggers substrate projection in Phase 2.5a
+                'is_code': data.get('is_code', False),
+                'gen_target': data.get('gen_target'),
+                # SOUP tracking — daemon creates REQUIRES_EVOLUTION if is_soup=True
+                'is_soup': data.get('is_soup', False),
+                'soup_reason': data.get('soup_reason'),
+                # Timeline source — who/what created this concept
+                'source': data.get('source', 'agent'),
+                # Target descs — cached KV from EC desc= on +{} claims
+                'target_descs': data.get('target_descs', {}),
             })
     elif data.get('concepts') and isinstance(data['concepts'], list):
         # Concepts list format: {"concepts": [{name, description, relationships}, ...]}
@@ -427,6 +443,7 @@ def parse_queue_file_to_concepts(queue_file: Path) -> list:
                 'description': concept_data.get('description', ''),
                 'relationships': rels_dict,
                 'desc_update_mode': concept_data.get('desc_update_mode', 'append'),
+                'source': concept_data.get('source', data.get('source', 'agent')),
             })
 
         if concepts:
@@ -469,6 +486,7 @@ def parse_queue_file_to_concepts(queue_file: Path) -> list:
                     'description': concept_data.get('description', ''),
                     'relationships': rels_dict,
                     'desc_update_mode': concept_data.get('desc_update_mode', 'append'),
+                    'source': data.get('source', 'agent'),
                 })
 
         # Create observation wrapper
@@ -480,7 +498,8 @@ def parse_queue_file_to_concepts(queue_file: Path) -> list:
                 'relationships': {
                     'is_a': ['Observation'],
                     'has_parts': part_names
-                }
+                },
+                'source': data.get('source', 'agent'),
             })
             concepts.extend(all_parts)
 
@@ -506,7 +525,36 @@ def process_queue_file(queue_file: Path, shared_connection=None) -> bool:
             observation_data = json.load(f)
 
         # Dispatch based on job type
-        if observation_data.get('raw_concept'):
+        if observation_data.get('timeline_merge'):
+            # Timeline merge: transfer CREATED_DURING from Unnamed → real Conversation, delete Unnamed
+            unnamed = observation_data['unnamed_concept']
+            real = observation_data['real_concept']
+            graph = shared_connection or _create_shared_neo4j()
+            if graph:
+                try:
+                    # Transfer all CREATED_DURING relationships
+                    merge_query = """
+                    MATCH (c:Wiki)-[old:CREATED_DURING]->(unnamed:Wiki {n: $unnamed})
+                    MATCH (real:Wiki {n: $real})
+                    MERGE (c)-[:CREATED_DURING]->(real)
+                    DELETE old
+                    SET c.timeline_linked = true
+                    RETURN count(c) as transferred
+                    """
+                    result = graph.execute_query(merge_query, {'unnamed': unnamed, 'real': real})
+                    count = result[0]['transferred'] if result else 0
+
+                    # Delete the Unnamed concept
+                    graph.execute_query("MATCH (n:Wiki {n: $name}) DETACH DELETE n", {'name': unnamed})
+                    print(f"[Worker] Timeline merge: {unnamed} → {real} ({count} relationships transferred)", file=sys.stderr)
+                    log_system_event(graph, "timeline_merge", f"Merged {unnamed} → {real}, {count} relationships transferred", "observation_daemon")
+                except Exception as e:
+                    print(f"[Worker] Timeline merge error: {e}", file=sys.stderr)
+
+            queue_file.unlink(missing_ok=True)
+            return True
+
+        elif observation_data.get('raw_concept'):
             # Raw concept - use daemon's own batch_create_concepts_neo4j (NOT add_concept_tool_func which re-queues!)
             # Convert relationships from list format to dict format
             rel_list = observation_data.get('relationships', [])
@@ -565,6 +613,7 @@ def process_queue_file(queue_file: Path, shared_connection=None) -> bool:
                 try:
                     # Debounce: only recompile if >60s since last compile
                     import time
+                    # CONNECTS_TO: /tmp/memory_compile_last.txt (read/write) — debounce for memory compilation
                     debounce_file = Path("/tmp/memory_compile_last.txt")
                     now = time.time()
                     should_compile = True
@@ -827,12 +876,198 @@ def _ensure_neo4j_alive(conn):
         return _create_shared_neo4j()
 
 
+_STOP_WORDS = frozenset({
+    "a", "an", "the", "and", "or", "of", "in", "to", "for", "with", "that",
+    "this", "it", "as", "at", "by", "from", "on", "are", "is", "was", "were",
+    "be", "been", "has", "have", "had", "not", "but", "so", "if", "we", "you",
+    "he", "she", "they", "do", "did", "will", "can", "all", "its", "their",
+    "which", "who", "when", "where", "what", "how", "any", "into", "about",
+    "also", "than", "then", "these", "those", "each", "both", "more", "such",
+    "some", "other", "after", "before", "via", "per", "within", "without",
+    "our", "my", "your", "his", "her", "us", "me", "no", "up", "out", "s",
+})
+
+def compute_description_score(description: str, concept_cache: list) -> int:
+    """Return % of meaningful words in description that exist in CartON (0-100).
+
+    Builds a flat token set from concept_cache (e.g. 'Giint_Project_Foo' yields
+    tokens {'giint', 'project', 'foo', 'giint_project_foo'}).  Each meaningful
+    word in the description is checked against this set.  Stop words are excluded
+    from both numerator and denominator.
+    """
+    import re
+    if not description or not concept_cache:
+        return 0
+
+    # Build flat token set from all concept names
+    concept_tokens: set = set()
+    for name in concept_cache:
+        lower = name.lower()
+        concept_tokens.add(lower)
+        for part in lower.split("_"):
+            if part:
+                concept_tokens.add(part)
+
+    # Tokenize description
+    raw_words = re.findall(r"[a-zA-Z][a-zA-Z0-9_]*", description)
+    meaningful = [w.lower() for w in raw_words if w.lower() not in _STOP_WORDS and len(w) > 1]
+
+    if not meaningful:
+        return 0
+
+    matched = sum(1 for w in meaningful if w in concept_tokens)
+    return round(matched / len(meaningful) * 100)
+
+
+CHAT_SOURCES = {"agent", "dragonbones_hook", "session_start"}
+SYSTEM_SOURCES = {"observation_daemon", "precompact", "hierarchical_summarizer", "linker", "substrate_projector"}
+ODYSSEY_SOURCES = {"narrative_organ", "odyssey_organ"}
+
+# CONNECTS_TO: /tmp/heaven_data/active_conversation.json (read/write) — tracks active conversation for timeline linking
+ACTIVE_CONV_MARKER = Path("/tmp/heaven_data/active_conversation.json")
+
+
+def log_system_event(neo4j_conn, event_type: str, description: str, source: str):
+    """Log a system event directly to Neo4j (bypasses queue to avoid recursion).
+
+    Creates a System_Event_{datetime} concept on the System_Timeline.
+    """
+    if not neo4j_conn:
+        return
+    try:
+        from datetime import datetime
+        ts = datetime.now().strftime("%Y_%m_%dT%H_%M_%S")
+        event_name = f"System_Event_{ts}_{event_type}"
+        day_name = f"Day_{datetime.now().strftime('%Y_%m_%d')}"
+
+        query = """
+        MERGE (timeline:Wiki {n: "System_Timeline"})
+        ON CREATE SET timeline.d = "Timeline of all background system events (daemon, linker, summarizer, projector)",
+                      timeline.t = datetime(), timeline.source = "system"
+        MERGE (day:Wiki {n: $day})
+        ON CREATE SET day.d = "Day container", day.t = datetime()
+        MERGE (timeline)-[:HAS_PART]->(day)
+        CREATE (e:Wiki {n: $name, d: $desc, t: datetime(), source: $source, linked: true, timeline_linked: true})
+        CREATE (e)-[:IS_A]->(:Wiki {n: "System_Event"})
+        MERGE (e)-[:PART_OF]->(day)
+        """
+        neo4j_conn.execute_query(query, {
+            'name': event_name,
+            'desc': description,
+            'source': source,
+            'day': day_name,
+        })
+    except Exception as e:
+        print(f"[SystemEvent] Error logging {event_type}: {e}", file=sys.stderr)
+
+
+def link_concepts_to_timeline(neo4j_conn):
+    """Link concepts to their conversation on the timeline via CREATED_DURING.
+
+    Reads active_conversation.json to find the current conversation concept.
+    For concepts with chat sources and no CREATED_DURING, creates the relationship.
+    """
+    if not ACTIVE_CONV_MARKER.exists():
+        return 0
+
+    try:
+        marker = json.loads(ACTIVE_CONV_MARKER.read_text())
+        # Prefer real_concept (set by precompact after merge) over unnamed placeholder
+        conv_name = marker.get("real_concept") or marker.get("concept_name")
+        if not conv_name:
+            return 0
+    except Exception:
+        return 0
+
+    # Find concepts with chat sources that have no CREATED_DURING relationship
+    query = """
+    MATCH (c:Wiki)
+    WHERE c.source IN $chat_sources
+      AND c.timeline_linked IS NULL
+      AND NOT (c)-[:CREATED_DURING]->(:Wiki)
+      AND NOT c.n STARTS WITH 'Unnamed_Conversation'
+    RETURN c.n as name
+    LIMIT 200
+    """
+    try:
+        result = neo4j_conn.execute_query(query, {'chat_sources': list(CHAT_SOURCES)})
+        if not result:
+            return 0
+
+        # Create CREATED_DURING relationships in batch
+        link_query = """
+        UNWIND $names AS concept_name
+        MATCH (c:Wiki {n: concept_name})
+        MERGE (conv:Wiki {n: $conv_name})
+        MERGE (c)-[:CREATED_DURING]->(conv)
+        SET c.timeline_linked = true
+        """
+        names = [r['name'] if isinstance(r, dict) else r['name'] for r in result]
+        neo4j_conn.execute_query(link_query, {'names': names, 'conv_name': conv_name})
+
+        if names:
+            print(f"[Linker] Timeline: linked {len(names)} concepts to {conv_name}", file=sys.stderr)
+        return len(names)
+    except Exception as e:
+        print(f"[Linker] Timeline linking error: {e}", file=sys.stderr)
+        return 0
+
+
+ODYSSEY_CONCEPT_TYPES = {"Episode", "Journey", "Epic", "Odyssey", "Executive_Summary",
+                         "Iteration_Summary", "Phase", "Subphase", "Framework_Report"}
+
+
+def link_concepts_to_odyssey_timeline(neo4j_conn):
+    """Link narrative/BML concepts to the Odyssey_Timeline.
+
+    Detects concepts that IS_A any of the odyssey concept types and creates
+    PART_OF → Odyssey_Timeline if not already linked.
+    """
+    if not neo4j_conn:
+        return 0
+
+    try:
+        query = """
+        MATCH (c:Wiki)-[:IS_A]->(t:Wiki)
+        WHERE t.n IN $odyssey_types
+          AND c.odyssey_linked IS NULL
+          AND NOT (c)-[:PART_OF]->(:Wiki {n: "Odyssey_Timeline"})
+        RETURN c.n as name
+        LIMIT 100
+        """
+        result = neo4j_conn.execute_query(query, {'odyssey_types': list(ODYSSEY_CONCEPT_TYPES)})
+        if not result:
+            return 0
+
+        names = [r['name'] if isinstance(r, dict) else r['name'] for r in result]
+
+        link_query = """
+        MERGE (timeline:Wiki {n: "Odyssey_Timeline"})
+        ON CREATE SET timeline.d = "Timeline of BML cycles, narrative levels (Episode → Journey → Epic → Odyssey), and ML organ outputs",
+                      timeline.t = datetime(), timeline.source = "system"
+        WITH timeline
+        UNWIND $names AS concept_name
+        MATCH (c:Wiki {n: concept_name})
+        MERGE (c)-[:PART_OF]->(timeline)
+        SET c.odyssey_linked = true
+        """
+        neo4j_conn.execute_query(link_query, {'names': names})
+
+        if names:
+            print(f"[Linker] Odyssey: linked {len(names)} concepts to Odyssey_Timeline", file=sys.stderr)
+        return len(names)
+    except Exception as e:
+        print(f"[Linker] Odyssey timeline linking error: {e}", file=sys.stderr)
+        return 0
+
+
 def linker_thread(stop_event: threading.Event):
     """
     Background thread that auto-links concept descriptions.
-    
+
     Runs continuously, picking up concepts where linked=false and processing them.
     Uses Aho-Corasick for O(n) matching.
+    Also links concepts to their conversation on the timeline via CREATED_DURING.
     """
     print("[Linker] Background auto-linker thread starting...", file=sys.stderr)
     
@@ -864,11 +1099,12 @@ def linker_thread(stop_event: threading.Event):
                 except Exception as e:
                     print(f"[Linker] Cache refresh error: {e}", file=sys.stderr)
             
-            # Query for unlinked concepts (batch of 100)
+            # Query for unlinked concepts (batch of 100) — newest first so recent adds get scored fast
             query = """
             MATCH (c:Wiki)
             WHERE c.linked = false OR c.linked IS NULL
             RETURN c.n as name, c.d as description
+            ORDER BY c.t DESC
             LIMIT 100
             """
             
@@ -890,22 +1126,23 @@ def linker_thread(stop_event: threading.Event):
                 if name and desc and concept_cache:
                     try:
                         linked_desc = auto_link_description(desc, base_path, name, concept_cache=concept_cache)
-                        
+                        score = compute_description_score(desc, concept_cache)
+
                         # Update concept with linked description and mark as linked
                         if linked_desc != desc:
                             update_query = """
                             MATCH (c:Wiki {n: $name})
-                            SET c.d = $description, c.linked = true
+                            SET c.d = $description, c.linked = true, c.score = $score
                             """
-                            linker_neo4j.execute_query(update_query, {'name': name, 'description': linked_desc})
+                            linker_neo4j.execute_query(update_query, {'name': name, 'description': linked_desc, 'score': score})
                             batch_linked += 1
                         else:
-                            # No changes, just mark as linked
+                            # No description changes, just mark as linked + store score
                             update_query = """
                             MATCH (c:Wiki {n: $name})
-                            SET c.linked = true
+                            SET c.linked = true, c.score = $score
                             """
-                            linker_neo4j.execute_query(update_query, {'name': name})
+                            linker_neo4j.execute_query(update_query, {'name': name, 'score': score})
                     except Exception as e:
                         # Mark as linked anyway to avoid infinite retry
                         try:
@@ -933,7 +1170,14 @@ def linker_thread(stop_event: threading.Event):
             linked_total += batch_linked
             if batch_linked > 0:
                 print(f"[Linker] Linked {batch_linked} in batch (total: {linked_total})", file=sys.stderr)
-            
+
+            # Timeline linking — connect concepts to active conversation
+            timeline_count = link_concepts_to_timeline(linker_neo4j)
+            # Odyssey timeline linking — connect narrative/BML concepts
+            odyssey_count = link_concepts_to_odyssey_timeline(linker_neo4j)
+            if batch_linked > 0 or timeline_count > 0 or odyssey_count > 0:
+                log_system_event(linker_neo4j, "linker_batch", f"Auto-linked {batch_linked} descriptions, {timeline_count} chat timeline, {odyssey_count} odyssey timeline", "linker")
+
             # Brief pause between batches
             stop_event.wait(1)
             
@@ -976,6 +1220,24 @@ def worker_daemon():
         sys.exit(1)
 
     print("[Worker] CartON Observation Queue Worker starting...", file=sys.stderr)
+
+    # Start ONE shared ChromaDB HTTP server for the entire container.
+    # All other processes (MCP, flight-predictor, skill-manager, etc.) connect
+    # via chromadb.HttpClient(host="localhost", port=8101) — no HNSW loads elsewhere.
+    import subprocess as _subprocess
+    _heaven_data_dir = os.getenv('HEAVEN_DATA_DIR', '/tmp/heaven_data')
+    _chroma_dir = Path(_heaven_data_dir) / 'chroma_db'
+    _chroma_dir.mkdir(parents=True, exist_ok=True)
+    _subprocess.Popen(
+        ["python3", "-m", "chromadb.cli.cli", "run",
+         "--path", str(_chroma_dir),
+         "--host", "localhost",
+         "--port", "8101"],
+        stdout=open("/tmp/chroma_server.log", "w"),
+        stderr=_subprocess.STDOUT,
+    )
+    import time as _time; _time.sleep(2)  # wait for server ready
+    print("[Worker] ChromaDB HTTP server started on port 8101", file=sys.stderr)
 
     # Verify environment variables
     required_env = ['NEO4J_URI', 'NEO4J_USER', 'NEO4J_PASSWORD']
@@ -1048,6 +1310,40 @@ def worker_daemon():
 
                     # Success = concepts were created AND no fatal errors
                     neo4j_succeeded = result['concepts_created'] > 0
+
+                    # Create REQUIRES_EVOLUTION for SOUP concepts (incomplete — not projected)
+                    for c in all_concepts:
+                        if c.get('is_soup') and shared_neo4j:
+                            soup_reason = c.get('soup_reason', 'Chain incomplete')
+                            try:
+                                shared_neo4j.execute_query(
+                                    """MATCH (n:Wiki {n: $name})
+                                    MERGE (re:Wiki {n: "Requires_Evolution", c: "requires_evolution"})
+                                    MERGE (n)-[r:REQUIRES_EVOLUTION]->(re)
+                                    SET r.reason = $reason, r.ts = datetime()""",
+                                    {'name': c['name'], 'reason': soup_reason}
+                                )
+                                print(f"[Worker] SOUP: {c['name']} -> REQUIRES_EVOLUTION", file=sys.stderr)
+                            except Exception as e:
+                                print(f"[Worker] SOUP REQUIRES_EVOLUTION failed for {c['name']}: {e}", file=sys.stderr)
+
+                    # Write target_descs — cached descriptions from EC desc= on +{} claims
+                    for c in all_concepts:
+                        td = c.get('target_descs', {})
+                        if td and shared_neo4j:
+                            for target_name, target_desc in td.items():
+                                try:
+                                    shared_neo4j.execute_query(
+                                        """MERGE (n:Wiki {n: $name})
+                                        SET n.d = CASE
+                                            WHEN n.d IS NULL OR n.d = '' OR n.d STARTS WITH 'AUTO CREATED'
+                                            THEN $desc ELSE n.d END,
+                                            n.t = datetime()""",
+                                        {'name': target_name, 'desc': target_desc}
+                                    )
+                                except Exception as e:
+                                    print(f"[Worker] target_desc write failed for {target_name}: {e}", file=sys.stderr)
+
                 elif not shared_neo4j:
                     print("[Worker] ERROR: No Neo4j connection — files stay in queue", file=sys.stderr)
 
@@ -1079,35 +1375,66 @@ def worker_daemon():
                     except Exception as ont_err:
                         print(f"[Worker] GIINT ontology enforcement error: {ont_err}", file=sys.stderr)
 
-                # Phase 2.5a: Auto-crystallize complete Skill concepts (Neo4j has them now)
+                # Phase 2.5a: Auto-crystallize CODE concepts (YOUKNOW decided)
+                # YOUKNOW's CODE decision + gen_target flows through queue.
+                # If is_code=True → remove REQUIRES_EVOLUTION (SOUP→CODE promotion)
+                # If is_code=True and gen_target exists → trigger substrate projection.
                 if all_concepts and neo4j_succeeded:
+                    for c in all_concepts:
+                        if c.get("is_code") and shared_neo4j:
+                            try:
+                                shared_neo4j.execute_query(
+                                    """MATCH (s:Wiki {n: $name})-[r:REQUIRES_EVOLUTION]->(re)
+                                    DELETE r""",
+                                    {'name': c['name']}
+                                )
+                                print(f"[Worker] SOUP→CODE: {c['name']} REQUIRES_EVOLUTION removed", file=sys.stderr)
+                            except Exception as e:
+                                print(f"[Worker] REQUIRES_EVOLUTION removal failed for {c['name']}: {e}", file=sys.stderr)
                     try:
                         from carton_mcp.substrate_projector import project_to_skill, SkillSubstrate
-                        SKILLSPEC_REQUIRED = {"has_domain", "has_category", "has_what", "has_when", "has_produces"}
                         for c in all_concepts:
-                            # Check if is_a Skill
-                            # relationships is a DICT {rel_type: [targets]} after parse_queue_file_to_concepts
-                            rels = c.get("relationships", {})
-                            if isinstance(rels, list):
-                                # Fallback for list format
-                                rels = {r.get("relationship",""): r.get("related",[]) for r in rels if isinstance(r, dict)}
-                            c_isa = [t.lower() for t in rels.get("is_a", [])]
-                            if "skill" not in c_isa:
+                            if not c.get("is_code") or not c.get("gen_target"):
                                 continue
-                            # Check Skillspec completeness
-                            provided = {k.lower() for k in rels.keys()}
-                            missing = SKILLSPEC_REQUIRED - provided
-                            if missing:
-                                print(f"[Worker] Skill incomplete [{c.get('name','')}]: missing {', '.join(missing)}", file=sys.stderr)
-                                continue
-                            # All 5 Skillspec rels present + in Neo4j → crystallize
+                            gen_target = c["gen_target"]
                             try:
-                                skill_result = project_to_skill(SkillSubstrate(), c.get("name", ""))
-                                print(f"[Worker] 🔮 Skill crystallized: {c.get('name','')} → {skill_result}", file=sys.stderr)
+                                if gen_target == "skill_package":
+                                    result = project_to_skill(SkillSubstrate(), c.get("name", ""))
+                                    print(f"[Worker] 🔮 CODE → Skill crystallized: {c.get('name','')} → {result}", file=sys.stderr)
+                                    log_system_event(shared_connection, "skill_crystallized", f"CODE → Skill: {c.get('name','')} → {result}", "substrate_projector")
+                                # Future gen_targets: flight_json, persona_json, etc.
+                                else:
+                                    print(f"[Worker] CODE gen_target '{gen_target}' not yet handled for {c.get('name','')}", file=sys.stderr)
                             except Exception as e:
-                                print(f"[Worker] Skill crystallization failed for {c.get('name','')}: {e}", file=sys.stderr)
+                                print(f"[Worker] CODE crystallization failed for {c.get('name','')}: {e}", file=sys.stderr)
                     except ImportError:
                         print("[Worker] substrate_projector not available, skipping crystallization", file=sys.stderr)
+
+                # Phase 2.5b: Auto-project Rule concepts to .claude/rules/ files
+                # CartON is the source of truth; the daemon writes/diffs the .md
+                # files. Never deletes. Bidirectional lift (file → CartON) is a
+                # follow-up phase — for now we only project CartON → file.
+                if all_concepts and neo4j_succeeded:
+                    try:
+                        from carton_mcp.substrate_projector import project_to_rule, RuleSubstrate
+                        for c in all_concepts:
+                            rels = c.get("relationships", {})
+                            if isinstance(rels, list):
+                                rels = {r.get("relationship",""): r.get("related",[]) for r in rels if isinstance(r, dict)}
+                            c_isa = [t.lower() for t in rels.get("is_a", [])]
+                            # Detect Claude_Code_Rule specifically. Bare "rule" is the
+                            # abstract concept. Prolog_Rule is SOMA's kind. Claude_Code_Rule
+                            # is the kind that projects to .claude/rules/ via the rules CLI.
+                            if "claude_code_rule" not in c_isa:
+                                continue
+                            try:
+                                rule_result = project_to_rule(RuleSubstrate(), c.get("name", ""))
+                                print(f"[Worker] 🛡️ Rule projected: {c.get('name','')} → {rule_result}", file=sys.stderr)
+                                log_system_event(shared_connection, "rule_projected", f"Rule: {c.get('name','')} → {rule_result}", "substrate_projector")
+                            except Exception as e:
+                                print(f"[Worker] Rule projection failed for {c.get('name','')}: {e}", file=sys.stderr)
+                    except ImportError:
+                        print("[Worker] substrate_projector not available, skipping rule projection", file=sys.stderr)
 
                 # Phase 2.5c: PBML auto-lane-move — detect phase-completion concepts → GIINT update_task_status
                 if all_concepts and neo4j_succeeded:
@@ -1185,6 +1512,24 @@ def worker_daemon():
                                     **params
                                 )
                                 print(f"[Worker] 🔄 PBML auto-move: {matched_trigger} → {task_id} in {project_id}: {update_result.get('treekanban_sync', {})}", file=sys.stderr)
+                                # Odyssey ML trigger: done_signal fires the full ML pipeline
+                                if matched_trigger == "done_signal":
+                                    try:
+                                        from odyssey.utils import dispatch_chain as odyssey_dispatch_chain
+                                        concept_name = c.get("name", "")
+                                        # Fire in background thread to not block daemon
+                                        _odyssey_thread = threading.Thread(
+                                            target=odyssey_dispatch_chain,
+                                            args=(concept_name,),
+                                            daemon=True,
+                                            name=f"odyssey_{concept_name[:40]}",
+                                        )
+                                        _odyssey_thread.start()
+                                        print(f"[Worker] 🔬 Odyssey ML chain triggered for {concept_name}", file=sys.stderr)
+                                    except ImportError:
+                                        print("[Worker] Odyssey not installed, skipping ML verification", file=sys.stderr)
+                                    except Exception as ody_err:
+                                        print(f"[Worker] Odyssey trigger failed: {ody_err}", file=sys.stderr)
                                 # Archive triggers: after GIINT moves to learn, directly move TK card to archive
                                 if matched_trigger in ARCHIVE_TRIGGERS:
                                     try:
@@ -1211,6 +1556,47 @@ def worker_daemon():
                         print("[Worker] GIINT not available, skipping PBML auto-lane-move", file=sys.stderr)
                     except Exception as pbml_err:
                         print(f"[Worker] PBML auto-lane-move error: {pbml_err}", file=sys.stderr)
+
+                # Phase 2.5d: Resolve _Unnamed stubs when real concept fills the slot
+                # TEMPORARY — moves to SOMA Prolog when YOUKNOW integrates into SOMA.
+                if all_concepts and neo4j_succeeded and shared_neo4j:
+                    for c in all_concepts:
+                        rels = c.get("relationships", {})
+                        if isinstance(rels, list):
+                            rels = {r.get("relationship", ""): r.get("related", []) for r in rels if isinstance(r, dict)}
+                        part_of_targets = rels.get("part_of", [])
+                        is_a_types = [t for t in rels.get("is_a", [])]
+                        concept_name = c.get("name", "")
+                        if not part_of_targets or not is_a_types:
+                            continue
+                        for parent_name in part_of_targets:
+                            for is_a_type in is_a_types:
+                                unnamed_name = f"{is_a_type}_Unnamed"
+                                try:
+                                    result = shared_neo4j.execute_query(
+                                        "MATCH (p:Wiki {n: $parent})-[r]->(stub:Wiki {n: $stub}) "
+                                        "RETURN type(r) AS rel_type LIMIT 1",
+                                        {'parent': parent_name, 'stub': unnamed_name}
+                                    )
+                                    if not result:
+                                        continue
+                                    rel_type = result[0]['rel_type']
+                                    shared_neo4j.execute_query(
+                                        f"MATCH (p:Wiki {{n: $parent}})-[old:{rel_type}]->(stub:Wiki {{n: $stub}}) "
+                                        f"DELETE old WITH p MATCH (real:Wiki {{n: $real}}) "
+                                        f"CREATE (p)-[:{rel_type}]->(real)",
+                                        {'parent': parent_name, 'stub': unnamed_name, 'real': concept_name}
+                                    )
+                                    shared_neo4j.execute_query(
+                                        "MATCH (stub:Wiki {n: $stub}), (real:Wiki {n: $real}) "
+                                        "SET stub.d = 'RESOLVED: evolved into ' + $real "
+                                        "MERGE (stub)-[:EVOLVED_TO]->(real) "
+                                        "MERGE (real)-[:EVOLVED_FROM]->(stub)",
+                                        {'stub': unnamed_name, 'real': concept_name}
+                                    )
+                                    print(f"[Worker] stub resolved: {unnamed_name} -> {concept_name} (parent: {parent_name}, rel: {rel_type})", file=sys.stderr)
+                                except Exception as stub_err:
+                                    print(f"[Worker] Stub resolution failed for {concept_name}: {stub_err}", file=sys.stderr)
 
                 # Phase 2.5b: Create wiki files for ChromaDB indexing (only if Neo4j succeeded)
                 if all_concepts and neo4j_succeeded:

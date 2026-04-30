@@ -57,8 +57,24 @@ class SkillSubstrate(BaseModel):
     write_to_chromadb: bool = Field(True, description="Write skillgraph entry to ChromaDB for Crystal Ball discovery")
 
 
+class RuleSubstrate(BaseModel):
+    """Project CartON Rule_ concept to a Claude Code .md rule file.
+
+    Resolves target dir from has_scope:
+      - has_scope=global  -> ~/.claude/rules/<slug>.md
+      - has_scope=project -> <starsystem_path>/.claude/rules/<slug>.md
+                             (starsystem path resolved from has_starsystem)
+
+    Renders has_content as the file body. If has_paths is set, renders YAML
+    frontmatter with paths: list. Diffs against current file content; only
+    writes if different. Never deletes.
+    """
+    type: Literal["rule"] = "rule"
+    output_dir_override: str | None = Field(None, description="Override output dir, ignoring has_scope/has_starsystem")
+
+
 # Union of all substrate types
-Substrate = Union[FileSubstrate, DiscordSubstrate, RegistrySubstrate, EnvSubstrate, SkillSubstrate]
+Substrate = Union[FileSubstrate, DiscordSubstrate, RegistrySubstrate, EnvSubstrate, SkillSubstrate, RuleSubstrate]
 
 # Registry of all substrate classes for dynamic instruction building
 SUBSTRATE_CLASSES: List[type] = [
@@ -67,6 +83,7 @@ SUBSTRATE_CLASSES: List[type] = [
     RegistrySubstrate,
     EnvSubstrate,
     SkillSubstrate,
+    RuleSubstrate,
 ]
 
 
@@ -391,6 +408,12 @@ def project_to_skill(substrate: SkillSubstrate, concept_name: str) -> str:
         targets = rel_targets(rel_type)
         return targets[0] if targets else None
 
+    # SKILL CONTENT SOURCE: The source concept's description (c.d in Neo4j) IS the
+    # SKILL.md body. Set by the FIRST desc= in the Dragonbones EC.
+    # has_content is NOT used here — OWL does not require it on Skill (only on
+    # Claude_Code_Rule). giint_types.py does not require it either (removed Apr 29 2026).
+    # If you are looking for where has_content matters: see project_to_rule() below.
+
     # Map relationships to GnosysSkillMetadata fields
     domain = (first_rel("HAS_DOMAIN") or first_rel("HAS_PERSONAL_DOMAIN")
               or first_rel("HAS_ACTUAL_DOMAIN") or "PAIAB")
@@ -399,26 +422,16 @@ def project_to_skill(substrate: SkillSubstrate, concept_name: str) -> str:
     # Strip Skill_Category_ prefix: "Skill_Category_Preflight" → "preflight"
     category = re.sub(r'^Skill_Category_', '', raw_category).lower()
 
-    # Resolve what/when: try concept description first, fall back to readable name
-    def _resolve_concept_text(rel_type):
-        """Get target concept's description, or convert concept name to readable text."""
+    # ARG fields: the concept NAME is the value. Convert to readable text.
+    def _resolve_arg_text(rel_type):
+        """Convert ARG relationship target name to readable text."""
         name = first_rel(rel_type)
-        if not name:
+        if not name or name == "_Unnamed" or name == "none":
             return None
-        # Try fetching description from Neo4j
-        desc_result = utils.query_wiki_graph(
-            "MATCH (c:Wiki {n: $name}) RETURN c.d as desc", {"name": name}
-        )
-        if desc_result.get("success") and desc_result.get("data"):
-            desc = desc_result["data"][0].get("desc", "")
-            if desc and len(desc) > 3:
-                # Strip wiki-links from resolved description too
-                return re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', desc).split("\n")[0][:200]
-        # Fall back: convert concept name to readable text
         return name.replace("_", " ")
 
-    what_text = _resolve_concept_text("HAS_WHAT")
-    when_text = _resolve_concept_text("HAS_WHEN")
+    what_text = _resolve_arg_text("HAS_WHAT")
+    when_text = _resolve_arg_text("HAS_WHEN")
     produces = first_rel("HAS_PRODUCES") or first_rel("PRODUCES")
     requires = rel_targets("REQUIRES") or None
 
@@ -527,6 +540,8 @@ def project_to_skill(substrate: SkillSubstrate, concept_name: str) -> str:
         frontmatter["argument-hint"] = argument_hint
 
     skill_md = "---\n" + yaml.dump(frontmatter, default_flow_style=False, sort_keys=False) + "---\n\n" + description + "\n"
+    # Final wiki-link strip — catches ALL links regardless of source (linker, DualSubstrate, etc.)
+    skill_md = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', skill_md)
     (skill_dir / "SKILL.md").write_text(skill_md)
 
     # Build _metadata.json
@@ -808,7 +823,217 @@ PROJECTORS = {
     "registry": project_to_registry,
     "env": project_to_env,
     "skill": project_to_skill,
+    "rule": lambda substrate, concept_name: project_to_rule(substrate, concept_name),
 }
+
+
+# ============================================================================
+# Rule Projection
+# ============================================================================
+
+def _resolve_starsystem_dir(starsystem_name: str) -> str | None:
+    """Resolve a Starsystem_X concept name to its filesystem path.
+
+    Mirrors the helper nested inside project_to_skill, exposed at module
+    level so project_to_rule can use it without re-implementing.
+    """
+    slug = starsystem_name
+    if slug.startswith("Starsystem_"):
+        slug = slug[len("Starsystem_"):]
+
+    parent_dirs = ["/home/GOD", "/tmp", "/home/GOD/gnosys-plugin-v2"]
+    for parent in parent_dirs:
+        parent_slug = parent.strip("/").replace("/", "_").replace("-", "_").title()
+        if not slug.startswith(parent_slug):
+            continue
+        remainder = slug[len(parent_slug):]
+        if remainder.startswith("_"):
+            remainder = remainder[1:]
+        if not remainder:
+            continue
+
+        lower_remainder = remainder.lower()
+        candidates = [
+            lower_remainder,
+            lower_remainder.replace("_", "-"),
+            lower_remainder.replace("_", "-", 1),
+        ]
+        for candidate in candidates:
+            full_path = os.path.join(parent, candidate)
+            if os.path.isdir(full_path):
+                return full_path
+
+        if os.path.isdir(parent):
+            for entry in os.listdir(parent):
+                entry_path = os.path.join(parent, entry)
+                if not os.path.isdir(entry_path):
+                    continue
+                entry_slug = entry.replace("-", "_").title()
+                if entry_slug == remainder or entry_slug == remainder.replace("_", ""):
+                    return entry_path
+
+    return None
+
+
+def _rule_concept_to_filename(concept_name: str) -> str:
+    """Convert Claude_Code_Rule_Persona_Equip -> persona-equip.md.
+
+    Note: this is a fallback. The concept SHOULD provide has_name explicitly
+    (matching the rules CLI arg shape). Filename derivation is only used when
+    has_name is absent.
+    """
+    slug = concept_name
+    if slug.startswith("Claude_Code_Rule_"):
+        slug = slug[len("Claude_Code_Rule_"):]
+    elif slug.startswith("Rule_"):
+        slug = slug[len("Rule_"):]
+    slug = slug.lower().replace("_", "-")
+    return f"{slug}.md"
+
+
+def _render_rule_file_content(has_content: str, has_paths: list | None) -> str:
+    """Render the .md file body. If has_paths is set, prepend YAML frontmatter."""
+    body = (has_content or "").rstrip() + "\n"
+    if not has_paths:
+        return body
+    fm_lines = ["---", "paths:"]
+    for p in has_paths:
+        fm_lines.append(f'  - "{p}"')
+    fm_lines.append("---")
+    fm_lines.append("")
+    return "\n".join(fm_lines) + "\n" + body
+
+
+def project_to_rule(substrate: RuleSubstrate, concept_name: str) -> str:
+    """Project a CartON Rule_ concept to a Claude Code .md rule file.
+
+    Fetches the concept's description, has_content, has_scope, has_starsystem,
+    and has_paths relationships from Neo4j. Resolves the target directory based
+    on scope, computes the filename from the concept name, renders the file
+    body (with optional frontmatter from has_paths), diffs against the existing
+    file content, and writes only if different.
+
+    Returns a status string describing the action taken: created, updated,
+    unchanged, or skipped (with reason).
+    """
+    from carton_mcp.carton_utils import CartOnUtils
+
+    utils = CartOnUtils()
+
+    # Fetch concept + relationships
+    cypher = """
+    MATCH (c:Wiki) WHERE c.n = $name AND c.d IS NOT NULL
+    OPTIONAL MATCH (c)-[r]->(related:Wiki)
+    RETURN c.n as name, c.d as description,
+           collect({type: type(r), target: related.n}) as relationships
+    """
+    result = utils.query_wiki_graph(cypher, {"name": concept_name})
+    if not result.get("success") or not result.get("data"):
+        return f"skipped: concept {concept_name} not found"
+
+    data = result["data"][0]
+    rels = data.get("relationships", [])
+
+    def rel_targets(rel_type):
+        return [r["target"] for r in rels if r.get("type") == rel_type]
+
+    def first_rel(rel_type):
+        targets = rel_targets(rel_type)
+        return targets[0] if targets else None
+
+    # RULE CONTENT SOURCE: has_content points to ANOTHER concept whose description
+    # IS the rule body text. OWL requires minCard(hasContent, 1) on Claude_Code_Rule.
+    # If has_content is missing or its target has no description, we fall back to
+    # the rule concept's own description (c.d). This fallback handles the case where
+    # the agent put the rule body directly in desc= instead of creating a separate
+    # content concept.
+    # If you are looking for skill content: see project_to_skill() above — skills
+    # use the concept's own description directly, NOT has_content.
+    has_content_concept = first_rel("HAS_CONTENT")
+    if has_content_concept:
+        # has_content points to another concept whose description IS the rule body
+        content_q = utils.query_wiki_graph(
+            "MATCH (c:Wiki {n: $name}) RETURN c.d as desc", {"name": has_content_concept}
+        )
+        if content_q.get("success") and content_q.get("data"):
+            has_content = content_q["data"][0].get("desc", "") or ""
+        else:
+            has_content = ""
+    else:
+        has_content = ""
+
+    # If no has_content, fall back to the concept's own description
+    # (handles the case where the agent put the rule body directly in desc=)
+    if not has_content:
+        has_content = data.get("description", "") or ""
+
+    if not has_content.strip():
+        return f"skipped: {concept_name} has no body content"
+
+    # Resolve scope
+    scope_target = first_rel("HAS_SCOPE")
+    if scope_target:
+        scope = scope_target.lower().replace("scope_", "").replace("rule_scope_", "")
+    else:
+        scope = "global"  # default
+    if scope not in ("global", "project"):
+        scope = "global"
+
+    # Resolve target directory
+    if substrate.output_dir_override:
+        target_dir = substrate.output_dir_override
+    elif scope == "global":
+        target_dir = os.path.expanduser("~/.claude/rules")
+    else:
+        ss_name = first_rel("HAS_STARSYSTEM")
+        if not ss_name:
+            return f"skipped: {concept_name} has scope=project but no has_starsystem"
+        ss_path = _resolve_starsystem_dir(ss_name)
+        if not ss_path:
+            return f"skipped: could not resolve starsystem path for {ss_name}"
+        target_dir = os.path.join(ss_path, ".claude", "rules")
+
+    # Resolve has_paths if any
+    has_paths = rel_targets("HAS_PATHS") or rel_targets("HAS_PATH")
+    has_paths = [p for p in has_paths if p] or None
+    # If has_paths targets are concept names like Path_Src_Foo_Py, strip prefix
+    if has_paths:
+        cleaned = []
+        for p in has_paths:
+            if p.startswith("Path_"):
+                cleaned.append(p[len("Path_"):].replace("_", "/"))
+            else:
+                cleaned.append(p)
+        has_paths = cleaned
+
+    # Compute filename
+    filename = _rule_concept_to_filename(concept_name)
+    target_path = os.path.join(target_dir, filename)
+
+    # Render new content
+    new_body = _render_rule_file_content(has_content, has_paths)
+
+    # Diff against existing
+    if os.path.exists(target_path):
+        try:
+            existing = Path(target_path).read_text()
+        except Exception as e:
+            return f"skipped: cannot read existing {target_path}: {e}"
+        if existing == new_body:
+            return f"unchanged: {target_path}"
+        action = "updated"
+    else:
+        action = "created"
+
+    # Write
+    try:
+        os.makedirs(target_dir, exist_ok=True)
+        Path(target_path).write_text(new_body)
+    except Exception as e:
+        return f"failed: cannot write {target_path}: {e}"
+
+    logger.info("Rule projected: %s -> %s (%s)", concept_name, target_path, action)
+    return f"{action}: {target_path}"
 
 
 def render_through_template(concept_name: str, template_name: str) -> str:
@@ -886,6 +1111,7 @@ def render_through_template(concept_name: str, template_name: str) -> str:
 
     # Call metastack to render
     try:
+        # PARALLEL: uses heaven_base.registry — should migrate to CartON/YOUKNOW
         from heaven_base.registry import RegistryService
 
         registry_dir = os.getenv("HEAVEN_DATA_DIR")
@@ -1034,6 +1260,7 @@ def compile_memory_tier(tier_num: int = 0, shared_connection=None, active_hyperc
 
     # Resolve active hypercluster from parameter or state file
     if not active_hypercluster:
+        # CONNECTS_TO: /tmp/active_hypercluster.txt (read) — also accessed by MEMORY.md compilation
         active_hc_file = Path("/tmp/active_hypercluster.txt")
         if active_hc_file.exists():
             active_hypercluster = active_hc_file.read_text().strip()
@@ -1063,6 +1290,7 @@ def compile_memory_tier(tier_num: int = 0, shared_connection=None, active_hyperc
             "- **ALL task/concept work MUST go through Dragonbones entity chains** — emit ECs, let the hook compile to CartON, then run `python3 ~/.claude/scripts/project_memory.py` to update this file",
             "- **NEVER manually write MEMORY.md** — this file is compiler output. Source of truth is CartON.",
             "- **Task list → Dragonbones EC → CartON → compiler → MEMORY.md** — this is the only valid pipeline",
+            # CONNECTS_TO: /tmp/heaven_data/task_list_backup.json (reference) — ephemeral task list backup
             "- **Backup task list to `/tmp/heaven_data/task_list_backup.json`** before session end (Claude Code tasks are ephemeral)",
             "",
             "## UltraMap (HC-to-HC morphisms)",
@@ -1140,6 +1368,7 @@ def compile_memory_tier(tier_num: int = 0, shared_connection=None, active_hyperc
         # Find the active HC's starsystem, then list all collections in it
         active_hc_name = None
         if not active_hypercluster:
+            # CONNECTS_TO: /tmp/active_hypercluster.txt (read) — also accessed by MEMORY.md compilation
             active_hc_file = Path("/tmp/active_hypercluster.txt")
             if active_hc_file.exists():
                 active_hc_name = active_hc_file.read_text().strip()

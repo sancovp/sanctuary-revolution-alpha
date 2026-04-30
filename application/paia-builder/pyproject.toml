@@ -9,7 +9,7 @@ description = "PAIAB mini-game: Build Personal AI Agents with GEAR progression"
 readme = "CONTINUITY.md"
 requires-python = ">=3.10"
 dependencies = [
-    "pydantic>=2.0",
+    "pydantic==2.10.6",
     "youknow-kernel",
 ]
 

@@ -73,8 +73,35 @@ def _get_observation_deck(path: str) -> str:
             indicator = "🔴"
 
         deck_parts.append(f"{indicator} HEALTH: {c.get('health', h_pct/100):.2f}")
-        deck_parts.append(f"   🎯 Emanation: {c['emanation']:.2f} | 👃 Smells: {c['smells']:.2f}")
-        deck_parts.append(f"   🏛️ Arch: {c['architecture']:.2f} | 📊 L{_complexity_to_level(c['complexity'])} | 🧠 KG: {c['kg_depth']:.2f}")
+        cd = c.get("complexity_details", {})
+        cl = cd.get("level", "?") if cd else "?"
+        hd = c.get('hidden_deps', None)
+        hd_str = f" | 🔗 Hidden: {hd:.2f}" if hd is not None else ""
+        deck_parts.append(f"   👃 Smells: {c['smells']:.2f} | 🏛️ Arch: {c['architecture']:.2f} | 📊 L{cl}/6 | 🧠 KG: {c['kg_depth']:.2f}{hd_str}")
+
+        # Detailed complexity breakdown
+        if cd and cd.get("met"):
+            for m in cd["met"]:
+                deck_parts.append(f"      ✅ {m}")
+        if cd and cd.get("missing"):
+            for m in cd["missing"]:
+                deck_parts.append(f"      ❌ {m}")
+
+        # Detailed emanation breakdown
+        ed = c.get("emanation_details", {})
+        if ed and ed.get("total", 0) > 0:
+            em_parts = [f"skills:{ed['skills']}", f"rules:{ed['rules']}"]
+            if ed.get("hooks", "0/0") != "0/0":
+                em_parts.append(f"hooks:{ed['hooks']}")
+            if ed.get("agents", "0/0") != "0/0":
+                em_parts.append(f"agents:{ed['agents']}")
+            deck_parts.append(f"   🎯 Emanation: {ed['code']}/{ed['total']} CODE — {' '.join(em_parts)}")
+            for concept, item_type, disk_path in ed.get("gaps", []):
+                deck_parts.append(f"      GAP: {concept} ({item_type}) — not in CartON")
+            for concept, reason in ed.get("soup", []):
+                deck_parts.append(f"      SOUP: {concept} — {reason}")
+        else:
+            deck_parts.append(f"   🎯 Emanation: {c['emanation']:.2f}")
     except Exception as e:
         logger.warning(f"Could not get STARSYSTEM health: {e}")
         # Fallback to legacy emanation-only display
@@ -174,6 +201,7 @@ except ImportError:
 
 from .starlog import Starlog
 from .models import RulesEntry, DebugDiaryEntry, StarlogEntry, FlightConfig, StarlogPayloadDiscoveryConfig
+# PARALLEL: uses heaven_base.registry — should migrate to CartON/YOUKNOW
 from heaven_base.tools.registry_tool import registry_util_func
 
 # Create singleton instance
@@ -185,20 +213,21 @@ app = FastMCP("STARLOG")
 logger.info("STARLOG initialized")
 
 @app.tool()
-def init_project(path: str, name: str, description: str = "", giint_project_id: str = None) -> str:
-    """Creates a full STARSYSTEM: starlog.hpi + GIINT project + .claude/ scaffold. Use this when check() shows directory is not a STARLOG project.
+def init_project(path: str, name: str, description: str = "", giint_project_id: str = None, architecture: list = None) -> str:
+    """Creates a full STARSYSTEM: starlog.hpi + GIINT project + .claude/ scaffold + optional architecture.
 
     A STARSYSTEM = directory + starlog project + GIINT project + .claude/ (rules + skills).
-    GIINT project is auto-created if not provided.
 
     Args:
         path: Directory path for the STARSYSTEM
         name: Project name
         description: Project description
         giint_project_id: Optional existing GIINT project ID to link (auto-created if omitted)
+        architecture: Optional list of {filepath: {feature_name: description}} dicts.
+            Creates placeholder files + GIINT features/components for each entry.
     """
-    logger.debug(f"init_project called with path={path}, name={name}, description={description}, giint_project_id={giint_project_id}")
-    result = starlog.init_project(path, name, description, giint_project_id)
+    logger.debug(f"init_project called with path={path}, name={name}, architecture={'yes' if architecture else 'no'}")
+    result = starlog.init_project(path, name, description, giint_project_id, architecture)
     return result
 
 @app.tool()
@@ -358,37 +387,27 @@ def _sync_kardashev_to_carton(kmap: dict) -> list[str]:
     for name, ss in starships.items():
         try:
             # Compute Kardashev level from actual state
+            # Canonical scale: Unterraformed → Planetary (K1) → Stellar (K2) → Galactic (K3)
             path = ss.get("path", "")
             kardashev = "Unterraformed"
 
-            # Planetary (K1): has .claude/ directory
+            # Planetary (K1): has .claude/ directory with intent
             claude_dir = os.path.join(path, ".claude")
             if os.path.isdir(claude_dir):
                 kardashev = "Planetary"
 
-                # Colonized (K2): has starlog.hpi (starlog initialized)
-                hpi_path = os.path.join(path, "starlog.hpi")
-                if os.path.exists(hpi_path):
-                    kardashev = "Colonized"
+                # Stellar (K2): Dyson Sphere — emanation >= 0.6
+                try:
+                    from starsystem.reward_system import get_starsystem_health
+                    health = get_starsystem_health(path)
+                    emanation = health.get("components", {}).get("emanation", 0)
+                    if emanation >= 0.6:
+                        kardashev = "Stellar"
+                except Exception:
+                    pass
 
-                    # Civilized (K3): has GIINT project linked
-                    try:
-                        with open(hpi_path, 'r') as _hf:
-                            hpi_data = json.load(_hf)
-                        if hpi_data.get("metadata", {}).get("giint_project_id"):
-                            kardashev = "Civilized"
-                    except Exception:
-                        pass  # Stick with Colonized if HPI read fails
-
-                    # Stellar (K4): check emanation score (~L3 complexity)
-                    try:
-                        from starsystem.reward_system import get_starsystem_health
-                        health = get_starsystem_health(path)
-                        emanation = health.get("components", {}).get("emanation", 0)
-                        if emanation >= 0.6:  # ~L3 threshold
-                            kardashev = "Stellar"
-                    except Exception:
-                        pass  # Stick with current level if scoring fails
+                # Galactic (K3): TODO — CICD detection (pipelines, deployment, release workflow)
+                # Stub: pass for now. Future: check .github/workflows/, Dockerfile, deploy scripts
 
             committed = "committed" if ss.get("committed", True) else "uncommitted"
             desc = f"Starship {name} | {kardashev} | {committed}"
@@ -585,6 +604,38 @@ def _get_home_dashboard() -> str:
         if name not in computed_levels:
             computed_levels[name] = "Unterraformed"
 
+    # Build name→health mapping from fleet_health (keyed by path)
+    _name_to_health = {}
+    for name, ss_data in starships.items():
+        ss_path = ss_data.get("path", "")
+        if ss_path and ss_path in fleet_health:
+            _name_to_health[name] = fleet_health[ss_path]
+
+    def _health_str(name: str) -> str:
+        """Format health scores inline for a starsystem."""
+        h = _name_to_health.get(name)
+        if not h:
+            return ""
+        c = h.get("components", {})
+        ed = c.get("emanation_details", {})
+        if ed and ed.get("total", 0) > 0:
+            parts = [f"{ed.get('skills','?')}sk", f"{ed.get('rules','?')}ru"]
+            if ed.get("hooks", "0/0") != "0/0":
+                parts.append(f"{ed['hooks']}hk")
+            if ed.get("agents", "0/0") != "0/0":
+                parts.append(f"{ed['agents']}ag")
+            e_str = f" E:{' '.join(parts)}"
+        else:
+            e_str = f" E:{c.get('emanation', 0):.2f}"
+        cd = c.get("complexity_details", {})
+        cl = cd.get("level", "?") if cd else "?"
+        return (f" H:{h.get('health', 0):.2f}"
+                f"{e_str}"
+                f" L:{cl}"
+                f" S:{c.get('smells', 0):.2f}"
+                f" A:{c.get('architecture', 0):.2f}"
+                f" K:{c.get('kg_depth', 0):.2f}")
+
     # Calculate title and type from computed levels (3-level Kardashev)
     galactics = sum(1 for lvl in computed_levels.values() if lvl == "Galactic")
     stellars = sum(1 for lvl in computed_levels.values() if lvl == "Stellar")
@@ -592,15 +643,20 @@ def _get_home_dashboard() -> str:
     squads_with_leaders = sum(1 for sq in squadrons.values() if sq.get("has_leader"))
     fleets_with_admirals = sum(1 for fl in fleets.values() if fl.get("has_admiral"))
 
-    # Determine title (CADET → ENSIGN → COMMANDER → CAPTAIN → COMMODORE → ADMIRAL)
-    if fleets_with_admirals > 0:
+    # Determine title (CADET → ENSIGN → CAPTAIN → COMMODORE → ADMIRAL → GRAND ADMIRAL)
+    # Grand Admiral: all fleets have admirals AND all starships are Stellar+
+    all_stellar = len(starships) > 0 and all(
+        computed_levels.get(n, "Unterraformed") in ("Stellar", "Galactic")
+        for n in starships
+    )
+    if fleets_with_admirals > 0 and all_stellar and len(fleets) > 0:
+        title, type_n = "GRAND ADMIRAL", fleets_with_admirals
+    elif fleets_with_admirals > 0:
         title, type_n = "ADMIRAL", fleets_with_admirals
     elif squads_with_leaders > 0:
         title, type_n = "COMMODORE", squads_with_leaders
-    elif galactics > 0:
-        title, type_n = "CAPTAIN", galactics
     elif stellars > 0:
-        title, type_n = "COMMANDER", stellars
+        title, type_n = "CAPTAIN", stellars
     elif planetaries > 0:
         title, type_n = "ENSIGN", planetaries
     else:
@@ -650,8 +706,8 @@ def _get_home_dashboard() -> str:
         lines.append("\n  LOOSE STARSHIPS:")
         for name in loose:
             lvl = computed_levels.get(name, "Unterraformed")
-            status = _kardashev_labels.get(lvl, "⚫ UNTERRAFORMED")
-            lines.append(f"    {name}: {status}")
+            icon = _kardashev_icons.get(lvl, "⚫")
+            lines.append(f"    {icon} {name} ({lvl}){_health_str(name)}")
 
     # Loose squadrons (not in any fleet)
     assigned_sq = set()
@@ -668,7 +724,7 @@ def _get_home_dashboard() -> str:
             for member in sq.get("members", []):
                 lvl = computed_levels.get(member, "Unterraformed")
                 icon = _kardashev_icons.get(lvl, "⚫")
-                lines.append(f"      {icon} {member} ({lvl})")
+                lines.append(f"      {icon} {member} ({lvl}){_health_str(member)}")
 
     # Fleets
     if fleets:
@@ -683,14 +739,16 @@ def _get_home_dashboard() -> str:
                 for member in sq.get("members", []):
                     lvl = computed_levels.get(member, "Unterraformed")
                     icon = _kardashev_icons.get(lvl, "⚫")
-                    lines.append(f"           {icon} {member} ({lvl})")
+                    lines.append(f"           {icon} {member} ({lvl}){_health_str(member)}")
             if fl.get("loose_starships"):
                 lines.append(f"      └─ Loose:")
                 for ls in fl.get("loose_starships", []):
                     lvl = computed_levels.get(ls, "Unterraformed")
                     icon = _kardashev_icons.get(lvl, "⚫")
-                    lines.append(f"           {icon} {ls} ({lvl})")
+                    lines.append(f"           {icon} {ls} ({lvl}){_health_str(ls)}")
 
+    lines.append("")
+    lines.append("  📖 H=Health E=Emanation L=Level(0-6) S=Smells A=Architecture K=KG_depth")
     lines.append("")
     lines.append("💡 Use `preflight-colonize-starsystem` skill to set up a new STARSYSTEM.")
     lines.append("")

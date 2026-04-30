@@ -37,6 +37,7 @@ current_conversation = {
 # TreeShell Conversation Registry
 # ============================================================================
 # Registry file stores conversation IDs that were started from TreeShell
+# CONNECTS_TO: /tmp/heaven_data/tree_shell_conversations_registry.json (read/write) — tracks TreeShell-originated conversations
 TREESHELL_REGISTRY_PATH = "/tmp/heaven_data/tree_shell_conversations_registry.json"
 
 

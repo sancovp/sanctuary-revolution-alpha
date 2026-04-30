@@ -578,3 +578,35 @@ def get_scores_registry() -> str:
     return core.get_scores_registry()
 
 
+# =============================================================================
+# NEW - Converters (JSON transcript → CartON concepts)
+# =============================================================================
+
+@mcp.tool()
+def ingest_openai_transcript(filepath: str, conv_name: Optional[str] = None) -> str:
+    """Convert OpenAI JSON export to CartON concepts.
+
+    Reads the OpenAI mapping tree format, extracts user/assistant pairs,
+    and creates typed CartON concepts (Conversation, Iteration, User_Message, Agent_Message).
+
+    Args:
+        filepath: Path to OpenAI JSON export file.
+        conv_name: Optional name for the conversation concept. Defaults to filename stem.
+    """
+    return core.ingest_openai_transcript(filepath, conv_name)
+
+
+@mcp.tool()
+def ingest_claude_transcript(filepath: str, slug: Optional[str] = None) -> str:
+    """Convert Claude Code .jsonl transcript to CartON concepts.
+
+    Parses the JSONL, segments by slug, creates typed CartON concepts
+    for each conversation (or a specific slug).
+
+    Args:
+        filepath: Path to Claude Code .jsonl transcript file.
+        slug: Optional specific slug to ingest. If None, ingests all conversations.
+    """
+    return core.ingest_claude_transcript(filepath, slug)
+
+

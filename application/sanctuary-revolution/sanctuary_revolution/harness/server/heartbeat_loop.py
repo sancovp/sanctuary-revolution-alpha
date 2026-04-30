@@ -14,7 +14,9 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+# CONNECTS_TO: /tmp/heaven_data/heartbeat_config.json (read) — Isaac-controlled heartbeat config
 HBC_PATH = Path("/tmp/heaven_data/heartbeat_config.json")
+# CONNECTS_TO: /tmp/heaven_data/heartbeat_log.jsonl (write) — heartbeat event log, append-only
 HBC_LOG_PATH = Path("/tmp/heaven_data/heartbeat_log.jsonl")
 LOCK_PATH = Path("/tmp/heaven_data/heartbeat_user_active.lock")
 LOCK_STALE_SECONDS = 300  # 5 minutes

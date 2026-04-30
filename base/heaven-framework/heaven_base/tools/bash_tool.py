@@ -162,14 +162,8 @@ class BashToolArgsSchema(ToolArgsSchema):
         'command': {
             'name': 'command',
             'type': 'str',
-            'description': 'The bash command to run. Required unless restart is set to true. For running files inside /core/, you may need to set PYTHONPATH=/home/GOD/core',
-            'required': False  # Not required when restarting
-        },
-        'restart': {
-            'name': 'restart',
-            'type': 'bool',
-            'description': 'Specifying true will restart this tool. Otherwise, leave this unspecified or false. If you receive a timeout error, BashTool must be restarted without any command before it can be used again.',
-            'required': False  # Defaults to false
+            'description': 'The bash command to run. To restart the shell session (e.g. after a timeout), pass the exact string "restart" as the command.',
+            'required': True
         }
     }
 
@@ -224,10 +218,9 @@ class BashTool(BaseHeavenTool):
     def create(cls, adk: bool = False):
         session = _BashSession()
     
-        async def wrapped_func(command: Optional[str] = None,
-                               restart: Optional[bool] = None):
+        async def wrapped_func(command: str):
             nonlocal session
-            if restart:
+            if command.strip().lower() == "restart":
                 if session._started:
                     session.stop()
                 session = _BashSession()
@@ -235,9 +228,7 @@ class BashTool(BaseHeavenTool):
                 return "tool has been restarted."
             if not session._started:
                 await session.start()
-            if command is not None:
-                return await session.run(command)
-            raise ToolError("ERROR: no command provided.")
+            return await session.run(command)
     
         cls.func = wrapped_func
         instance = super().create(adk=adk)

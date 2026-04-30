@@ -17,7 +17,7 @@ def parse_claims(claims_str: str) -> list[str]:
             i += 1
             in_triple_quote = False
             while i < len(claims_str) and depth > 0:
-                if claims_str[i:i+3] == '"""':
+                if claims_str[i:i+3] in ('"""', "'''"):
                     in_triple_quote = not in_triple_quote
                     i += 3
                     continue
@@ -42,9 +42,9 @@ def split_claim_kvs(claim: str) -> list[str]:
     in_triple = False
     i = 0
     while i < len(claim):
-        if claim[i:i+3] == '"""':
+        if claim[i:i+3] in ('"""', "'''"):
             in_triple = not in_triple
-            current.append('"""')
+            current.append(claim[i:i+3])
             i += 3
             continue
         if claim[i] == ',' and not in_triple:
@@ -73,7 +73,7 @@ def extract_pio_operators(content: str) -> tuple[list[str], list[str], str]:
     arrow_positions = []
 
     while i < len(cleaned):
-        if cleaned[i:i+3] == '"""':
+        if cleaned[i:i+3] in ('"""', "'''"):
             in_triple = not in_triple
             i += 3
             continue
@@ -104,7 +104,7 @@ def extract_pio_operators(content: str) -> tuple[list[str], list[str], str]:
     containment_positions = []
 
     while i < len(cleaned):
-        if cleaned[i:i+3] == '"""':
+        if cleaned[i:i+3] in ('"""', "'''"):
             in_triple = not in_triple
             i += 3
             continue
@@ -167,11 +167,10 @@ def parse_entity_chain(line: str) -> dict | None:
 
     raw_claims = parse_claims(claims_str)
 
-    all_desc_parts = []
-    missing_descs = []
+    concept_desc = None  # First claim's desc → source concept description
+    target_descs = {}    # Subsequent claims' descs → cached KV for daemon auto-creation
     invalid_rels = []
     all_targets = []
-    target_descs = {}
     isa, partof, instantiates, extra_rels = [], [], [], []
 
     for claim in raw_claims:
@@ -191,23 +190,23 @@ def parse_entity_chain(line: str) -> dict | None:
             if value.startswith("'''") and value.endswith("'''"):
                 value = value[3:-3].strip()
 
-            if key == "desc":
+            if key in ("desc", "str"):
                 claim_desc = value
             else:
                 claim_rels.append((key, value))
 
-        if claim_desc:
-            all_desc_parts.append(claim_desc)
-
-        if claim_rels and claim_desc is None:
-            for key, target in claim_rels:
-                missing_descs.append(f"{key}={target}")
+        # First claim's desc = source concept description (SKILL.md body etc)
+        # Subsequent claims' descs = cached for target concepts
+        if claim_desc and concept_desc is None:
+            concept_desc = claim_desc
+        elif claim_desc:
+            # Cache desc for each target in this claim
+            for key, value in claim_rels:
+                target_descs[value] = claim_desc
 
         for key, value in claim_rels:
             # Pass ALL relationships through — CartON/YOUKNOW validates, not Dragonbones
             all_targets.append(value)
-            if claim_desc:
-                target_descs.setdefault(value, []).append(claim_desc)
             if key == "is_a":
                 isa.append(value)
             elif key == "part_of":
@@ -233,16 +232,15 @@ def parse_entity_chain(line: str) -> dict | None:
         rels.append({"relationship": "has_part", "related": pio_containment})
         all_targets.extend(pio_containment)
 
-    description = " ".join(all_desc_parts) if all_desc_parts else f"[NO DESC] {concept_name}"
+    description = concept_desc if concept_desc else f"[NO DESC] {concept_name}"
 
     return {
         "concept_name": concept_name,
         "description": description,
         "relationships": rels,
-        "missing_descs": missing_descs,
         "invalid_rels": invalid_rels,
         "all_targets": all_targets,
-        "target_descs": {k: " ".join(v) for k, v in target_descs.items()},
+        "target_descs": target_descs,  # KV cache: target_name → desc for daemon auto-creation
     }
 
 
@@ -286,7 +284,7 @@ def extract_chain_segments(chains_text: str) -> list[tuple[str, str]]:
                     segments.append((current_op, "\n".join(current_lines)))
                 current_op = detected
                 current_lines = [stripped]
-                count = stripped.count('"""')
+                count = stripped.count('"""') + stripped.count("'''")
                 if count % 2 == 1:
                     in_triple = not in_triple
                 continue
@@ -299,7 +297,7 @@ def extract_chain_segments(chains_text: str) -> list[tuple[str, str]]:
                 segments.append(("--help", stripped))
                 continue
 
-        count = stripped.count('"""')
+        count = stripped.count('"""') + stripped.count("'''")
         if count % 2 == 1:
             in_triple = not in_triple
 

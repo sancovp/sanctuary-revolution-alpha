@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "soma-prolog"
+version = "0.1.0"
+description = "SOMA — Self-Organizing Meta-Architecture with Prolog MI"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp[cli]>=1.0.0",
+    "janus-swi>=1.5.0",
+]
+
+[project.scripts]
+soma-prolog-mcp = "soma_prolog.mcp_server:mcp.run"
+soma-prolog-daemon = "soma_prolog.api:main"
+
+[tool.setuptools.packages.find]
+include = ["soma_prolog*"]
+
+[tool.setuptools.package-data]
+soma_prolog = ["*.pl", "*.owl"]

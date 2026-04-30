@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from capability_predictor.tracking import record_tool_from_hook, get_active_session
 
+# CONNECTS_TO: /tmp/hook_control.json (read) — toggle config also accessed by other hooks
 HOOK_CONTROL_CONFIG = Path("/tmp/hook_control.json")
 
 

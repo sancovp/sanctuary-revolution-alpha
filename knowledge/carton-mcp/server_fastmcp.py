@@ -20,7 +20,6 @@ from mcp.types import TextContent
 # Import CartOn utilities
 from carton_mcp.carton_utils import CartOnUtils
 from .add_concept_tool import add_concept_tool_func, add_observation, rename_concept_func, get_observation_queue_dir
-from .smart_chroma_rag import SmartChromaRAG, route_concept_to_collection
 from .concept_config import ConceptConfig
 
 # Setup logging
@@ -30,12 +29,15 @@ logger = logging.getLogger(__name__)
 import re
 
 # --------- ChromaDB Collection Routing ---------
-# Uses shared routing from smart_chroma_rag.route_concept_to_collection()
+# SmartChromaRAG uses HttpClient — connects to the shared ChromaDB server started by
+# observation_worker_daemon. No HNSW load in this process, safe to import at module level.
 
-_rag_cache: dict[str, SmartChromaRAG] = {}
+from .smart_chroma_rag import SmartChromaRAG, route_concept_to_collection
 
-def _get_rag(collection_name: str = "carton_concepts") -> SmartChromaRAG:
-    """Get or create a cached SmartChromaRAG instance for a collection."""
+_rag_cache: dict = {}
+
+def _get_rag(collection_name: str = "carton_concepts"):
+    """Get or create a cached SmartChromaRAG instance."""
     if collection_name not in _rag_cache:
         hdd = os.environ.get("HEAVEN_DATA_DIR", "/tmp/heaven_data")
         chroma_dir = str(Path(hdd) / "chroma_db")
@@ -63,6 +65,26 @@ def _strip_md(text: str) -> str:
     text = re.sub(r'  +', ' ', text)
     return text.strip()
 
+
+def _dedup_desc(text: str) -> str:
+    """Deduplicate description paragraphs. Repeated appends create massive duplication.
+    Does NOT truncate — the _fmt overflow mechanism handles long output (writes to file)."""
+    if not text or not isinstance(text, str):
+        return text or ""
+    # Split by double-newline (paragraphs)
+    paragraphs = re.split(r'\n\n+', text)
+    seen = set()
+    deduped = []
+    for p in paragraphs:
+        normalized = p.strip()
+        if not normalized:
+            continue
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        deduped.append(normalized)
+    return "\n\n".join(deduped)
+
 _OVERFLOW_THRESHOLD = 10000  # chars before file overflow kicks in
 _OVERFLOW_DIR = Path(os.environ.get("HEAVEN_DATA_DIR", "/tmp/heaven_data")) / "query_overflow"
 
@@ -78,9 +100,9 @@ def _fmt(data) -> str:
     return result
 
 def _fmt_inner(data) -> str:
-    """Inner formatter — no truncation, no overflow."""
+    """Inner formatter — no truncation, no overflow. Deduplicates descriptions."""
     if isinstance(data, str):
-        return _strip_md(data)
+        return _dedup_desc(_strip_md(data))
     if isinstance(data, dict):
         if "result" in data:
             return _fmt_inner(data["result"])
@@ -145,7 +167,8 @@ def _deferred_enforcement():
             logger.info(f"Ontology enforcement applied fixes: {enforcement_stats}")
     except Exception as e:
         logger.warning(f"Ontology enforcement failed (non-fatal): {e}")
-threading.Thread(target=_deferred_enforcement, daemon=True).start()
+# # DISABLED: was pegging CPU at 99% — enforce_ontology_invariants creates chromadb.PersistentClient which never finishes
+# threading.Thread(target=_deferred_enforcement, daemon=True).start()
 
 """
 UARL ONTOLOGY SYSTEM STATUS:
@@ -304,7 +327,8 @@ def add_concept(
     relationships: Optional[List[ConceptRelationship]] = None,
     desc_update_mode: str = "append",
     hide_youknow: bool = False,
-    clear_stash: bool = False
+    clear_stash: bool = False,
+    source: str = "agent"
 ) -> str:
     """Add a new concept to the knowledge graph
 
@@ -315,7 +339,7 @@ def add_concept(
         instantiates: REQUIRED. What pattern does this realize? e.g. ["Bug_Fix_Pattern"], ["Working_System_Pattern"]
         concept: Full conceptual content explaining the entire concept, ideas, technical details, etc. Mentioning other concept names auto-creates relates_to links.
         relationships: OPTIONAL. Additional custom relationships beyond the required three. Each object must have format: {"relationship": "relation_type", "related": ["concept_name1", "concept_name2", ...]}. Use for has_*, depends_on, validates, etc.
-        desc_update_mode: How to update description if concept exists - "append" (default), "prepend", or "replace"
+        desc_update_mode: How to update description if concept exists - "append" (default), "prepend", "replace", or "path" (concept field is a file path — reads file content as description)
         hide_youknow: If False (default), YOUKNOW validates and shows SOUP/ONT status. If True, skip validation - silent add.
         clear_stash: If True, discard any stashed payload for this concept before processing. Use when a previous stash has stale/wrong values.
 
@@ -327,6 +351,15 @@ def add_concept(
         _concept_stash.pop(stash_key, None)
     try:
         description = concept
+        # desc_update_mode="path": concept field is a file path, read contents as description
+        if desc_update_mode == "path" and description:
+            from pathlib import Path as _Path
+            p = _Path(description)
+            if p.exists() and p.is_file():
+                description = p.read_text()
+                desc_update_mode = "replace"  # file content replaces existing desc
+            else:
+                return f"ERROR: desc_update_mode='path' but file not found: {description}"
         # Build relationships from required params + optional custom rels
         relationships_dict = [
             {"relationship": "is_a", "related": list(is_a)},
@@ -354,7 +387,7 @@ def add_concept(
                 else:
                     relationships_dict.append(srel)
 
-        raw_result = add_concept_tool_func(concept_name, description, relationships_dict, desc_update_mode=desc_update_mode, hide_youknow=hide_youknow, shared_connection=_neo4j_conn)
+        raw_result = add_concept_tool_func(concept_name, description, relationships_dict, desc_update_mode=desc_update_mode, hide_youknow=hide_youknow, shared_connection=_neo4j_conn, source=source)
         return _format_concept_result(concept_name, raw_result)
     except Exception as e:
         # Stash full payload so next call only needs missing fields
@@ -804,6 +837,7 @@ CartON Usage Guide:
             from neo4j import GraphDatabase
             import re as _re
 
+
             neo4j_uri = os.getenv('NEO4J_URI', 'bolt://host.docker.internal:7687')
             neo4j_user = os.getenv('NEO4J_USER', 'neo4j')
             neo4j_pass = os.getenv('NEO4J_PASSWORD', 'password')
@@ -1182,7 +1216,7 @@ def get_concept(concept_name: str, refresh_code: bool = False) -> TextContent:
         cypher_query = """
         MATCH (c:Wiki) WHERE c.n = $concept_name AND c.d IS NOT NULL
         OPTIONAL MATCH (c)-[r]->(related:Wiki)
-        RETURN c.n as name, c.d as description,
+        RETURN c.n as name, c.d as description, c.score as score,
                collect({type: type(r), target: related.n}) as relationships
         """
         result = utils.query_wiki_graph(cypher_query, {"concept_name": concept_name})
@@ -1194,7 +1228,7 @@ def get_concept(concept_name: str, refresh_code: bool = False) -> TextContent:
 
             # Build compact output
             name = concept_data.get("name", "")
-            desc = _strip_md(concept_data.get("description", ""))
+            desc = _dedup_desc(_strip_md(concept_data.get("description", "")))
             
             # Group relationships
             requires_evolution = []
@@ -1212,7 +1246,9 @@ def get_concept(concept_name: str, refresh_code: bool = False) -> TextContent:
                     normal_rels.append(f"{rel_type.lower()} {target}")
             
             # Build output string
-            lines = [f"Name: {name}", f"Description: {desc}", "", "Rels:["]
+            score = concept_data.get("score")
+            score_str = f" [{score}% description coverage]" if score is not None else ""
+            lines = [f"Name: {name}", f"Description{score_str}: {desc}", "", "Rels:["]
             
             if requires_evolution:
                 lines.append("# ⚠️ REQUIRES_EVOLUTION")
@@ -1229,28 +1265,33 @@ def get_concept(concept_name: str, refresh_code: bool = False) -> TextContent:
             
             lines.append("]")
 
-            # YOUKNOW live check — run the reasoner on this concept's relationships
+            # YOUKNOW live check via daemon (port 8102)
             try:
-                from youknow_kernel.compiler import youknow as youknow_check
-                # Build statement from relationships
-                triples = []
-                for rel in normal_rels:
-                    parts = rel.split(" ", 1)
-                    if len(parts) == 2:
-                        triples.append(rel)
-                if triples:
-                    statement = f"{name} {', '.join(triples)}"
-                    yk_result = youknow_check(statement)
-                    if yk_result == "OK":
-                        lines.append("")
-                        lines.append("YOUKNOW: ONT ✅")
-                    elif yk_result.startswith("SOUP:"):
-                        lines.append("")
-                        lines.append(f"YOUKNOW: {yk_result}")
+                from carton_mcp.add_concept_tool import youknow_validate, YOUKNOW_AVAILABLE
+                if YOUKNOW_AVAILABLE:
+                    triples = []
+                    for rel in normal_rels:
+                        parts = rel.split(" ", 1)
+                        if len(parts) == 2:
+                            triples.append(rel)
+                    if triples:
+                        statement = f"{name} {', '.join(triples)}"
+                        yk_data = youknow_validate(statement)
+                        if yk_data and isinstance(yk_data, dict):
+                            result_str = yk_data.get("result", "")
+                            if result_str.startswith("CODE:"):
+                                lines.append("")
+                                lines.append(f"YOUKNOW: CODE ✅ {result_str[:120]}")
+                            elif result_str.startswith("SOUP:"):
+                                lines.append("")
+                                lines.append(f"YOUKNOW: {result_str[:200]}")
+                            else:
+                                lines.append("")
+                                lines.append(f"YOUKNOW: {result_str[:200]}")
             except ImportError:
                 pass
-            except Exception:
-                pass
+            except Exception as yk_err:
+                lines.append(f"\nYOUKNOW: error — {yk_err}")
 
             output = "\n".join(lines)
             if refresh_code:
@@ -1366,7 +1407,7 @@ def get_history_info(
 
                 component = {
                     "name": row.get("component_name"),
-                    "content": row.get("component_desc")
+                    "content": _strip_md(row.get("component_desc") or "")
                 }
 
                 if rel_type.startswith("HAS_USER_MESSAGE_"):
@@ -1527,7 +1568,7 @@ def get_history_info(
                 return f"❌ Iteration summary '{id}' not found"
 
             data = result["data"][0]
-            return f"=== {data['name']} ===\n\n{data['description']}"
+            return f"=== {data['name']} ===\n\n{_strip_md(data['description'] or '')}"
 
         elif info_type == "all_iteration_summaries":
             # Get all iteration summaries for a conversation (id = conversation concept name)
@@ -1545,7 +1586,7 @@ def get_history_info(
             lines = [f"=== Iteration Summaries for {id} ===\n"]
             for row in result["data"]:
                 lines.append(f"### {row['name']}")
-                lines.append(row['description'] or "(empty)")
+                lines.append(_strip_md(row['description'] or "(empty)"))
                 lines.append("")
 
             return "\n".join(lines)
@@ -1579,10 +1620,10 @@ def get_history_info(
 
             summaries.sort(key=lambda x: x[0])
 
-            lines = [f"=== {id} ===\n", phase_desc or "(no description)", "\n### Iteration Summaries:"]
+            lines = [f"=== {id} ===\n", _strip_md(phase_desc or "(no description)"), "\n### Iteration Summaries:"]
             for seq, name, desc in summaries:
                 lines.append(f"\n{seq}. {name}")
-                lines.append(desc or "(empty)")
+                lines.append(_strip_md(desc or "(empty)"))
 
             return "\n".join(lines)
 
@@ -1602,7 +1643,7 @@ def get_history_info(
             lines = [f"=== All Phases for {id} ===\n"]
             for row in result["data"]:
                 lines.append(f"### {row['name']}")
-                lines.append(row['description'] or "(empty)")
+                lines.append(_strip_md(row['description'] or "(empty)"))
                 lines.append("")
 
             return "\n".join(lines)
@@ -1620,7 +1661,7 @@ def get_history_info(
                 return f"❌ Subphase '{id}' not found"
 
             data = result["data"][0]
-            return f"=== {data['name']} ===\n\n{data['description']}"
+            return f"=== {data['name']} ===\n\n{_strip_md(data['description'] or '')}"
 
         elif info_type == "all_subphases":
             # Get all subphases for a phase (id = phase concept name)
@@ -1638,7 +1679,7 @@ def get_history_info(
             lines = [f"=== Subphases for {id} ===\n"]
             for row in result["data"]:
                 lines.append(f"### {row['name']}")
-                lines.append(row['description'] or "(empty)")
+                lines.append(_strip_md(row['description'] or "(empty)"))
                 lines.append("")
 
             return "\n".join(lines)
@@ -1666,7 +1707,7 @@ def get_history_info(
                 return f"❌ Executive summary not found for '{id}'"
 
             data = result["data"][0]
-            return f"=== {data['name']} ===\n\n{data['description']}"
+            return f"=== {data['name']} ===\n\n{_strip_md(data['description'] or '')}"
 
         else:
             valid_types = "iteration, conversation, session, context_bundle, iteration_summary, all_iteration_summaries, phase, all_phases, subphase, all_subphases, executive_summary"
@@ -1723,68 +1764,80 @@ def create_missing_concepts(concepts_data: list) -> str:
         return f"❌ Error: {e}"
 
 @mcp.tool()
-def get_recent_concepts(n: int = 20, sort_by: str = "modified") -> str:
-    """Get the N most recently created/updated concepts from the knowledge graph
-    
-    Returns a chronological list of recently added or modified concepts with timestamps.
-    Useful for reviewing recent work, understanding current context, and maintaining
-    awareness of knowledge graph evolution.
-    
+def get_recent_concepts(n: int = 20, timeline: str = None) -> str:
+    """CartON timeline — most recent concept activity.
+
+    Shows concepts sorted by most recent activity (created or modified).
+    Each entry shows 'new' or 'mod' and the timestamp.
+
     Args:
-        n: Number of recent concepts to retrieve (default: 20, max: 100)
-        sort_by: Sort order - 'modified' (default, most recently modified/created first)
-                 or 'created' (most recently created first, ignores modifications)
-        
+        n: Number of entries (default: 20, max: 100)
+        timeline: Filter by timeline. Options:
+            - "chat": concepts created by agent/dragonbones during conversations
+            - "system": background system events (daemon, linker, projector)
+            - "odyssey": narrative/BML concepts (Episode, Journey, Epic, summaries)
+            - "overall": all timeline-linked concepts across all timelines
+            - None (default): no filter, shows all concepts
+
     Returns:
-        JSON string with recent concepts list including names and timestamps
+        Table of concept name | new/mod timestamp
     """
     try:
-        # Limit to reasonable maximum
         n = min(n, 100)
-        
-        if sort_by == "created":
-            # Sort by creation time only (c.t)
-            query = """
-            MATCH (c:Wiki) 
-            WHERE c.t IS NOT NULL
-            RETURN c.n as name, 
-                   toString(c.t) as created,
-                   CASE WHEN c.last_modified IS NOT NULL THEN toString(c.last_modified) ELSE null END as last_modified
-            ORDER BY c.t DESC 
-            LIMIT $n
-            """
-        else:
-            # Sort by most recently modified (falls back to created if no last_modified)
-            query = """
-            MATCH (c:Wiki) 
-            WHERE c.t IS NOT NULL OR c.last_modified IS NOT NULL
-            WITH c, COALESCE(c.last_modified, c.t) AS effective_time
-            RETURN c.n as name, 
-                   toString(effective_time) as sorted_by,
-                   CASE WHEN c.t IS NOT NULL THEN toString(c.t) ELSE null END as created,
-                   CASE WHEN c.last_modified IS NOT NULL THEN toString(c.last_modified) ELSE null END as last_modified
-            ORDER BY effective_time DESC 
-            LIMIT $n
-            """
-        
+
+        # Timeline filters based on source property and timeline flags
+        timeline_clauses = {
+            "chat": "(c.source IN ['agent', 'dragonbones_hook', 'session_start'] AND NOT c.source IN ['colonizer'] AND NOT c.n STARTS WITH 'Starsystem_' AND NOT c.n STARTS WITH 'Starship_' AND NOT c.n STARTS WITH 'Squadron_' AND NOT c.n STARTS WITH 'Fleet_' AND NOT c.n STARTS WITH 'Mcp_Skill_' AND NOT c.n STARTS WITH 'Skill_Create_' AND NOT c.n STARTS WITH 'File_')",
+            "system": "(c.source IN ['observation_daemon', 'precompact', 'hierarchical_summarizer', 'linker', 'substrate_projector', 'colonizer'] OR c.n STARTS WITH 'System_Event_')",
+            "odyssey": "c.odyssey_linked = true",
+            "overall": "(c.source IS NOT NULL OR c.odyssey_linked = true OR c.timeline_linked = true)",
+        }
+        timeline_filter = ""
+        if timeline and timeline.lower() in timeline_clauses:
+            timeline_filter = f" AND ({timeline_clauses[timeline.lower()]})"
+
+        # Exclude system-generated bulk entries (add prefixes as needed)
+        exclude_prefixes = ["Skillgraph_"]
+        exclude_clause = " AND ".join([f"NOT c.n STARTS WITH '{p}'" for p in exclude_prefixes])
+
+        # Normalize mixed timestamp types (integer epoch ms, string ISO, Neo4j datetime)
+        norm_t = """CASE
+            WHEN c.t IS NULL THEN null
+            WHEN valueType(c.t) STARTS WITH 'INTEGER' OR valueType(c.t) STARTS WITH 'FLOAT' THEN datetime({epochMillis: toInteger(c.t)})
+            WHEN valueType(c.t) STARTS WITH 'STRING' THEN datetime(c.t)
+            ELSE c.t END"""
+        norm_lm = """CASE
+            WHEN c.last_modified IS NULL THEN null
+            WHEN valueType(c.last_modified) STARTS WITH 'INTEGER' OR valueType(c.last_modified) STARTS WITH 'FLOAT' THEN datetime({epochMillis: toInteger(c.last_modified)})
+            WHEN valueType(c.last_modified) STARTS WITH 'STRING' THEN datetime(c.last_modified)
+            ELSE c.last_modified END"""
+
+        query = f"""
+        MATCH (c:Wiki)
+        WHERE (c.t IS NOT NULL OR c.last_modified IS NOT NULL) AND {exclude_clause}{timeline_filter}
+        WITH c, {norm_t} AS norm_created, {norm_lm} AS norm_modified
+        WITH c, norm_created, norm_modified, COALESCE(norm_modified, norm_created) AS effective_time
+        RETURN c.n as name,
+               CASE WHEN norm_modified IS NOT NULL THEN 'mod' ELSE 'new' END as action,
+               toString(effective_time) as at
+        ORDER BY effective_time DESC
+        LIMIT $n
+        """
+
         result = utils.query_wiki_graph(query, {"n": n})
 
         if result.get("success", False):
             concepts = result.get("data", [])
+            if not concepts:
+                return "No concepts with timestamps found."
 
-            formatted_concepts = []
-            for i, concept in enumerate(concepts, 1):
-                entry = {
-                    "rank": i,
-                    "name": concept["name"],
-                }
-                if concept.get("created"):
-                    entry["created"] = concept["created"]
-                if concept.get("last_modified"):
-                    entry["last_modified"] = concept["last_modified"]
-                formatted_concepts.append(entry)
+            tl_label = f" [{timeline}]" if timeline else ""
+            lines = [f"Recent concepts{tl_label} ({len(concepts)}):", "name | at", "-" * 60]
+            for c in concepts:
+                ts = str(c.get("at", "?")).replace("T", " ").split(".")[0].split("+")[0][:16]
+                lines.append(f"{c['name']} | {c['action']} {ts}")
 
-            return _fmt(formatted_concepts)
+            return "\n".join(lines)
         else:
             return "❌ Failed to query recent concepts"
 
@@ -1853,6 +1906,7 @@ def equip_frame(frame: str) -> str:
     """
     try:
         # Get frames path from env or use default
+        # CONNECTS_TO: /tmp/heaven_data/carton_frames.json (read) — also accessed by summarizer_mcp.py
         frames_path = os.getenv('CARTON_FRAMES_PATH', '/tmp/heaven_data/carton_frames.json')
         frames_file = Path(frames_path)
 
@@ -1976,6 +2030,7 @@ def add_frame(frame_name: str, description: str) -> str:
     Returns:
         Prompt instructing LLM to add frame to frames file
     """
+    # CONNECTS_TO: /tmp/heaven_data/carton_frames.json (read/write) — also accessed by summarizer_mcp.py
     frames_path = os.getenv('CARTON_FRAMES_PATH', '/tmp/heaven_data/carton_frames.json')
 
     return f"""[ADD FRAME MODE]

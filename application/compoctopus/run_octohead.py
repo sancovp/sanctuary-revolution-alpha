@@ -26,7 +26,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-MINIMAX_BASE_URL = "https://api.minimax.io/anthropic"
+import json as _json
+_ro_cfg_path = HEAVEN_DATA / "conductor_agent_config.json"
+_ro_cfg = {}
+if _ro_cfg_path.exists():
+    try:
+        _ro_cfg = _json.loads(_ro_cfg_path.read_text())
+    except (ValueError, OSError):
+        pass
+MINIMAX_BASE_URL = _ro_cfg.get("extra_model_kwargs", {}).get("anthropic_api_url", "")
 HEAVEN_DATA = Path(os.environ.get("HEAVEN_DATA_DIR", "/tmp/heaven_data"))
 STATE_FILE = HEAVEN_DATA / "octohead_conversation.json"
 

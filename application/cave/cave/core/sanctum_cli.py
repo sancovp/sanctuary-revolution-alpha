@@ -15,16 +15,38 @@ any module that wants a Discord channel with commands.
 import json
 import logging
 import os
+import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 
 from .mini_cli import MiniCLI
-from .sanctum_source import SanctumRitualSource
+from .sanctum_automations import sync_ritual_automations
 
 logger = logging.getLogger(__name__)
 
 HEAVEN_DATA = Path(os.environ.get("HEAVEN_DATA_DIR", "/tmp/heaven_data"))
 SANCTUM_CHANNEL_ID = None  # Set from discord_config.json
+
+
+def _queue_carton_concept(concept_name: str, description: str, relationships: list) -> None:
+    """Queue a concept to CartON observation worker. Best-effort, never blocks."""
+    try:
+        from carton_mcp.add_concept_tool import get_observation_queue_dir
+        queue_dir = get_observation_queue_dir()
+        data = {
+            "raw_concept": True,
+            "concept_name": concept_name,
+            "description": description,
+            "relationships": relationships,
+            "source": "sanctum",
+            "hide_youknow": True,
+        }
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S%f")
+        queue_file = queue_dir / f"{ts}_{uuid.uuid4().hex[:8]}.json"
+        with open(queue_file, "w") as f:
+            json.dump(data, f)
+    except Exception as e:
+        logger.debug("CartON queue failed (non-critical): %s", e)
 
 
 def _load_sanctum_channel_id() -> str:
@@ -96,6 +118,19 @@ def handle_done(argument: str) -> str:
     sanctum_path = HEAVEN_DATA / "sanctums" / f"{sanctum_name}.json"
     sanctum_path.write_text(json.dumps(sanctum, indent=2))
 
+    # Queue to CartON timeline
+    day_str = today.replace("-", "_")
+    _queue_carton_concept(
+        concept_name=f"Ritual_Completion_{ritual_name}_{day_str}",
+        description=f"Ritual '{ritual_name}' completed on {today} (sanctum: {sanctum_name})",
+        relationships=[
+            {"relationship": "is_a", "related": ["Ritual_Completion"]},
+            {"relationship": "part_of", "related": [f"Day_{day_str}", "User_Autobiography_Timeline"]},
+            {"relationship": "has_ritual_name", "related": [ritual_name]},
+            {"relationship": "has_date", "related": [today]},
+        ],
+    )
+
     # Count today's progress (filtered by frequency)
     day_name = datetime.now().strftime("%A").lower()
     todays_rituals = [r for r in rituals if r.get("active", True) and
@@ -103,6 +138,13 @@ def handle_done(argument: str) -> str:
     done_today = sum(1 for r in todays_rituals if
                      any(c.get("date", "").startswith(today) for c in r.get("completions", [])))
     total = len(todays_rituals)
+
+    # Recompute sanctuary degree after completion
+    try:
+        from .sanctuary_degree_calculator import compute_sanctuary_degree
+        compute_sanctuary_degree()
+    except Exception as e:
+        logger.warning("SD recompute after done failed: %s", e)
 
     return f"✓ {ritual_name} — {done_today}/{total} done today"
 
@@ -175,11 +217,10 @@ def handle_status(argument: str) -> str:
 
 
 def handle_skip(argument: str) -> str:
-    """Skip a ritual for today."""
+    """Skip a ritual for today. Idempotent — won't double-skip."""
     if not argument:
         return "Usage: skip <ritual_name>"
     ritual_name = _resolve_alias(argument)
-    # Mark as skipped (completion with skip flag)
     sanctum_name, sanctum = _get_active_sanctum()
     if not sanctum:
         return "No active sanctum"
@@ -188,13 +229,41 @@ def handle_skip(argument: str) -> str:
     if not ritual:
         return f"Ritual '{ritual_name}' not found"
 
-    today = datetime.now().strftime("%Y-%m-%d")
+    # Use Clock for timezone-aware today
+    from .world import Clock
+    today = Clock.from_config().today()
+
+    # Idempotency: check if already skipped today
     completions = ritual.get("completions", [])
+    for c in completions:
+        if str(c.get("date", "")).startswith(today) and c.get("skipped"):
+            return f"⏭ {ritual_name} already skipped today"
+
     completions.append({"date": today, "timestamp": datetime.now().isoformat(), "skipped": True})
     ritual["completions"] = completions
 
     sanctum_path = HEAVEN_DATA / "sanctums" / f"{sanctum_name}.json"
     sanctum_path.write_text(json.dumps(sanctum, indent=2))
+
+    # Queue to CartON timeline
+    day_str = today.replace("-", "_")
+    _queue_carton_concept(
+        concept_name=f"Ritual_Skip_{ritual_name}_{day_str}",
+        description=f"Ritual '{ritual_name}' skipped on {today} (sanctum: {sanctum_name})",
+        relationships=[
+            {"relationship": "is_a", "related": ["Ritual_Skip"]},
+            {"relationship": "part_of", "related": [f"Day_{day_str}", "User_Autobiography_Timeline"]},
+            {"relationship": "has_ritual_name", "related": [ritual_name]},
+            {"relationship": "has_date", "related": [today]},
+        ],
+    )
+
+    # Recompute sanctuary degree after skip
+    try:
+        from .sanctuary_degree_calculator import compute_sanctuary_degree
+        compute_sanctuary_degree()
+    except Exception as e:
+        logger.warning("SD recompute after skip failed: %s", e)
 
     return f"⏭ {ritual_name} skipped"
 

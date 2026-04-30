@@ -7,6 +7,7 @@ orient() reads from cache instantly. This runs:
 - Every 10 minutes in background
 - Can be triggered manually: python3 -m starlog_mcp.score_compiler
 
+# CONNECTS_TO: /tmp/heaven_data/seed_ship_cache.json (read/write) — also accessed by orient(), start_sancrev.sh
 Cache file: /tmp/heaven_data/seed_ship_cache.json
 """
 
@@ -136,48 +137,32 @@ def compile_scores(verbose: bool = False) -> dict:
 
 
 def _compute_kardashev_level(path: str, fleet_health: dict) -> str:
-    """Compute Kardashev level for a starsystem path."""
+    """Compute Kardashev level for a starsystem path.
+
+    Canonical scale (from STARSYSTEM_GAME_DESIGN.md):
+        Unterraformed → No .claude/ (uninhabited star)
+        Planetary (K1) → Has .claude/ with intent (can land)
+        Stellar (K2)   → Dyson Sphere — emanation >= 0.6
+        Galactic (K3)  → TODO: CICD + deployment + self-propagating
+    """
     if not path or not os.path.isdir(path):
         return "Unterraformed"
 
-    # K1 (Planetary): Has GIINT project
-    hpi_path = os.path.join(path, "starlog.hpi")
-    has_giint = False
-    if os.path.exists(hpi_path):
-        try:
-            with open(hpi_path) as f:
-                hpi_data = json.load(f)
-            if hpi_data.get("metadata", {}).get("giint_project_id"):
-                has_giint = True
-        except Exception:
-            pass
-
-    if not has_giint:
+    # Planetary (K1): Has .claude/ directory with intent
+    claude_dir = os.path.join(path, ".claude")
+    if not os.path.isdir(claude_dir):
         return "Unterraformed"
 
-    # K2 (Stellar): Has .claude/ with rules AND skills
-    claude_dir = os.path.join(path, ".claude")
-    has_rules_and_skills = False
-    if os.path.isdir(claude_dir):
-        rules_dir = os.path.join(claude_dir, "rules")
-        skills_dir = os.path.join(claude_dir, "skills")
-        try:
-            has_rules = os.path.isdir(rules_dir) and bool(list(os.scandir(rules_dir)))
-            has_skills = os.path.isdir(skills_dir) and bool(list(os.scandir(skills_dir)))
-            has_rules_and_skills = has_rules and has_skills
-        except Exception:
-            pass
-
-    if not has_rules_and_skills:
-        return "Planetary"
-
-    # K3 (Galactic): Health threshold met
+    # Stellar (K2): Dyson Sphere — emanation >= 0.6
     if path in fleet_health:
-        health_score = fleet_health[path].get("health", 0)
-        if health_score >= 0.6:
-            return "Galactic"
+        emanation = fleet_health[path].get("components", {}).get("emanation", 0)
+        if emanation >= 0.6:
+            # Galactic (K3): TODO — CICD detection (pipelines, deployment, release workflow)
+            # Stub: check for .github/workflows/ or Dockerfile as basic signal
+            # Future: proper CICD pipeline validation
+            return "Stellar"
 
-    return "Stellar"
+    return "Planetary"
 
 
 def write_cache(data: dict):

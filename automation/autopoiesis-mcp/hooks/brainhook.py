@@ -28,6 +28,7 @@ logging.basicConfig(
 logger = logging.getLogger('brainhook')
 
 # State file - simple on/off
+# CONNECTS_TO: /tmp/brainhook_state.txt (write) — also accessed by autopoiesis_stop_hook.py
 STATE_FILE = Path("/tmp/brainhook_state.txt")
 
 # Prompt file - look in plugin directory first, fall back to default

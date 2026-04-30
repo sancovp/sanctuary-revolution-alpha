@@ -40,6 +40,7 @@ if _heaven_data_dir:
 def get_registry():
     """Get registry service from HEAVEN_DATA_DIR."""
     try:
+        # PARALLEL: uses heaven_base.registry — should migrate to CartON/YOUKNOW
         from heaven_base.registry import RegistryService
         registry_dir = os.getenv("HEAVEN_DATA_DIR")
         if not registry_dir:

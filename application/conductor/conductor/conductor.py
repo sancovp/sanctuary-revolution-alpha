@@ -31,6 +31,7 @@ NOT YET BUILT:
 import asyncio
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -53,26 +54,20 @@ from .cave_registration import (
 logger = logging.getLogger(__name__)
 
 
-SANCTUARY_DEGREES = [
-    "WakingDreamer",
-    "OlivusVictory-Promise",
-    "DemonChampion",
-    "OlivusVictory-Ability",
-]
-
-
 def _get_sanctuary_degree() -> str:
-    """Read current sanctuary degree from config. Default: WakingDreamer."""
+    """Read current sanctuary degree from sanctuary_degree.json.
+
+    Written by cave.core.sanctuary_degree_calculator.compute_sanctuary_degree().
+    Returns identity label (e.g. 'OVP', 'Demon Champion', 'OVA').
+    """
     try:
         p = Path(os.environ.get("HEAVEN_DATA_DIR", "/tmp/heaven_data")) / "sanctuary_degree.json"
         if p.exists():
             data = json.loads(p.read_text())
-            deg = data.get("degree", "WakingDreamer")
-            if deg in SANCTUARY_DEGREES:
-                return deg
+            return data.get("degree", "OVP")
     except Exception:
         pass
-    return "WakingDreamer"
+    return "OVP"
 
 
 def _chunk_for_discord(text: str, chunk_size: int = 1900):
@@ -236,11 +231,23 @@ class DiscordEventForwarder:
                 try:
                     _time.sleep(1.0)
                     discord.deliver({"message": chunk})
-                except Exception:
-                    logger.error("Discord chunk %d/%d retry also failed, SKIPPING", i + 1, len(chunks))
+                except Exception as e2:
+                    logger.error("Discord chunk %d/%d retry also failed, SKIPPING: %s", i + 1, len(chunks), e2, exc_info=True)
 
 
-MINIMAX_BASE_URL = "https://api.minimax.io/anthropic"
+def _get_default_model_config() -> dict:
+    """Read model defaults from conductor_agent_config.json. No hardcoded values."""
+    _cfg_path = Path(os.environ.get("HEAVEN_DATA_DIR", "/tmp/heaven_data")) / "conductor_agent_config.json"
+    if _cfg_path.exists():
+        try:
+            return json.loads(_cfg_path.read_text())
+        except (json.JSONDecodeError, OSError):
+            pass
+    return {}
+
+_MODEL_CFG = _get_default_model_config()
+MINIMAX_BASE_URL = _MODEL_CFG.get("extra_model_kwargs", {}).get("anthropic_api_url", "")
+DEFAULT_MODEL = _MODEL_CFG.get("model", "")
 
 
 
@@ -263,7 +270,7 @@ def _build_agent_config(system_prompt: str):
         name="conductor",
         system_prompt=system_prompt,
         tools=[BashTool, NetworkEditTool, SkillTool, HermesTool, ViewHistoryTool, ChainTool],
-        model="MiniMax-M2.5-highspeed",
+        model=DEFAULT_MODEL,
         use_uni_api=False,
         max_tokens=8000,
         extra_model_kwargs={"anthropic_api_url": MINIMAX_BASE_URL},
@@ -300,8 +307,13 @@ def _build_agent_config(system_prompt: str):
                 "transport": "stdio",
             },
         },
+        # CONNECTS_TO: /tmp/heaven_data/conductor_prompt_blocks/ (read) — written by SD calculator, WakingDreamer, and manual edits
+        # CONNECTS_TO: /tmp/heaven_data/conductor_dynamic/ (read) — written by Conductor handle_message and CAVE automations
+        # CONNECTS_TO: /tmp/heaven_data/conductor_memory/MEMORY.md (read) — written by Conductor memory system
         prompt_suffix_blocks=[
             "path=/tmp/heaven_data/conductor_prompt_blocks/role_card.md",
+            "path=/tmp/heaven_data/conductor_prompt_blocks/sanctuary_orientation.md",
+            "path=/tmp/heaven_data/conductor_prompt_blocks/planning_pattern.md",
             "path=/tmp/heaven_data/conductor_prompt_blocks/sanctum_daily.md",
             "path=/tmp/heaven_data/conductor_prompt_blocks/treekanban.md",
             "path=/tmp/heaven_data/conductor_dynamic/memory.txt",
@@ -356,7 +368,7 @@ def _build_compaction_config():
             "Do NOT try to do it now."
         ),
         tools=[],
-        model="MiniMax-M2.5-highspeed",
+        model=DEFAULT_MODEL,
         use_uni_api=False,
         max_tokens=8000,
         extra_model_kwargs={"anthropic_api_url": MINIMAX_BASE_URL},

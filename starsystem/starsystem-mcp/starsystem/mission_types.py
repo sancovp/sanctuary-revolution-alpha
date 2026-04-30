@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Any
 
 logger = logging.getLogger(__name__)
 
-# Import heaven registry tool
+# PARALLEL: uses heaven_base.registry — should migrate to CartON/YOUKNOW
 try:
     from heaven_base.tools.registry_tool import registry_util_func
 except ImportError:

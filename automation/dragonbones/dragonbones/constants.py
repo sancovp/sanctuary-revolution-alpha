@@ -4,10 +4,15 @@ SKIP_MARKER = "!🔮"           # Legacy: also silences YOUKNOW
 UNSILENCE_MARKER = "💭⛈️"     # Brainstorm mode: UN-silences YOUKNOW (verbose feedback)
 DB_FENCE = "🐉🦴"
 
+# CONNECTS_TO: /tmp/active_hypercluster.txt (read/write) — also accessed by OMNISANC, Dragonbones compiler
 ACTIVE_HC_FILE = "/tmp/active_hypercluster.txt"
+# CONNECTS_TO: /tmp/heaven_data/dragonbones/SYNTAX.md (read) — injected into agent context
 SYNTAX_REF_PATH = "/tmp/heaven_data/dragonbones/SYNTAX.md"
+# CONNECTS_TO: /tmp/log_validator_state.json (read/write) — log validation state
 LOG_STATE_FILE = "/tmp/log_validator_state.json"
+# CONNECTS_TO: /tmp/log_deliverable_counter.json (read/write) — deliverable counter state
 DELIVERABLE_COUNTER_FILE = "/tmp/log_deliverable_counter.json"
+# TRIGGERS: Skill manager mirror via file write to /tmp/heaven_data/skills/
 SKILLS_DIR = "/tmp/heaven_data/skills/"
 
 # Chain type operators → (name, status)
@@ -30,6 +35,7 @@ CHAIN_TYPES = {
     "💡⛓️": ("EntityChain", "SHIPPED"),   # Idea
     "🗺️⛓️": ("EntityChain", "SHIPPED"),   # Inclusion_Map
     "✅⛓️": ("EntityChain", "SHIPPED"),   # GIINT_Task
+    "🛡️⛓️": ("EntityChain", "SHIPPED"),   # Claude_Code_Rule
 }
 
 # DEAD CODE — Commented out 2026-03-29. UARL_RELATIONSHIPS is defined but never imported or used anywhere. The comment "ANY relationship not in this set is DROPPED by the compiler" was FALSE — parser.py line 207 passes ALL relationships through, compiler sends all to add_concept.
@@ -71,4 +77,5 @@ CHAIN_TYPES = {
 LOG_SYNTAX = {
     "CogLog": "🧠 type::domain::subdomain::description 🧠",
     "SkillLog": "🎯 STATE::domain::skill_name 🎯  (states: PREDICTING, MAKING, USING)",
+    "DeliverableLog": "📦 type::domain::idea 📦",
 }

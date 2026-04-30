@@ -123,18 +123,26 @@ def view_card(card_id: int = 0) -> str:
 
 
 def create_card(title: str = "", description: str = "",
-                 lane: str = "backlog", starsystem: str = "",
-                 assignee: str = "", tags: str = "[]") -> str:
-    """Create a card on the board.
+                 starsystem: str = "", assignee: str = "",
+                 tags: str = "[]") -> str:
+    """Create a backlog card. For prioritized cards, use tk_add_deliverable/tk_add_task.
+
+    Cards created here go to BACKLOG with NA priority. To get priority and move
+    through PBML lanes, use the GIINT planning flow (add_deliverable, add_task)
+    which auto-assigns priority via OMNISANC hooks.
 
     starsystem: REQUIRED — starsystem name tag (e.g. 'gnosys-plugin-v2')
     assignee: REQUIRED — 'ai-human', 'ai-only', or 'human-only' (canopy routing)
-    tags: additional tags as JSON array string (e.g. operadic flow IDs, giint refs)
-
-    Cards flow through PBML lanes:
-      plan → build → measure → learn → (done | back to build)
-    ai-only cards get auto-routed to agent via canopy.
+    tags: additional tags as JSON array string
     """
+    # OMNISANC REQUIRED — sync hooks live in omnisanc PostToolUse
+    omnisanc_disabled = os.path.join(
+        os.environ.get("HEAVEN_DATA_DIR", "/tmp/heaven_data"),
+        "omnisanc_core", ".omnisanc_disabled"
+    )
+    if os.path.exists(omnisanc_disabled):
+        return "ERROR: OMNISANC must be ON to use TreeKanban. Toggle OMNISANC on first."
+
     if not starsystem:
         return "ERROR: starsystem is required. Every card must be tagged with its starsystem."
     if not assignee:
@@ -146,11 +154,12 @@ def create_card(title: str = "", description: str = "",
 
     client = _client()
     extra = json.loads(tags) if isinstance(tags, str) else tags
-    all_tags = [starsystem, assignee] + extra
+    # Prefixed tags so parse_giint_metadata and _has_agent_assignee find them
+    all_tags = [f"starsystem:{starsystem}", f"assignee:{assignee}"] + extra
 
-    result = client.create_card(DEFAULT_BOARD, title, description, lane, all_tags)
+    result = client.create_card(DEFAULT_BOARD, title, description, "backlog", all_tags)
     if result:
-        return f"Created card #{result['id']}: {title} [lane={lane}] tags={all_tags}"
+        return f"Created card #{result['id']}: {title} [lane=backlog] tags={all_tags}"
     return "Failed to create card."
 
 
@@ -187,15 +196,92 @@ def get_family(card_id: int = 0) -> str:
     return "\n".join(lines)
 
 
-def get_next_task() -> str:
-    """Get the highest-priority card from the build lane."""
-    client = _client()
-    cards = client.get_prioritized_cards(DEFAULT_BOARD, "build")
-    if not cards:
-        return "No tasks in build lane."
-    card = cards[0]
-    tags = json.loads(card.get('tags', '[]'))
-    return f"Next task: #{card['id']} [{card.get('priority','NA')}] {card.get('title','')} (tags: {','.join(tags) if tags else 'none'})"
+def get_next_task(from_conductor: bool = True) -> str:
+    """Get next task from TreeKanban with auto-ratchet + conductor dispatch.
+
+    Calls the GIINT MCP's get_next_task_from_treekanban (single source of truth for
+    auto-ratchet, agent filtering, GIINT metadata, CartON hierarchy creation).
+    Adds from_conductor dispatch on top: AI-only tasks → GNOSYS via /self/inject.
+
+    When from_conductor=True (default, conductor calling):
+      If task is AI-only → dispatch to GNOSYS via /self/inject with plot_course prompt.
+      If task is NOT AI-only → return to conductor for human interaction.
+    When from_conductor=False (OMNISANC auto-flips for GNOSYS):
+      Return task info directly — GNOSYS picks it up itself.
+    """
+    try:
+        from llm_intelligence.projects import get_next_task_from_treekanban as _get_next_core
+    except ImportError:
+        return "ERROR: llm_intelligence not available"
+
+    # Call the library function directly — sync, no async wrapper needed (onion architecture)
+    result_str = _get_next_core(agent_tasks_only=from_conductor)
+    result = json.loads(result_str)
+
+    if not result.get("success"):
+        return result_str  # Pass through errors/meta-tasks as-is
+
+    card = result.get("card", {})
+    title = card.get("title", "")
+    description = card.get("description", "")
+    tags = card.get("tags", [])
+    card_id = card.get("id", "?")
+    giint_metadata = card.get("giint_metadata", {})
+    starsystem = giint_metadata.get("starsystem", "")
+
+    # Extract assignee from tags
+    assignee = ""
+    for tag in tags:
+        if tag.startswith("assignee:"):
+            assignee = tag.split(":", 1)[1]
+
+    # If conductor calling AND task is AI-only → dispatch to GNOSYS
+    if from_conductor and assignee in ("ai-only", "ai-human"):
+        # Resolve starsystem filesystem path from CartON
+        starsystem_path = ""
+        try:
+            from carton_mcp.carton_utils import CartOnUtils
+            utils = CartOnUtils()
+            # GIINT project PART_OF Starsystem, Starsystem has description with path
+            path_result = utils.query_wiki_graph(
+                "MATCH (g:Wiki)-[:PART_OF]->(s:Wiki) "
+                "WHERE g.n STARTS WITH 'Giint_Project_' AND s.n STARTS WITH 'Starsystem_' "
+                "AND g.d CONTAINS $ss "
+                "MATCH (g)-[:HAS_PATH]->(p:Wiki) "
+                "RETURN p.n AS path LIMIT 1",
+                {"ss": starsystem}
+            )
+            if path_result.get("success") and path_result.get("data"):
+                raw_path = path_result["data"][0].get("path", "")
+                starsystem_path = raw_path.lower()  # Un-normalize: /Tmp/X -> /tmp/x
+        except Exception:
+            pass
+
+        prompt = (
+            f"Conductor dispatched task #{card_id}: {title}\n"
+            f"Starsystem: {starsystem}\n"
+            f"Starsystem path: {starsystem_path}\n"
+            f"Description: {description}\n"
+            f"Card type: {card.get('card_type', 'unknown')}\n"
+            f"Tags: {', '.join(tags)}\n\n"
+            f"INSTRUCTIONS: Equip skill /bml-mission-loop-e2e and follow it exactly. "
+            f"project_path={starsystem_path}. Mission ID: bml-{starsystem}. "
+            f"OMNISANC must be ON. Do not improvise — the skill has the exact commands."
+        )
+        try:
+            import httpx
+            # TRIGGERS: CAVE/sancrev:8080/self/inject via HTTP POST
+            cave_url = os.environ.get("CAVE_URL", "http://localhost:8080")
+            payload = {"message": prompt, "press_enter": True}
+            resp = httpx.post(f"{cave_url}/self/inject", json=payload, timeout=10)
+            if resp.status_code == 200:
+                return f"Dispatched to GNOSYS: #{card_id} [{title}] → /self/inject sent\n{result_str}"
+            else:
+                return f"ERROR dispatching to GNOSYS: HTTP {resp.status_code}\n{result_str}"
+        except Exception as e:
+            return f"ERROR dispatching to GNOSYS: {e}\n{result_str}"
+
+    return result_str
 
 
 def add_tag(card_id: int = 0, tag: str = "") -> str:
@@ -226,6 +312,13 @@ def move_to_lane(card_id: int = 0, lane: str = "") -> str:
     if not card_id:
         return "ERROR: card_id is required."
     client = _client()
+    # Cards cannot leave backlog without a priority (assigned by GIINT planning flow)
+    # Exception: archive is always allowed (cleanup)
+    if lane not in ("backlog", "archive"):
+        all_cards = client.get_all_cards(DEFAULT_BOARD)
+        card = next((c for c in all_cards if str(c['id']) == str(card_id)), None)
+        if card and card.get('priority') in ('NA', 'none', '', None):
+            return f"ERROR: Card #{card_id} has no priority. Cards must have priority to leave backlog. Use tk_add_deliverable/tk_add_task to create prioritized cards."
     result = client._make_request("PUT", f"/api/sqlite/cards/{card_id}", {"board": DEFAULT_BOARD, "status": lane})
     if result:
         return f"Moved #{card_id} to '{lane}'"

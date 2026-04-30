@@ -22,6 +22,7 @@ try:
         BlockTypeVX1
     )
     from heaven_base.baseheavenagent import HeavenAgentConfig, ProviderEnum
+    # PARALLEL: uses heaven_base.registry — should migrate to CartON/YOUKNOW
     from heaven_base.registry.registry_service import RegistryService
     PIS_AVAILABLE = True
     REGISTRY_AVAILABLE = True
@@ -947,6 +948,7 @@ def list_recently_plotted_courses(limit: int = 10) -> str:
     import json
     from pathlib import Path
 
+    # CONNECTS_TO: /tmp/heaven_data/omnisanc_core/.course_history.json (read) — written by OMNISANC course plotter
     course_history_file = Path("/tmp/heaven_data/omnisanc_core/.course_history.json")
 
     if not course_history_file.exists():

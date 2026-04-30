@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 # Paths for be_myself enforcement
 SELF_CONTINUITY_PATH = Path(os.environ.get("SELF_CONTINUITY_PATH", "/tmp/self_continuity.log"))
+# CONNECTS_TO: /tmp/latest_self_awareness.json (write) — self-awareness state persisted across sessions
 LATEST_AWARENESS_PATH = Path(os.environ.get("LATEST_AWARENESS_PATH", "/tmp/latest_self_awareness.json"))
 BE_MYSELF_LOGS_DIR = Path(os.environ.get("HEAVEN_DATA_DIR", "/tmp/heaven_data")) / "giint" / "be_myself_logs"
 
@@ -769,9 +770,10 @@ def log_to_starlog_debug_diary(
             try:
                 # Import STARLOG models and HEAVEN registry
                 from starlog_mcp.models import DebugDiaryEntry
+                # PARALLEL: uses heaven_base.registry — should migrate to CartON/YOUKNOW
                 from heaven_base.tools.registry_tool import registry_util_func
                 import os
-                
+
                 # Set HEAVEN_DATA_DIR for registry access
                 os.environ['HEAVEN_DATA_DIR'] = '/tmp/heaven_data'
                 

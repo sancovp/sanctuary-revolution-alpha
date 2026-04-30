@@ -53,12 +53,8 @@ class FlightRAGResult:
 
 
 def get_chroma_client() -> chromadb.ClientAPI:
-    """Get ChromaDB client for flight embeddings."""
-    chroma_path = os.path.join(HEAVEN_DATA_DIR, "chroma_db")
-    return chromadb.PersistentClient(
-        path=chroma_path,
-        settings=Settings(anonymized_telemetry=False)
-    )
+    """Get ChromaDB client — connects to shared HTTP server started by observation_worker_daemon."""
+    return chromadb.HttpClient(host="localhost", port=8101)
 
 
 def flight_rag_query(query: str, n_results: int = 5) -> FlightRAGResult:

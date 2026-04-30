@@ -439,6 +439,7 @@ class StarlogSessionsMixin:
 
             # Ensure joint registries exist
             try:
+                # PARALLEL: uses heaven_base.registry — should migrate to CartON/YOUKNOW
                 from heaven_base.tools.registry_tool import registry_util_func
                 registry_util_func("create_registry", registry_name=f"{joint_name}_starlog")
                 registry_util_func("create_registry", registry_name=f"{joint_name}_debug_diary")

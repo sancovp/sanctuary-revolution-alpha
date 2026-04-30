@@ -43,16 +43,29 @@ HOME_DEFAULT_PROMPT_FILE = HOME_PROMPTS_DIR / "default_home_prompt.md"
 HOME_QUEUE_DIR = HOME_PROMPTS_DIR / "queue"
 
 # Autopoiesis promise/blocked paths - all in /tmp, never touch ~/.claude
+# CONNECTS_TO: /tmp/active_promise.md (write) — also accessed by autopoiesis_mcp/mcp_server.py
+# TRIGGERS: Autopoiesis L1 via file write to /tmp/active_promise.md
 ACTIVE_PROMISE_PATH = Path("/tmp/active_promise.md")
+# CONNECTS_TO: /tmp/block_report.json (write) — also accessed by autopoiesis_mcp/mcp_server.py
 BLOCK_REPORT_PATH = Path("/tmp/block_report.json")
+# CONNECTS_TO: /tmp/brainhook_state.txt (write) — also accessed by hooks/brainhook.py
 BRAINHOOK_STATE_FILE = Path("/tmp/brainhook_state.txt")
+# CONNECTS_TO: /tmp/autopoiesis_prompt_override.md (write) — read by _get_prompt_override()
 PROMPT_OVERRIDE_PATH = Path("/tmp/autopoiesis_prompt_override.md")
+# TRIGGERS: OMNISANC disable (lib) via file write to .omnisanc_disabled
 OMNISANC_DISABLED_FILE = Path("/tmp/heaven_data/omnisanc_core/.omnisanc_disabled")
+# CONNECTS_TO: /tmp/flight_stabilizer_disabled.txt (write) — checked by omnisanc hooks
+# TRIGGERS: OMNISANC disable (hooks) via file write to flight_stabilizer_disabled.txt
 FLIGHT_STABILIZER_DISABLED_FILE = Path("/tmp/flight_stabilizer_disabled.txt")
+# CONNECTS_TO: /tmp/autopoiesis_captains_log_tracker.json (write)
 CAPTAINS_LOG_TRACKER_FILE = Path("/tmp/autopoiesis_captains_log_tracker.json")
 
 # L2/L3 loop files
+# CONNECTS_TO: /tmp/guru_loop.md (write) — Autopoiesis L2
+# TRIGGERS: Autopoiesis L2 via file write to /tmp/guru_loop.md
 GURU_LOOP_PATH = Path("/tmp/guru_loop.md")
+# CONNECTS_TO: /tmp/samaya_loop.md (write) — Autopoiesis L3
+# TRIGGERS: Autopoiesis L3 via file write to /tmp/samaya_loop.md
 SAMAYA_LOOP_PATH = Path("/tmp/samaya_loop.md")
 
 # Diary staleness threshold
@@ -238,6 +251,15 @@ def _handle_samaya_loop(transcript_path: str, course: dict, waypoint: dict) -> N
         SAMAYA_LOOP_PATH.unlink(missing_ok=True)
         GURU_LOOP_PATH.unlink(missing_ok=True)
         clear_promise_file()
+        # Clear target_level from course state (conductor-dispatched tasks)
+        try:
+            if os.path.exists(COURSE_STATE_FILE):
+                course_data = json.loads(Path(COURSE_STATE_FILE).read_text())
+                if course_data.pop("target_level", None):
+                    Path(COURSE_STATE_FILE).write_text(json.dumps(course_data, indent=2))
+                    logger.info("Cleared target_level from course state")
+        except Exception as e:
+            logger.warning("Failed to clear target_level: %s", e)
         _output_approve(course=course, waypoint=waypoint, clearing_promise=True)
 
     elif samaya_result == "BREACHED":
@@ -1310,7 +1332,14 @@ def _handle_mode_check(mode: str, course: dict, waypoint: dict, project_path: st
 
     # When OMNISANC is active, NEVER approve stop — always fall through to mode prompt
     # This ensures HOME/STARPORT/LANDING/MISSION prompts are always injected
+    # EXCEPTION: HOME with no enforcement loops = conductor dispatches work, GNOSYS exits
     omnisanc_active = _is_omnisanc_active()
+    guru_active, _ = _check_guru_loop()
+    promise_active, _, _ = get_active_promise()
+
+    if mode == "HOME" and not guru_active and not promise_active:
+        logger.debug("HOME with no enforcement loops — approving exit")
+        _output_approve(course=course, waypoint=waypoint)
 
     if not loop_active and mode not in ["SESSION", "JOURNEY"] and not omnisanc_active:
         logger.debug("No loop active, not SESSION, OMNISANC off — approving stop")
@@ -1361,6 +1390,17 @@ def main():
         # Design_Loop_Zone_Mapping: guru is the quality gate for leaving a starsystem.
         # HOME is unreachable while guru is active — you must prove emanation first.
         if mode == "STARPORT":
+            # Auto-activate guru loop from conductor-dispatched target_level
+            if not GURU_LOOP_PATH.exists() and course.get("target_level"):
+                target_level = course["target_level"]
+                guru_content = (
+                    f"---\nstatus: active\ntarget_level: {target_level}\n"
+                    f"course_linked: true\nsource: conductor\n---\n"
+                    f"Auto-activated from conductor-dispatched task"
+                )
+                GURU_LOOP_PATH.write_text(guru_content)
+                logger.info("Auto-activated guru loop at %s from course", target_level)
+
             # L3: Samaya loop (highest priority)
             samaya_active, _ = _check_samaya_loop()
             if samaya_active:

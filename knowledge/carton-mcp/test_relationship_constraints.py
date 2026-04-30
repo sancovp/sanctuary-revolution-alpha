@@ -8,6 +8,7 @@ import sys
 os.environ['GITHUB_PAT'] = 'test_token'
 os.environ['REPO_URL'] = 'test_repo'
 os.environ['BASE_PATH'] = '/tmp/carton_constraint_test'
+# TRIGGERS: Neo4j database via Bolt protocol on localhost:7687
 os.environ['NEO4J_URI'] = 'bolt://localhost:7687'
 os.environ['NEO4J_USER'] = 'neo4j'
 os.environ['NEO4J_PASSWORD'] = 'password'

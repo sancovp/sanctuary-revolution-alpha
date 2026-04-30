@@ -18,6 +18,7 @@ from fastmcp import FastMCP
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# PARALLEL: uses heaven_base.registry — should migrate to CartON/YOUKNOW
 try:
     from heaven_base.registry.registry_service import RegistryService
 except ImportError as e:
@@ -244,6 +245,7 @@ def toggle_omnisanc(enable: bool = None) -> str:
     import subprocess
     import signal
 
+    # TRIGGERS: OMNISANC daemon via file write to /tmp/heaven_data/omnisanc_core/.omnisanc_disabled
     kill_switch_file = "/tmp/heaven_data/omnisanc_core/.omnisanc_disabled"
     daemon_path = "/home/GOD/omnisanc_core_daemon/daemon.py"
     pid_file = "/tmp/omnisanc_daemon.pid"

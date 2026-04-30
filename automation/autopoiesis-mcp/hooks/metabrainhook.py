@@ -33,7 +33,9 @@ logger = logging.getLogger('metabrainhook')
 
 # Paths
 HEAVEN_DATA_DIR = Path(os.environ.get("HEAVEN_DATA_DIR", "/tmp/heaven_data"))
+# CONNECTS_TO: /tmp/heaven_data/metabrainhook_config.json (read) — user-editable orchestration config
 CONFIG_FILE = HEAVEN_DATA_DIR / "metabrainhook_config.json"
+# CONNECTS_TO: /tmp/metabrainhook_state.txt (read/write) — toggled by `metabrainhook` bash command
 STATE_FILE = Path("/tmp/metabrainhook_state.txt")
 
 # Brainhook prompt file (to append at end)

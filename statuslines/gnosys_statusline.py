@@ -17,10 +17,14 @@ COURSE_STATE_FILE = os.environ.get(
     "COURSE_STATE_FILE",
     "/tmp/heaven_data/omnisanc_core/.course_state"
 )
+# CONNECTS_TO: /tmp/heaven_data/omnisanc_core/.omnisanc_disabled (read) — also accessed by OMNISANC daemon, CAVE hooks
 OMNISANC_DISABLED_FILE = "/tmp/heaven_data/omnisanc_core/.omnisanc_disabled"
+# CONNECTS_TO: /tmp/brainhook_state.txt (read) — also accessed by brainhook toggle
 BRAINHOOK_STATE_FILE = "/tmp/brainhook_state.txt"
+# CONNECTS_TO: /tmp/active_promise.md (read) — also accessed by autopoiesis MCP
 AUTOPOIESIS_PROMISE_FILE = "/tmp/active_promise.md"
 BE_MYSELF_TOGGLE_FILE = "/tmp/heaven_data/giint/be_myself_enabled"
+# CONNECTS_TO: /tmp/heaven_data/carton_queue (read) — also accessed by observation_worker_daemon
 CARTON_QUEUE_DIR = "/tmp/heaven_data/carton_queue"
 INNER_TEACHER_PID_FILE = "/tmp/inner_teacher_data/inner_teacher.pid"
 
@@ -94,6 +98,7 @@ def _get_context_color(percent: float) -> str:
         return "\033[33m"
     return "\033[32m"
 
+# CONNECTS_TO: /tmp/context_percent.txt (write) — also read by PostToolUse hooks
 
 CONTEXT_PERCENT_FILE = "/tmp/context_percent.txt"
 
