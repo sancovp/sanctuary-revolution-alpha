@@ -177,22 +177,15 @@ class SancrevTreeshellMCPServer:
                     server_name = match.group(1)
                     logger.info(f"Auto-connecting '{server_name}' and retrying...")
                     await self.shell.handle_command(f'manage_servers.exec {{"connect": "{server_name}"}}')
-                    # Poll CONNECTION STATUS only (not the full command) — up to 30s
-                    connected = False
-                    for _ in range(15):
-                        await asyncio.sleep(2)
-                        status = await self.shell.handle_command(f'manage_servers.exec {{"status": "{server_name}"}}')
-                        status_output = render_response(status)
-                        if "connected" in status_output.lower() and "not connected" not in status_output.lower():
-                            connected = True
-                            break
-                    if connected:
-                        # NOW re-run the original command once
+                    # Wait for connection to establish, then retry once
+                    await asyncio.sleep(15)
+                    try:
                         result = await self.shell.handle_command(command)
                         rendered_output = render_response(result)
-                    else:
-                        logger.warning(f"Auto-connect '{server_name}' timed out after 30s")
-                        rendered_output = f"Auto-connect '{server_name}' timed out. Try again or connect manually."
+                        if "not connected" in rendered_output:
+                            rendered_output = f"Auto-connect '{server_name}' timed out. Try again or connect manually."
+                    except Exception:
+                        rendered_output = f"Auto-connect '{server_name}' failed. Try again or connect manually."
 
             return {
                 "success": True,
