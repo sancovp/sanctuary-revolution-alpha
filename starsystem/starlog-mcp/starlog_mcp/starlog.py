@@ -9,16 +9,26 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-# Import Heaven registry system
-try:
-    # PARALLEL: uses heaven_base.registry — should migrate to CartON/YOUKNOW
-    from heaven_base.tools.registry_tool import registry_util_func
-    from heaven_base.registry.registry_service import RegistryService
-except ImportError:
-    # Fallback for development
-    logger.warning(f"Heaven registry not available, using fallback: {traceback.format_exc()}")
-    def registry_util_func(*args, **kwargs):
-        return "Heaven registry not available - using fallback"
+# Lazy-import Heaven registry to avoid pulling in torch/langchain at module level
+_registry_cache = {}
+
+def registry_util_func(*args, **kwargs):
+    if 'func' not in _registry_cache:
+        try:
+            from heaven_base.tools.registry_tool import registry_util_func as _real
+            _registry_cache['func'] = _real
+        except ImportError:
+            _registry_cache['func'] = lambda *a, **kw: "Heaven registry not available"
+    return _registry_cache['func'](*args, **kwargs)
+
+def _get_registry_service():
+    if 'svc' not in _registry_cache:
+        try:
+            from heaven_base.registry.registry_service import RegistryService
+            _registry_cache['svc'] = RegistryService
+        except ImportError:
+            _registry_cache['svc'] = None
+    return _registry_cache['svc']
 
 from .debug_diary import DebugDiaryMixin
 from .starlog_sessions import StarlogSessionsMixin
@@ -687,7 +697,10 @@ class Starlog(DebugDiaryMixin, StarlogSessionsMixin, RulesMixin, HpiSystemMixin)
         
         try:
             # Use RegistryService directly instead of parsing display strings
-            service = RegistryService()
+            RSClass = _get_registry_service()
+            if not RSClass:
+                return {}
+            service = RSClass()
             data = service.get_all(registry_name)
             return data if data is not None else {}
         except Exception:
