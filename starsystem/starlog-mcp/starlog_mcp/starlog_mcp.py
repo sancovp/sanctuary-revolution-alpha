@@ -202,7 +202,7 @@ except ImportError:
 from .starlog import Starlog
 from .models import RulesEntry, DebugDiaryEntry, StarlogEntry, FlightConfig, StarlogPayloadDiscoveryConfig
 # PARALLEL: uses heaven_base.registry — should migrate to CartON/YOUKNOW
-from heaven_base.tools.registry_tool import registry_util_func
+# LAZY: heaven_base imported on demand to avoid torch
 
 # Create singleton instance
 logger.info("Initializing STARLOG instance")
@@ -321,7 +321,7 @@ def _sync_kardashev_to_carton(kmap: dict) -> list[str]:
     # Validate: each starship must have a path pointing to an initialized STARSYSTEM
     # Check via starlog registry
     try:
-        from heaven_base.tools.registry_tool import registry_util_func
+        # LAZY: heaven_base imported on demand to avoid torch
     except ImportError:
         errors.append("HEAVEN registry not available - can't validate STARSYSTEMs")
         return errors
@@ -955,7 +955,7 @@ def update_debug_diary(path: str = None, diary_entry: DebugDiaryEntry = None, en
 
         # Ensure joint starlog registry exists + mirror to CartON
         try:
-            from heaven_base.tools.registry_tool import registry_util_func
+            # LAZY: heaven_base imported on demand to avoid torch
             registry_util_func("create_registry", registry_name=f"{joint_name}_debug_diary")
             registry_util_func("create_registry", registry_name=f"{joint_name}_starlog")
         except Exception:
@@ -1033,7 +1033,7 @@ def view_starlog(path: str, last_n: int = 5) -> str:
 def _update_recent_projects(project_path: str) -> None:
     """Update recent projects list, moving project to front and deduping."""
     try:
-        from heaven_base.tools.registry_tool import registry_util_func
+        # LAZY: heaven_base imported on demand to avoid torch
         
         # Get current recent projects
         recent_data = {}
@@ -1597,7 +1597,7 @@ def list_most_recent_projects(page: Optional[int] = None) -> str:
     logger.debug(f"list_most_recent_projects called with page={page}")
     
     try:
-        from heaven_base.tools.registry_tool import registry_util_func
+        # LAZY: heaven_base imported on demand to avoid torch
         
         # Get recent projects registry
         recent_data = {}

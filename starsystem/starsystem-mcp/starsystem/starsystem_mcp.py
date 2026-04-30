@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 # PARALLEL: uses heaven_base.registry — should migrate to CartON/YOUKNOW
 try:
-    from heaven_base.registry.registry_service import RegistryService
+    RegistryService = None  # lazy-loaded to avoid torch
 except ImportError as e:
     logger.error(f"Failed to import RegistryService: {e}")
     logger.error(traceback.format_exc())

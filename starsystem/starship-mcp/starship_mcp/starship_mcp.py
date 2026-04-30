@@ -24,7 +24,8 @@ from starlog_mcp.starlog_mcp import (
 )
 
 # PARALLEL: uses heaven_base.registry — should migrate to CartON/YOUKNOW
-from heaven_base.tools.registry_tool import registry_util_func
+# LAZY: heaven_base imported on demand to avoid torch
+from starlog_mcp.starlog import registry_util_func
 
 # Import PayloadDiscovery models
 from payload_discovery.core import PayloadDiscovery, PayloadDiscoveryPiece

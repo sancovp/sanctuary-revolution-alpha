@@ -8,20 +8,21 @@ from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
 
-# Import PIS system components
-try:
-    from heaven_base.tool_utils.prompt_injection_system_vX1 import (
-        PromptInjectionSystemVX1,
-        PromptInjectionSystemConfigVX1,
-        PromptStepDefinitionVX1,
-        PromptBlockDefinitionVX1,
-        BlockTypeVX1
-    )
-    from heaven_base.baseheavenagent import HeavenAgentConfig, ProviderEnum
-    PIS_AVAILABLE = True
-except ImportError as e:
-    logger.warning(f"PIS system not available: {traceback.format_exc()}")
-    PIS_AVAILABLE = False
+# PIS system lazy-loaded on demand to avoid pulling in torch/langchain at startup
+PIS_AVAILABLE = False  # Set True on first successful lazy load
+
+def _load_pis():
+    global PIS_AVAILABLE
+    try:
+        from heaven_base.tool_utils.prompt_injection_system_vX1 import (
+            PromptInjectionSystemVX1, PromptInjectionSystemConfigVX1,
+            PromptStepDefinitionVX1, PromptBlockDefinitionVX1, BlockTypeVX1
+        )
+        from heaven_base.baseheavenagent import HeavenAgentConfig, ProviderEnum
+        PIS_AVAILABLE = True
+        return locals()
+    except ImportError:
+        return None
 
 
 class HpiSystemMixin:
