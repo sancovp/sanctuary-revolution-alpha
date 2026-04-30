@@ -371,10 +371,23 @@ def auto_link_description(description: str, base_path: str, current_concept: str
     try:
         import ahocorasick
     except ImportError:
-        # Fallback: if ahocorasick not installed, skip auto-linking
         print("[auto_link] ahocorasick not installed, skipping auto-linking", file=sys.stderr)
         return description
-    
+
+    # Strip existing wiki links FIRST to prevent recursive nesting
+    import re as _re
+    for _ in range(5):
+        prev = description
+        description = _re.sub(r"\[([^\]]+)\]\([^)]+_itself\.md\)", r"\1", description)
+        description = _re.sub(r"\[([^\]]+)\]\(\.\./[^)]+\)", r"\1", description)
+        description = _re.sub(r"\([^)]*_itself\.md\)", "", description)
+        description = _re.sub(r"\(\.\./[^)]*\)", "", description)
+        if description == prev:
+            break
+    description = _re.sub(r"\[([^\]]+)\]", r"\1", description)
+    description = _re.sub(r"[\[\]]", "", description)
+    description = _re.sub(r"  +", " ", description)
+
     # Get all existing concept names (use cache if provided, otherwise query Neo4j)
     if concept_cache is not None:
         existing_concepts = [c for c in concept_cache if c != current_concept]
