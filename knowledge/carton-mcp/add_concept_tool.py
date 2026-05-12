@@ -374,17 +374,27 @@ def auto_link_description(description: str, base_path: str, current_concept: str
         print("[auto_link] ahocorasick not installed, skipping auto-linking", file=sys.stderr)
         return description
 
-    # Strip existing wiki links FIRST to prevent recursive nesting
+    # Strip existing wiki links FIRST to prevent recursive nesting.
+    # Wiki links end with _itself.md) — use that as the literal end anchor.
+    # URLs may contain ( ) when concept names have parens (e.g. Orient()), so we
+    # cannot delimit the URL with [^)]. Label class excludes [ and ] so the regex
+    # matches innermost-first when nested; iterate until idempotent.
+    # Also handles orphan residue from prior partial strips (bracketless chains
+    # like /X/X_itself.md) and trailing _itself.md) tails with no preceding (.
     import re as _re
-    for _ in range(5):
+    for _ in range(200):
         prev = description
-        description = _re.sub(r"\[([^\]]+)\]\([^)]+_itself\.md\)", r"\1", description)
-        description = _re.sub(r"\[([^\]]+)\]\(\.\./[^)]+\)", r"\1", description)
-        description = _re.sub(r"\([^)]*_itself\.md\)", "", description)
-        description = _re.sub(r"\(\.\./[^)]*\)", "", description)
+        # Well-formed wiki links: [label](../X_itself.md) → label
+        description = _re.sub(r"\[([^\[\]]*?)\]\(\.\./.+?_itself\.md\)", r"\1", description)
+        # Orphan parenthesized URL: (../X_itself.md) → empty
+        description = _re.sub(r"\(\.\./.+?_itself\.md\)", "", description)
+        # Bracketless orphan chain: /<concept>_itself.md)+ residue from prior partial strips
+        description = _re.sub(r"/[^/\s]*?_itself\.md\)+", "", description)
+        # Bare trailing _itself.md) with no preceding slash
+        description = _re.sub(r"_itself\.md\)+", "", description)
         if description == prev:
             break
-    description = _re.sub(r"\[([^\]]+)\]", r"\1", description)
+    description = _re.sub(r"\[([^\[\]]*?)\]", r"\1", description)
     description = _re.sub(r"[\[\]]", "", description)
     description = _re.sub(r"  +", " ", description)
 

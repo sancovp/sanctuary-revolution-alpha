@@ -163,9 +163,71 @@ def batch_create_concepts_neo4j(concepts_data: list, shared_connection) -> dict:
             # SOUP = has REQUIRES_EVOLUTION, ONT = no REQUIRES_EVOLUTION
         })
 
+    # Section-level dedup: before UNWIND, fetch existing descriptions and strip
+    # sections that already exist. Prevents identical paragraphs from accumulating
+    # across repeated appends (e.g. daemon reruns, observation re-emissions).
+    append_names = [r['name'] for r in concept_rows if r['update_mode'] == 'append']
+    if append_names and graph:
+        try:
+            existing_result = graph.execute_query(
+                "UNWIND $names AS name MATCH (n:Wiki {n: name}) WHERE n.d IS NOT NULL RETURN n.n AS name, n.d AS desc",
+                {'names': append_names}
+            )
+            existing_map = {}
+            if existing_result:
+                records = existing_result[0] if isinstance(existing_result, tuple) else existing_result
+                for record in records:
+                    try:
+                        rname = record.get('name', '') if isinstance(record, dict) else record['name']
+                        rdesc = record.get('desc', '') if isinstance(record, dict) else record['desc']
+                        if rname and rdesc:
+                            existing_map[rname] = rdesc
+                    except (TypeError, KeyError):
+                        continue
+
+            # Strip wiki links for comparison. Uses _itself.md) as the literal end
+            # anchor (URLs can contain ( ) when concept names have parens like Orient()).
+            # Also handles orphan residue from prior partial strips. See matching
+            # logic in add_concept_tool.auto_link_description and substrate_projector.
+            # TODO: consolidate these three copies into one shared utility in carton_utils.
+            import re
+            def _strip_links(s):
+                if not s:
+                    return s
+                for _ in range(200):
+                    prev = s
+                    s = re.sub(r"\[([^\[\]]*?)\]\(\.\./.+?_itself\.md\)", r"\1", s)
+                    s = re.sub(r"\(\.\./.+?_itself\.md\)", "", s)
+                    s = re.sub(r"/[^/\s]*?_itself\.md\)+", "", s)
+                    s = re.sub(r"_itself\.md\)+", "", s)
+                    if s == prev:
+                        break
+                s = re.sub(r"\[([^\[\]]*?)\]", r"\1", s)
+                s = re.sub(r"[\[\]]", "", s)
+                s = re.sub(r"  +", " ", s)
+                return s.strip()
+
+            for row in concept_rows:
+                if row['update_mode'] != 'append' or row['name'] not in existing_map:
+                    continue
+                existing = existing_map[row['name']]
+                if not existing:
+                    continue
+                # Split by section separator, strip wiki links for comparison
+                existing_sections = set(_strip_links(s) for s in existing.split('\n\n---\n\n') if s.strip())
+                new_sections = [s.strip() for s in row['description'].split('\n\n---\n\n') if s.strip()]
+                novel = [s for s in new_sections if _strip_links(s) not in existing_sections]
+                if not novel:
+                    row['update_mode'] = 'skip'  # nothing new to add
+                    print(f"[DEDUP] Skipping duplicate append for {row['name']}", file=sys.stderr)
+                else:
+                    row['description'] = '\n\n---\n\n'.join(novel)
+        except Exception as dedup_err:
+            print(f"[DEDUP] Pre-dedup query failed (continuing without dedup): {dedup_err}", file=sys.stderr)
+
     # UNWIND: Create all concept nodes at once (set linked=false for new concepts)
     # Use original timestamp if provided, otherwise use current datetime
-    # desc_update_mode: append (default) | prepend | replace
+    # desc_update_mode: append (default) | prepend | replace | skip (deduped)
     # NOTE: layer is determined by REQUIRES_EVOLUTION relationship, not a property
     try:
         create_query = """
@@ -175,6 +237,8 @@ def batch_create_concepts_neo4j(concepts_data: list, shared_connection) -> dict:
         SET n.d = CASE
             WHEN n.d IS NULL OR n.d = ''
                 THEN c.description
+            WHEN c.update_mode = 'skip'
+                THEN n.d
             WHEN n.d = c.description
                 THEN n.d
             WHEN c.description CONTAINS n.d
@@ -1109,14 +1173,16 @@ def linker_thread(stop_event: threading.Event):
             """
             
             result = linker_neo4j.execute_query(query)
-            
-            if not result:
+
+            # extract records from result (may be tuple or list)
+            records = result[0] if isinstance(result, tuple) else result
+            if not records or len(records) == 0:
                 # No unlinked concepts - sleep longer
                 stop_event.wait(30)
                 continue
             
             batch_linked = 0
-            for record in result:
+            for record in records:
                 if stop_event.is_set():
                     break
                     
@@ -1399,7 +1465,7 @@ def worker_daemon():
                             gen_target = c["gen_target"]
                             try:
                                 if gen_target == "skill_package":
-                                    result = project_to_skill(SkillSubstrate(), c.get("name", ""))
+                                    result = project_to_skill(SkillSubstrate(), c.get("name", ""), shared_connection=shared_neo4j)
                                     print(f"[Worker] 🔮 CODE → Skill crystallized: {c.get('name','')} → {result}", file=sys.stderr)
                                     log_system_event(shared_connection, "skill_crystallized", f"CODE → Skill: {c.get('name','')} → {result}", "substrate_projector")
                                 # Future gen_targets: flight_json, persona_json, etc.
@@ -1428,9 +1494,10 @@ def worker_daemon():
                             if "claude_code_rule" not in c_isa:
                                 continue
                             try:
-                                rule_result = project_to_rule(RuleSubstrate(), c.get("name", ""))
+                                rule_result = project_to_rule(RuleSubstrate(), c.get("name", ""), shared_connection=shared_neo4j)
                                 print(f"[Worker] 🛡️ Rule projected: {c.get('name','')} → {rule_result}", file=sys.stderr)
-                                log_system_event(shared_connection, "rule_projected", f"Rule: {c.get('name','')} → {rule_result}", "substrate_projector")
+# shared_connection not in scope here — print on line above already logs it
+                                # log_system_event(shared_connection, "rule_projected", f"Rule: {c.get('name','')} → {rule_result}", "substrate_projector")
                             except Exception as e:
                                 print(f"[Worker] Rule projection failed for {c.get('name','')}: {e}", file=sys.stderr)
                     except ImportError:
