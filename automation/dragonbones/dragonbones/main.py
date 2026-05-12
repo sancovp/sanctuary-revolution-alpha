@@ -15,6 +15,59 @@ os.environ["LITELLM_LOG"] = "ERROR"
 logging.getLogger("LiteLLM").setLevel(logging.ERROR)
 logging.getLogger("litellm").setLevel(logging.ERROR)
 
+# Suppress specific Pydantic v2 deprecation warnings from heaven_base's older
+# Extra.forbid / class-based config patterns. We don't want to touch heaven, and
+# we don't want to suppress ALL DeprecationWarnings — these two specific messages
+# only. Other warnings continue to surface normally.
+#
+# We can't use warnings.filterwarnings here: langchain (loaded transitively via
+# heaven_base at runtime) calls simplefilter("default", ...) which wipes our
+# filters. So we wrap sys.stderr with a line-level text filter that drops the
+# exact deprecation lines as they're written. Survives any filter resets.
+
+class _DropPydanticDeprecationLines:
+    """sys.stderr wrapper that drops lines containing the specific pydantic
+    deprecation warnings we don't want to see. Everything else passes through
+    unchanged so other warnings stay visible.
+    """
+
+    _DROP_SUBSTRINGS = (
+        "`pydantic.config.Extra` is deprecated",
+        "Support for class-based `config` is deprecated",
+        "extra = Extra.forbid",
+        "`json_encoders` is deprecated",
+        "Pydantic V1 style `@validator` validators are deprecated",
+        "warnings.warn(",
+        '@validator("assignments")',
+    )
+
+    def __init__(self, real):
+        self._real = real
+        self._buf = ""
+
+    def _should_drop(self, line: str) -> bool:
+        return any(s in line for s in self._DROP_SUBSTRINGS)
+
+    def write(self, s):
+        self._buf += s
+        while "\n" in self._buf:
+            line, self._buf = self._buf.split("\n", 1)
+            if not self._should_drop(line):
+                self._real.write(line + "\n")
+
+    def flush(self):
+        if self._buf:
+            if not self._should_drop(self._buf):
+                self._real.write(self._buf)
+            self._buf = ""
+        self._real.flush()
+
+    def __getattr__(self, name):
+        return getattr(self._real, name)
+
+
+sys.stderr = _DropPydanticDeprecationLines(sys.stderr)
+
 from dragonbones.constants import UNSILENCE_MARKER
 from dragonbones.transcript import get_last_assistant_text
 from dragonbones.parser import extract_from_blocks

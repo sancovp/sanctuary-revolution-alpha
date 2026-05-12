@@ -1458,7 +1458,7 @@ def worker_daemon():
                             except Exception as e:
                                 print(f"[Worker] REQUIRES_EVOLUTION removal failed for {c['name']}: {e}", file=sys.stderr)
                     try:
-                        from carton_mcp.substrate_projector import project_to_skill, SkillSubstrate
+                        from carton_mcp.substrate_projector import project_to_skill, SkillSubstrate, project_to_rule, RuleSubstrate
                         for c in all_concepts:
                             if not c.get("is_code") or not c.get("gen_target"):
                                 continue
@@ -1468,6 +1468,14 @@ def worker_daemon():
                                     result = project_to_skill(SkillSubstrate(), c.get("name", ""), shared_connection=shared_neo4j)
                                     print(f"[Worker] 🔮 CODE → Skill crystallized: {c.get('name','')} → {result}", file=sys.stderr)
                                     log_system_event(shared_connection, "skill_crystallized", f"CODE → Skill: {c.get('name','')} → {result}", "substrate_projector")
+                                elif gen_target == "rule_file":
+                                    # Unified rule projection via gen_target gate — same path as skills.
+                                    # Replaces the legacy Phase 2.5b substring-check on is_a that bypassed
+                                    # YOUKNOW d-chain validation. Rules now require is_code AND gen_target
+                                    # to be set by validate_system_type before projection fires.
+                                    rule_result = project_to_rule(RuleSubstrate(), c.get("name", ""), shared_connection=shared_neo4j)
+                                    print(f"[Worker] 🛡️ CODE → Rule projected: {c.get('name','')} → {rule_result}", file=sys.stderr)
+                                    log_system_event(shared_connection, "rule_projected", f"CODE → Rule: {c.get('name','')} → {rule_result}", "substrate_projector")
                                 # Future gen_targets: flight_json, persona_json, etc.
                                 else:
                                     print(f"[Worker] CODE gen_target '{gen_target}' not yet handled for {c.get('name','')}", file=sys.stderr)
@@ -1476,32 +1484,13 @@ def worker_daemon():
                     except ImportError:
                         print("[Worker] substrate_projector not available, skipping crystallization", file=sys.stderr)
 
-                # Phase 2.5b: Auto-project Rule concepts to .claude/rules/ files
-                # CartON is the source of truth; the daemon writes/diffs the .md
-                # files. Never deletes. Bidirectional lift (file → CartON) is a
-                # follow-up phase — for now we only project CartON → file.
-                if all_concepts and neo4j_succeeded:
-                    try:
-                        from carton_mcp.substrate_projector import project_to_rule, RuleSubstrate
-                        for c in all_concepts:
-                            rels = c.get("relationships", {})
-                            if isinstance(rels, list):
-                                rels = {r.get("relationship",""): r.get("related",[]) for r in rels if isinstance(r, dict)}
-                            c_isa = [t.lower() for t in rels.get("is_a", [])]
-                            # Detect Claude_Code_Rule specifically. Bare "rule" is the
-                            # abstract concept. Prolog_Rule is SOMA's kind. Claude_Code_Rule
-                            # is the kind that projects to .claude/rules/ via the rules CLI.
-                            if "claude_code_rule" not in c_isa:
-                                continue
-                            try:
-                                rule_result = project_to_rule(RuleSubstrate(), c.get("name", ""), shared_connection=shared_neo4j)
-                                print(f"[Worker] 🛡️ Rule projected: {c.get('name','')} → {rule_result}", file=sys.stderr)
-# shared_connection not in scope here — print on line above already logs it
-                                # log_system_event(shared_connection, "rule_projected", f"Rule: {c.get('name','')} → {rule_result}", "substrate_projector")
-                            except Exception as e:
-                                print(f"[Worker] Rule projection failed for {c.get('name','')}: {e}", file=sys.stderr)
-                    except ImportError:
-                        print("[Worker] substrate_projector not available, skipping rule projection", file=sys.stderr)
+                # Phase 2.5b REMOVED 2026-05-12: legacy rule bypass path that
+                # gated on substring(is_a, "claude_code_rule") and bypassed YOUKNOW
+                # d-chain validation. Rules now flow through Phase 2.5a via the
+                # gen_target="rule_file" branch, gated by is_code AND gen_target
+                # like skills. validate_system_type._infer_from_context fills the
+                # required Claude_Code_Rule fields (has_scope, has_name, has_content)
+                # before structural validation passes.
 
                 # Phase 2.5c: PBML auto-lane-move — detect phase-completion concepts → GIINT update_task_status
                 if all_concepts and neo4j_succeeded:

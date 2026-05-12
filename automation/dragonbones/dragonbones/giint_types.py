@@ -151,6 +151,19 @@ GIINT_EC_SHAPES = {
         "instantiates": None,
         "target_prefixes": {},
     },
+    "Claude_Code_Rule_": {
+        "is_a": "Claude_Code_Rule",
+        # OWL minCard restrictions on Claude_Code_Rule are has_scope, has_name,
+        # has_content — all self-healed by the Claude_Code_Rule branch in
+        # system_type_validator._infer_from_context, so no required_rels at the
+        # Dragonbones pre-check layer. The d-chain naming-pattern check fails
+        # project-scope rules with wrong prefixes.
+        "required_rels": set(),
+        "optional_rels": {"has_scope", "has_starsystem", "has_paths"},
+        "parent_hint": None,  # Anchors to Seed_Ship (global) or Starsystem_X (project)
+        "instantiates": None,
+        "target_prefixes": {},
+    },
     "Prolog_Rule_": {
         "is_a": "Prolog_Rule",
         "required_rels": {"has_rule_body"},
