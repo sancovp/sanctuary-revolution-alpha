@@ -27,7 +27,7 @@ from ..core.carton_init import initialize_carton_atomspace
 
 # Setup logging - MUST go to stderr for MCP
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.CRITICAL,  # CRITICAL only - INFO floods stderr and breaks MCP on Antigravity
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     stream=sys.stderr  # MCP operates on stderr
 )
