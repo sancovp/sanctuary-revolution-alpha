@@ -1,0 +1,23 @@
+# COMPOSE — function composition
+# {compose f g} returns a new function that does f(g(x))
+
+{def COMPOSE | f g |
+  {morph | x | {f {g x}}}}
+
+# PIPE — reverse composition (left to right)
+# {pipe f g h} = h(g(f(x)))
+{def PIPE2 | f g |
+  {morph | x | {g {f x}}}}
+
+# IDENTITY — the do-nothing function
+{def IDENTITY | x | x}
+
+# CONST — always returns the same value
+{def CONST | val |
+  {morph | x | val}}
+
+# FLIP — swap arguments of a binary function
+{def FLIP | f |
+  {morph | a b | {f b a}}}
+
+{print :OP :COMPOSE :LOADED}

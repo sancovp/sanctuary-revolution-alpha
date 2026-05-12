@@ -1,0 +1,17 @@
+# SPECIALIZE — Futamura projection engine as a super/ op
+#
+# Exposes the partial evaluator to the MAP runtime via Python hooks.
+# Once this op is registered, you can call from any MAP program:
+#
+#   {PE-SPECIALIZE expr senv-alist}    → residual expression
+#   {FUTAMURA-1 program-expr}          → compiled program (as expression)
+#   {FUTAMURA-2}                       → compiler description
+#   {FUTAMURA-3}                       → compiler-compiler description
+#   {PE-FOLD expr}                     → fully reduce if all-static, else residual
+#
+# The hot-reload engine means you can {self-rewrite SPECIALIZE new-source}
+# to evolve the partial evaluator while it's running — the 3rd projection
+# made literal.
+
+{print :OP :SPECIALIZE :LOADED}
+{print :FUTAMURA :PROJECTIONS :READY}

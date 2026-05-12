@@ -1,0 +1,684 @@
+<?xml version="1.0"?>
+<rdf:RDF xmlns="http://sanctuary.ai/uarl#"
+     xml:base="http://sanctuary.ai/uarl"
+     xmlns:owl="http://www.w3.org/2002/07/owl#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:xml="http://www.w3.org/XML/1998/namespace"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:uarl="http://sanctuary.ai/uarl#">
+
+    <owl:Ontology rdf:about="http://sanctuary.ai/uarl">
+        <rdfs:label>UARL v5 - GNOSYS Structural Extension</rdfs:label>
+        <rdfs:comment>
+UARL v5 extends v4 with GNOSYS compound intelligence structural types.
+
+v3: SOUP/ONT, derivation chain, PatternOfIsA, compression, SES
+v4: Crystal Ball coordinate space types
+v5: GNOSYS operational types — the structural substrate for compound intelligence.
+
+These are NOT domain types. They ARE the structural extension of UARL for
+project-based reasoning, agent emanation, and starsystem colonization.
+Just as CB types enable space-based reasoning, GNOSYS types enable
+compound-intelligence reasoning.
+
+Typing strategy: OWL restrictions encode required relationships (has_part,
+part_of). NOT rich descriptions — Context-Alignment provides code-level
+detail. OWL types ontological structure, CA types code structure.
+Codegen fires when both are satisfied.
+        </rdfs:comment>
+        <owl:versionInfo>5.0.0 - GNOSYS Structural Extension</owl:versionInfo>
+    </owl:Ontology>
+
+    <!-- ============================================================ -->
+    <!-- EVERYTHING FROM v3+v4 IS INHERITED (same namespace, same IRI) -->
+    <!-- Below are the NEW additions for v5                            -->
+    <!-- ============================================================ -->
+
+    <!-- ============================================== -->
+    <!-- GNOSYS STRUCTURAL RELATIONSHIPS                -->
+    <!-- subPropertyOf the UARL co-arising primitives   -->
+    <!-- ============================================== -->
+
+    <!-- GIINT hierarchy relationships -->
+    <owl:ObjectProperty rdf:about="#hasFeature">
+        <rdfs:subPropertyOf rdf:resource="#hasPart"/>
+        <rdfs:label>has_feature</rdfs:label>
+        <rdfs:comment>GIINT_Project → GIINT_Feature</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasComponent">
+        <rdfs:subPropertyOf rdf:resource="#hasPart"/>
+        <rdfs:label>has_component</rdfs:label>
+        <rdfs:comment>GIINT_Feature → GIINT_Component</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasDeliverable">
+        <rdfs:subPropertyOf rdf:resource="#hasPart"/>
+        <rdfs:label>has_deliverable</rdfs:label>
+        <rdfs:comment>GIINT_Component → GIINT_Deliverable</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasTask">
+        <rdfs:subPropertyOf rdf:resource="#hasPart"/>
+        <rdfs:label>has_task</rdfs:label>
+        <rdfs:comment>GIINT_Deliverable → GIINT_Task</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasDesign">
+        <rdfs:subPropertyOf rdf:resource="#hasPart"/>
+        <rdfs:label>has_design</rdfs:label>
+        <rdfs:comment>GIINT_Feature → Design</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasPotentialSolution">
+        <rdfs:subPropertyOf rdf:resource="#hasPart"/>
+        <rdfs:label>has_potential_solution</rdfs:label>
+        <rdfs:comment>Bug → Potential_Solution</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasInclusionMap">
+        <rdfs:subPropertyOf rdf:resource="#hasPart"/>
+        <rdfs:label>has_inclusion_map</rdfs:label>
+        <rdfs:comment>GIINT_Deliverable → Inclusion_Map</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#proves">
+        <rdfs:label>proves</rdfs:label>
+        <rdfs:comment>Inclusion_Map → GIINT_Task (structural proof)</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasDoneSignal">
+        <rdfs:label>has_done_signal</rdfs:label>
+        <rdfs:comment>GIINT_Task completion signal</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <!-- Starsystem relationships -->
+    <owl:ObjectProperty rdf:about="#hasGiintProject">
+        <rdfs:subPropertyOf rdf:resource="#hasPart"/>
+        <rdfs:label>has_giint_project</rdfs:label>
+        <rdfs:comment>Hypercluster → GIINT_Project</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasStatus">
+        <rdfs:label>has_status</rdfs:label>
+        <rdfs:comment>Lifecycle status (Active, Done_Signal, Completed)</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <!-- Discovered type relationships -->
+    <owl:ObjectProperty rdf:about="#hasSkill">
+        <rdfs:subPropertyOf rdf:resource="#hasPart"/>
+        <rdfs:label>has_skill</rdfs:label>
+        <rdfs:comment>Links starsystem/persona to skills</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasFlightConfig">
+        <rdfs:subPropertyOf rdf:resource="#hasPart"/>
+        <rdfs:label>has_flight_config</rdfs:label>
+        <rdfs:comment>Links starsystem to flight configs</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasPersona">
+        <rdfs:subPropertyOf rdf:resource="#hasPart"/>
+        <rdfs:label>has_persona</rdfs:label>
+        <rdfs:comment>Links starsystem to personas</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasMcpServer">
+        <rdfs:subPropertyOf rdf:resource="#hasPart"/>
+        <rdfs:label>has_mcp_server</rdfs:label>
+        <rdfs:comment>Links starsystem to MCP servers</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasAgent">
+        <rdfs:subPropertyOf rdf:resource="#hasPart"/>
+        <rdfs:label>has_agent</rdfs:label>
+        <rdfs:comment>Links starsystem to agents</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#configures">
+        <rdfs:label>configures</rdfs:label>
+        <rdfs:comment>Persona configures a starsystem</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#automates">
+        <rdfs:label>automates</rdfs:label>
+        <rdfs:comment>Flight_Config automates a workflow</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#providesToolsTo">
+        <rdfs:label>provides_tools_to</rdfs:label>
+        <rdfs:comment>MCP_Server provides tools to agents</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <!-- Emanation relationships -->
+    <owl:ObjectProperty rdf:about="#emanates">
+        <rdfs:label>emanates</rdfs:label>
+        <rdfs:comment>Starsystem emanates a Pilot agent from typed ontology</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#colonizes">
+        <rdfs:label>colonizes</rdfs:label>
+        <rdfs:comment>Starship colonizes a repository into a starsystem</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <!-- Navy relationships -->
+    <owl:ObjectProperty rdf:about="#hasSquadron">
+        <rdfs:subPropertyOf rdf:resource="#hasPart"/>
+        <rdfs:label>has_squadron</rdfs:label>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasMember">
+        <rdfs:subPropertyOf rdf:resource="#hasPart"/>
+        <rdfs:label>has_member</rdfs:label>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasKardashevLevel">
+        <rdfs:label>has_kardashev_level</rdfs:label>
+    </owl:ObjectProperty>
+
+    <!-- Skill spec relationships -->
+    <owl:ObjectProperty rdf:about="#hasDomain">
+        <rdfs:label>has_domain</rdfs:label>
+        <rdfs:comment>Domain classification for skills/flights</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasCategory">
+        <rdfs:label>has_category</rdfs:label>
+        <rdfs:comment>Skill category: understand, preflight, single_turn_process</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasWhat">
+        <rdfs:label>has_what</rdfs:label>
+        <rdfs:comment>What a skill teaches/does</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasWhen">
+        <rdfs:label>has_when</rdfs:label>
+        <rdfs:comment>When to use a skill (trigger condition)</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasProduces">
+        <rdfs:label>has_produces</rdfs:label>
+        <rdfs:comment>What a skill produces (output artifact)</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <!-- ============================================== -->
+    <!-- SEED SHIP — Root of compound intelligence      -->
+    <!-- ============================================== -->
+
+    <owl:Class rdf:about="#Seed_Ship">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Seed_Ship</rdfs:label>
+        <rdfs:comment>Root graph node. One per user. Contains starsystems, kardashev map, sanctum.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasPart"/>
+                <owl:someValuesFrom rdf:resource="#Starsystem_Registry"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasPart"/>
+                <owl:someValuesFrom rdf:resource="#Kardashev_Map"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasPart"/>
+                <owl:someValuesFrom rdf:resource="#Sanctum"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <!-- ============================================== -->
+    <!-- STARSYSTEM HIERARCHY                           -->
+    <!-- ============================================== -->
+
+    <owl:Class rdf:about="#Starsystem_Registry">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Starsystem_Registry</rdfs:label>
+        <rdfs:comment>Registry of all starsystem collections.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Starsystem_Collection">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Starsystem_Collection</rdfs:label>
+        <rdfs:comment>A colonized repository with full collection hierarchy.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasPart"/>
+                <owl:someValuesFrom rdf:resource="#Collection_Category"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasGiintProject"/>
+                <owl:someValuesFrom rdf:resource="#GIINT_Project"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Collection_Category">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Collection_Category</rdfs:label>
+        <rdfs:comment>Category container within a starsystem (Task_Collections, Done_Signal, etc).</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Hypercluster">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Hypercluster</rdfs:label>
+        <rdfs:comment>Work graph container. Created by GIINT_Task. Contains full work context.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasGiintProject"/>
+                <owl:someValuesFrom rdf:resource="#GIINT_Project"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#partOf"/>
+                <owl:someValuesFrom rdf:resource="#Collection_Category"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <!-- ============================================== -->
+    <!-- GIINT HIERARCHY                                -->
+    <!-- Project → Feature → Component → Deliverable → Task -->
+    <!-- ============================================== -->
+
+    <owl:Class rdf:about="#GIINT_Project">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>GIINT_Project</rdfs:label>
+        <rdfs:comment>Top-level project. The vision. ONE per subsystem.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasFeature"/>
+                <owl:someValuesFrom rdf:resource="#GIINT_Feature"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#GIINT_Feature">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>GIINT_Feature</rdfs:label>
+        <rdfs:comment>Major capability within a project.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#partOf"/>
+                <owl:someValuesFrom rdf:resource="#GIINT_Project"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasComponent"/>
+                <owl:someValuesFrom rdf:resource="#GIINT_Component"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#GIINT_Component">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>GIINT_Component</rdfs:label>
+        <rdfs:comment>Buildable piece within a feature.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#partOf"/>
+                <owl:someValuesFrom rdf:resource="#GIINT_Feature"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasDeliverable"/>
+                <owl:someValuesFrom rdf:resource="#GIINT_Deliverable"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#GIINT_Deliverable">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>GIINT_Deliverable</rdfs:label>
+        <rdfs:comment>Concrete shippable artifact. TK card = deliverable.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#partOf"/>
+                <owl:someValuesFrom rdf:resource="#GIINT_Component"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#GIINT_Task">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>GIINT_Task</rdfs:label>
+        <rdfs:comment>Atomic work unit. Created dynamically by agent.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#partOf"/>
+                <owl:someValuesFrom rdf:resource="#GIINT_Deliverable"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <!-- ============================================== -->
+    <!-- GIINT AUXILIARY TYPES                           -->
+    <!-- ============================================== -->
+
+    <owl:Class rdf:about="#Bug">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Bug</rdfs:label>
+        <rdfs:comment>Exact error observed. Dated. Lives under GIINT_Component or GIINT_Deliverable.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#partOf"/>
+                <owl:someValuesFrom rdf:resource="#GIINT_Component"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Potential_Solution">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Potential_Solution</rdfs:label>
+        <rdfs:comment>Hypothesis for fixing a bug.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#partOf"/>
+                <owl:someValuesFrom rdf:resource="#Bug"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Design">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Design</rdfs:label>
+        <rdfs:comment>Design decision or pattern shaping a feature.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#partOf"/>
+                <owl:someValuesFrom rdf:resource="#GIINT_Feature"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Idea">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Idea</rdfs:label>
+        <rdfs:comment>Snapshot of a thought. Dated. Lives under project.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#partOf"/>
+                <owl:someValuesFrom rdf:resource="#GIINT_Project"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Inclusion_Map">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Inclusion_Map</rdfs:label>
+        <rdfs:comment>Structural proof linking tasks to deliverable completion.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#partOf"/>
+                <owl:someValuesFrom rdf:resource="#GIINT_Deliverable"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#proves"/>
+                <owl:someValuesFrom rdf:resource="#GIINT_Task"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <!-- ============================================== -->
+    <!-- NAVY HIERARCHY                                 -->
+    <!-- Kardashev_Map → Fleet → Squadron → Starship    -->
+    <!-- ============================================== -->
+
+    <owl:Class rdf:about="#Kardashev_Map">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Kardashev_Map</rdfs:label>
+        <rdfs:comment>Top-level container for fleet/squadron/starship organization.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Navy_Fleet">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Navy_Fleet</rdfs:label>
+        <rdfs:comment>Fleet containing squadrons and starships.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#partOf"/>
+                <owl:someValuesFrom rdf:resource="#Kardashev_Map"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasSquadron"/>
+                <owl:someValuesFrom rdf:resource="#Navy_Squadron"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Navy_Squadron">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Navy_Squadron</rdfs:label>
+        <rdfs:comment>Squadron containing starship members.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasMember"/>
+                <owl:someValuesFrom rdf:resource="#Navy_Starship"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Navy_Starship">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Navy_Starship</rdfs:label>
+        <rdfs:comment>Individual starship linked to a starsystem. Kardashev level from state.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#partOf"/>
+                <owl:someValuesFrom rdf:resource="#Kardashev_Map"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <!-- ============================================== -->
+    <!-- SANCTUM — Life Architecture                    -->
+    <!-- ============================================== -->
+
+    <owl:Class rdf:about="#Sanctum">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Sanctum</rdfs:label>
+        <rdfs:comment>Life architecture system. Six domains scored.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Sanctum_Ritual">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Sanctum_Ritual</rdfs:label>
+        <rdfs:comment>Recurring practice within a sanctum domain.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#partOf"/>
+                <owl:someValuesFrom rdf:resource="#Sanctum"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Sanctum_Goal">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Sanctum_Goal</rdfs:label>
+        <rdfs:comment>Target within a sanctum domain.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#partOf"/>
+                <owl:someValuesFrom rdf:resource="#Sanctum"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Sanctum_Boundary">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Sanctum_Boundary</rdfs:label>
+        <rdfs:comment>Constraint within a sanctum domain.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#partOf"/>
+                <owl:someValuesFrom rdf:resource="#Sanctum"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <!-- ============================================== -->
+    <!-- DISCOVERED TYPES — Emanation artifacts         -->
+    <!-- ============================================== -->
+
+    <owl:Class rdf:about="#Skill">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Skill</rdfs:label>
+        <rdfs:comment>Equippable knowledge package. Crystallizes from GIINT_Project.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasDomain"/>
+                <owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasCategory"/>
+                <owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasWhat"/>
+                <owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasWhen"/>
+                <owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasProduces"/>
+                <owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Flight_Config">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Flight_Config</rdfs:label>
+        <rdfs:comment>Replayable workflow template. Steps with waypoints.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasDomain"/>
+                <owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Persona">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Persona</rdfs:label>
+        <rdfs:comment>Agent persona. Equipped skills + flights. Configures a starsystem.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasSkill"/>
+                <owl:someValuesFrom rdf:resource="#Skill"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#configures"/>
+                <owl:someValuesFrom rdf:resource="#Starsystem_Collection"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#MCP_Server">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>MCP_Server</rdfs:label>
+        <rdfs:comment>Model Context Protocol server providing tools to agents.</rdfs:comment>
+    </owl:Class>
+
+    <!-- ============================================== -->
+    <!-- EMANATION TYPES — Agent lifecycle               -->
+    <!-- ============================================== -->
+
+    <owl:Class rdf:about="#Starship_Pilot">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Starship_Pilot</rdfs:label>
+        <rdfs:comment>Emanated agent assembled from persona + skills + flights. Autonomous dev.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasPart"/>
+                <owl:someValuesFrom rdf:resource="#Persona"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#partOf"/>
+                <owl:someValuesFrom rdf:resource="#Navy_Starship"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Mission">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Mission</rdfs:label>
+        <rdfs:comment>Chain of flight configs. Executed by a pilot.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasPart"/>
+                <owl:someValuesFrom rdf:resource="#Flight_Config"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Starlog">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Starlog</rdfs:label>
+        <rdfs:comment>Session tracking record within a starsystem.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#partOf"/>
+                <owl:someValuesFrom rdf:resource="#Starsystem_Collection"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Automation">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Automation</rdfs:label>
+        <rdfs:comment>CAVE automation. InputAutomation chain with triggers.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#CAVE_Agent">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>CAVE_Agent</rdfs:label>
+        <rdfs:comment>Agent registered in CAVE server. Processes inbox, runs automations.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasPart"/>
+                <owl:someValuesFrom rdf:resource="#Automation"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <!-- ============================================== -->
+    <!-- PATTERN — standalone, no hierarchy requirement  -->
+    <!-- ============================================== -->
+
+    <!-- Pattern already exists in Cat_of_Cat primitives -->
+    <!-- But needs to be in OWL for completeness -->
+    <owl:Class rdf:about="#Pattern">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Pattern</rdfs:label>
+        <rdfs:comment>Reusable pattern. No date. May be part of multiple GIINT_Projects.</rdfs:comment>
+    </owl:Class>
+
+</rdf:RDF>

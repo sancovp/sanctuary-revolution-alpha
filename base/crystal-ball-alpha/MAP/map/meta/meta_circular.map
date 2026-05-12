@@ -1,0 +1,194 @@
+# Meta-circular evaluator for Map, written IN Map.
+# This is the second pass — MAP interpreting Map.
+# The base interpreter runs this code, which itself can evaluate Map.
+#
+# IMPORTANT: Due to forward-reference constraints in Map's `def`,
+# we use a single recursive META-EVAL that handles everything inline.
+# This avoids mutual-recursion issues where META-EVAL needs META-EVAL-CELL
+# but META-EVAL-CELL also needs META-EVAL.
+
+# --- Environment operations (using MAP lists as env) ---
+# Env is a list of {key val} pairs — same as base, but pure Map
+
+{def ENV-EMPTY | | NIL}
+
+{def ENV-BIND | env key val |
+  {cons {list key val} env}}
+
+{def ENV-LOOKUP | env key |
+  {when | {nil? env} |
+    NIL |
+    {when | {= {head {head env}} key} |
+      {head {tail {head env}}} |
+      {ENV-LOOKUP {tail env} key}}}}
+
+{def ENV-EXTEND | env keys vals |
+  {when | {nil? keys} |
+    env |
+    {ENV-EXTEND
+      {ENV-BIND env {head keys} {head vals}}
+      {tail keys}
+      {tail vals}}}}
+
+# --- Helper: eval a list of expressions ---
+{def META-EVAL-LIST | eval-fn args env |
+  {when | {nil? args} |
+    NIL |
+    {cons
+      {eval-fn {head args} env}
+      {META-EVAL-LIST eval-fn {tail args} env}}}}
+
+# --- Helper: apply a function ---
+{def META-APPLY | eval-fn fn args env |
+  {when | {= {type? fn} :BUILTIN} |
+    # Delegate to host builtin
+    {apply fn args} |
+    {when | {cell? fn} |
+      {when | {= {head fn} :CLOSURE} |
+        # {:CLOSURE params body captured-env}
+        {bind params {nth 1 fn}}
+        {bind body {nth 2 fn}}
+        {bind closure-env {nth 3 fn}}
+        {eval-fn body {ENV-EXTEND closure-env params args}} |
+      {when | {= {head fn} :NAMED-CLOSURE} |
+        # {:NAMED-CLOSURE name params body captured-env}
+        # Self-bind for recursion: inject fn into its own env
+        {bind name {nth 1 fn}}
+        {bind params {nth 2 fn}}
+        {bind body {nth 3 fn}}
+        {bind closure-env {nth 4 fn}}
+        {bind self-env {ENV-BIND closure-env name fn}}
+        {eval-fn body {ENV-EXTEND self-env params args}} |
+        {seq {print :ERROR :NOT-A-FUNCTION fn} NIL}}} |
+      # Try calling as morph (host-level closure)
+      {apply fn args}}}}
+
+# --- Helper: check if a value is a META-BIND result ---
+{def META-BIND? | val |
+  {when | {cell? val} |
+    {= {head val} :META-BIND} |
+    NIL}}
+
+# --- Helper: evaluate a sequence with env threading for BIND/DEF ---
+# When a sub-expression returns {:META-BIND name val}, the name gets
+# bound into env for subsequent expressions.
+{def META-EVAL-SEQ | eval-fn exprs env |
+  {when | {nil? exprs} | NIL |
+    {when | {nil? {tail exprs}} |
+      {eval-fn {head exprs} env} |
+      {seq
+        {bind result {eval-fn {head exprs} env}}
+        {when | {META-BIND? result} |
+          {META-EVAL-SEQ eval-fn {tail exprs}
+            {ENV-BIND env {nth 1 result} {nth 2 result}}} |
+          {META-EVAL-SEQ eval-fn {tail exprs} env}}}}}}
+
+# --- The meta-evaluator (single function, no forward refs) ---
+
+{def META-EVAL | expr env |
+  # NIL
+  {when | {nil? expr} | NIL |
+  # Number — self-evaluating
+  {when | {num? expr} | expr |
+  # Atom (symbol or keyword)
+  {when | {atom? expr} |
+    {when | {= {type? expr} :KW} | expr |
+      {ENV-LOOKUP env expr}} |
+  # Cell — special form or application
+  {seq
+    {bind tag {head expr}}
+    {bind args {tail expr}}
+
+    # QUOTE
+    {when | {= tag ~QUOTE} | {head args} |
+    # BIND — bind name to value, return tagged result for env threading
+    {when | {= tag ~BIND} |
+      {seq
+        {bind name {head args}}
+        {bind val {META-EVAL {head {tail args}} env}}
+        {list :META-BIND name val}} |
+    # DEF — named function definition, return tagged result for env threading
+    # Uses :NAMED-CLOSURE with name field so META-APPLY can self-bind for recursion
+    {when | {= tag ~DEF} |
+      {seq
+        {bind name {head args}}
+        {bind params {head {tail args}}}
+        {bind body {head {tail {tail args}}}}
+        {bind closure {list :NAMED-CLOSURE name params body env}}
+        {list :META-BIND name closure}} |
+    # WHEN — conditional
+    {when | {= tag ~WHEN} |
+      {seq
+        {bind cond-val {META-EVAL {head args} env}}
+        {when | cond-val |
+          {META-EVAL {head {tail args}} env} |
+          {when | {nil? {tail {tail args}}} | NIL |
+            {META-EVAL {head {tail {tail args}}} env}}}} |
+    # SEQ — sequence with env threading for BIND/DEF
+    {when | {= tag ~SEQ} |
+      {META-EVAL-SEQ META-EVAL args env} |
+    # MORPH — lambda
+    {when | {= tag ~MORPH} |
+      {seq
+        {bind params {head args}}
+        {bind body {head {tail args}}}
+        {list :CLOSURE params body env}} |
+    # Function application
+    {seq
+      {bind fn {META-EVAL tag env}}
+      {bind evaled-args {META-EVAL-LIST META-EVAL args env}}
+      {META-APPLY META-EVAL fn evaled-args env}}
+    }}}}}}}}}}}
+
+# --- Bootstrap: set up the meta-eval environment ---
+
+{def META-STDLIB | |
+  {bind e {ENV-EMPTY}}
+  {bind e {ENV-BIND e ~+ +}}
+  {bind e {ENV-BIND e ~- -}}
+  {bind e {ENV-BIND e ~* *}}
+  {bind e {ENV-BIND e ~/ /}}
+  {bind e {ENV-BIND e ~= =}}
+  {bind e {ENV-BIND e ~< <}}
+  {bind e {ENV-BIND e ~> >}}
+  {bind e {ENV-BIND e ~HEAD head}}
+  {bind e {ENV-BIND e ~TAIL tail}}
+  {bind e {ENV-BIND e ~CONS cons}}
+  {bind e {ENV-BIND e ~LIST list}}
+  {bind e {ENV-BIND e ~NIL? nil?}}
+  {bind e {ENV-BIND e ~ATOM? atom?}}
+  {bind e {ENV-BIND e ~CELL? cell?}}
+  {bind e {ENV-BIND e ~NUM? num?}}
+  {bind e {ENV-BIND e ~TYPE? type?}}
+  {bind e {ENV-BIND e ~PRINT print}}
+  {bind e {ENV-BIND e ~LENGTH length}}
+  {bind e {ENV-BIND e ~NTH nth}}
+  {bind e {ENV-BIND e ~T T}}
+  {bind e {ENV-BIND e ~NIL NIL}}
+  e}
+
+# --- Top-level program evaluator (threads env across expressions) ---
+# Evaluates a list of MAP expressions, threading env through BIND/DEF.
+# Returns {result env} pair so callers can get the updated env.
+
+{def META-EVAL-PROGRAM | exprs env |
+  {when | {nil? exprs} | {list NIL env} |
+    {seq
+      {bind result {META-EVAL {head exprs} env}}
+      {when | {nil? {tail exprs}} |
+        # Last expression — check for bind
+        {when | {META-BIND? result} |
+          {list {nth 2 result}
+            {ENV-BIND env {nth 1 result} {nth 2 result}}} |
+          {list result env}} |
+        # More expressions — thread env if bind
+        {when | {META-BIND? result} |
+          {META-EVAL-PROGRAM {tail exprs}
+            {ENV-BIND env {nth 1 result} {nth 2 result}}} |
+          {META-EVAL-PROGRAM {tail exprs} env}}}}}}
+
+# --- Boot and test ---
+{print :META-CIRCULAR-EVALUATOR :LOADED}
+{bind META-ENV {META-STDLIB}}
+{print :TEST-ADD {META-EVAL ~{+ 1 2} META-ENV}}
+{print :TEST-MUL {META-EVAL ~{* 6 7} META-ENV}}

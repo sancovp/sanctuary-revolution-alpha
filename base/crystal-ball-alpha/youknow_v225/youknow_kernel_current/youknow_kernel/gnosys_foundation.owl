@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<rdf:RDF xmlns="http://sanctuary.ai/gnosys#"
+     xml:base="http://sanctuary.ai/gnosys"
+     xmlns:owl="http://www.w3.org/2002/07/owl#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:xml="http://www.w3.org/XML/1998/namespace"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:uarl="http://sanctuary.ai/uarl#"
+     xmlns:star="http://sanctuary.ai/starsystem#">
+
+    <owl:Ontology rdf:about="http://sanctuary.ai/gnosys">
+        <rdfs:label>GNOSYS Foundation Ontology</rdfs:label>
+        <rdfs:comment>
+The totalized GNOSYS foundation. Imports:
+  - uarl.owl (http://sanctuary.ai/uarl) — core sentence, bootstrap, DOLCE, compression
+  - starsystem.owl (http://sanctuary.ai/starsystem) — GIINT, Navy, Sanctum, Skills
+
+User domain.owl files import THIS by URI. This is the only URI users need.
+        </rdfs:comment>
+        <owl:imports rdf:resource="http://sanctuary.ai/uarl"/>
+        <owl:imports rdf:resource="http://sanctuary.ai/starsystem"/>
+    </owl:Ontology>
+
+</rdf:RDF>

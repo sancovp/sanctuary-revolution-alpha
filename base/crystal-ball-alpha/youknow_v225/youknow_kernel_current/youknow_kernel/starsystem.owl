@@ -1,0 +1,685 @@
+<?xml version="1.0"?>
+<rdf:RDF xmlns="http://sanctuary.ai/uarl#"
+     xml:base="http://sanctuary.ai/starsystem"
+     xmlns:owl="http://www.w3.org/2002/07/owl#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:xml="http://www.w3.org/XML/1998/namespace"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:uarl="http://sanctuary.ai/uarl#">
+
+    <owl:Ontology rdf:about="http://sanctuary.ai/starsystem">
+        <rdfs:label>GNOSYS Starsystem Ontology</rdfs:label>
+        <rdfs:comment>Compound intelligence operational types: GIINT hierarchy, Navy, Sanctum, Skills, Personas, Flights, Missions. Imports UARL foundation by URI.</rdfs:comment>
+        <owl:imports rdf:resource="http://sanctuary.ai/uarl"/>
+    </owl:Ontology>
+
+    <!-- GIINT produces chain REMOVED — was bidirectional with hasFeature/hasComponent/etc
+         at the same meta level, causing infinite healing loops. EMR semantics belong
+         at a different meta level, not as someValuesFrom on structural classes. -->
+
+    <!-- GIINT hierarchy relationships -->
+    <owl:ObjectProperty rdf:about="#hasFeature"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_feature</rdfs:label><rdfs:comment>GIINT_Project → GIINT_Feature</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasComponent"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_component</rdfs:label><rdfs:comment>GIINT_Feature → GIINT_Component</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasDeliverable"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_deliverable</rdfs:label><rdfs:comment>GIINT_Component → GIINT_Deliverable</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasTask"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_task</rdfs:label><rdfs:comment>GIINT_Deliverable → GIINT_Task</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasDesign"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_design</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasPotentialSolution"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_potential_solution</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasInclusionMap"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_inclusion_map</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#proves"><rdfs:label>proves</rdfs:label><rdfs:comment>Inclusion_Map → GIINT_Task (structural proof)</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasDoneSignal"><rdfs:label>has_done_signal</rdfs:label></owl:ObjectProperty>
+
+    <!-- GIINT Deliverable completeness properties -->
+    <owl:ObjectProperty rdf:about="#hasPattern">
+        <rdfs:subPropertyOf rdf:resource="#hasPart"/>
+        <rdfs:label>has_pattern</rdfs:label>
+        <rdfs:comment>GIINT_Deliverable → CodePattern. The implementation pattern this deliverable follows.
+The CodePattern must be a fully typed entity in the graph with its own restrictions satisfied
+(name, description, template, recognizer, operations, composesWith).</rdfs:comment>
+    </owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasExampleReference">
+        <rdfs:label>has_example_reference</rdfs:label>
+        <rdfs:comment>GIINT_Deliverable → ExampleReference. Points to a typed reference to existing code
+that demonstrates the pattern. The ExampleReference must point to a CodeFile/CodeFunction/CodeMethod
+that IS in the graph, typed, showing it has the patterns required for the component.</rdfs:comment>
+    </owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasChangeSpec">
+        <rdfs:label>has_change_spec</rdfs:label>
+        <rdfs:comment>GIINT_Deliverable → ChangeSpec. The exact context range of changes to make
+in the component if it already exists. Only required when modifying existing code.</rdfs:comment>
+    </owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasCodeEntity">
+        <rdfs:label>has_code_entity</rdfs:label>
+        <rdfs:comment>ExampleReference → CodeFile/CodeFunction/CodeMethod/CodeClass.
+The actual code entity in the graph that this reference points to.</rdfs:comment>
+    </owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasLineRange">
+        <rdfs:label>has_line_range</rdfs:label>
+        <rdfs:comment>ExampleReference/ChangeSpec → line range string (e.g. "45-120").
+The specific lines in the code entity that are relevant.</rdfs:comment>
+    </owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#implementsPattern">
+        <rdfs:label>implements_pattern</rdfs:label>
+        <rdfs:comment>CodeFile/CodeClass/CodeFunction → CodePattern.
+Declares that this code entity implements a specific pattern.
+Required for example code to prove it has the patterns needed by the component.</rdfs:comment>
+    </owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasGiintProject"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_giint_project</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasStatus"><rdfs:label>has_status</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasSkill"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_skill</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasFlightConfig"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_flight_config</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasPersona"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_persona</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasMcpServer"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_mcp_server</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasAgent"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_agent</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#configures"><rdfs:label>configures</rdfs:label></owl:ObjectProperty>
+    <!-- Skill/SkillSpec properties -->
+    <owl:ObjectProperty rdf:about="#hasSpec"><rdfs:label>has_spec</rdfs:label><rdfs:comment>Skill HAS a SkillSpec — the spec is always present, manufactured from args if not explicit</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasPersonalDomain"><rdfs:label>has_personal_domain</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasSubdomain"><rdfs:label>has_subdomain</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasContent"><rdfs:label>has_content</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasReference"><rdfs:label>has_reference</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasResources"><rdfs:label>has_resources</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasScripts"><rdfs:label>has_scripts</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasTemplates"><rdfs:label>has_templates</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasRequires"><rdfs:label>has_requires</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasDescribesComponent"><rdfs:label>has_describes_component</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasStarsystem"><rdfs:label>has_starsystem</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasAllowedTools"><rdfs:label>has_allowed_tools</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasModelPref"><rdfs:label>has_model</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasContextMode"><rdfs:label>has_context_mode</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasAgentType"><rdfs:label>has_agent_type</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasHook"><rdfs:label>has_hook</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasUserInvocable"><rdfs:label>has_user_invocable</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasDisableModelInvocation"><rdfs:label>has_disable_model_invocation</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasArgumentHint"><rdfs:label>has_argument_hint</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#automates"><rdfs:label>automates</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#providesToolsTo"><rdfs:label>provides_tools_to</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#emanates"><rdfs:label>emanates</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#colonizes"><rdfs:label>colonizes</rdfs:label></owl:ObjectProperty>
+    <!-- Derivation chain primitives (from UARL core sentence) -->
+    <owl:ObjectProperty rdf:about="#reifies">
+        <rdfs:label>reifies</rdfs:label>
+        <rdfs:comment>The act of formal commitment — locking a recognized pattern into structured, explicit relationship. In SOUP entry: input reifies into PIOEntity. In core sentence: produces reifies PatternOfIsA (the quine). Range is open because reification targets vary: SOUP entry targets PIOEntity, foundation self-reference targets itself, domain concepts target their patterns.</rdfs:comment>
+        <!-- NO rdfs:range — reification targets are context-dependent -->
+    </owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#primitiveIsA"><rdfs:label>primitive_is_a</rdfs:label><rdfs:comment>Pre-linguistic is_a — any claim at all. L0 in derivation chain.</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#candidateIsA"><rdfs:label>candidate_is_a</rdfs:label><rdfs:comment>Candidate for promotion — has embodies but not yet manifests.</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#isAPromotion"><rdfs:label>is_a_promotion</rdfs:label><rdfs:comment>Promoted is_a — chain closes, all targets typed. L4 in derivation.</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#isAPattern"><rdfs:label>is_a_pattern</rdfs:label><rdfs:comment>PatternOfIsA instantiation — the subgraph that programs the label.</rdfs:comment></owl:ObjectProperty>
+    <!-- PIO / attention operators -->
+    <owl:ObjectProperty rdf:about="#attentionChainsTo"><rdfs:label>attention_chains_to</rdfs:label><rdfs:comment>PIO attention chaining — X focuses attention on Y.</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#siblingOf"><rdfs:label>sibling_of</rdfs:label><rdfs:comment>Same-level parallel entity — shares parent.</rdfs:comment></owl:ObjectProperty>
+    <!-- General structural -->
+    <owl:ObjectProperty rdf:about="#instanceOf"><rdfs:label>instance_of</rdfs:label><rdfs:comment>Standard rdf:type semantic (distinct from generative instantiates).</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#relatesTo"><rdfs:label>relates_to</rdfs:label><rdfs:comment>Weak untyped relationship — requires_evolution marker.</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#describes"><rdfs:label>describes</rdfs:label><rdfs:comment>X describes Y — used for skill→component, doc→system.</rdfs:comment></owl:ObjectProperty>
+    <!-- GIINT path -->
+    <owl:ObjectProperty rdf:about="#hasPath"><rdfs:label>has_path</rdfs:label><rdfs:comment>GIINT_Project → filesystem path of the project.</rdfs:comment></owl:ObjectProperty>
+    <!-- Inter-starsystem relations -->
+    <owl:ObjectProperty rdf:about="#dependsOn"><rdfs:label>depends_on</rdfs:label><rdfs:comment>Starsystem X depends on starsystem Y.</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#uses"><rdfs:label>uses</rdfs:label><rdfs:comment>Starsystem X uses starsystem Y.</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#integratesWith"><rdfs:label>integrates_with</rdfs:label><rdfs:comment>Starsystem X integrates with starsystem Y.</rdfs:comment></owl:ObjectProperty>
+    <!-- Navy/Seed Ship properties -->
+    <owl:ObjectProperty rdf:about="#hasAdmiral"><rdfs:label>has_admiral</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasLeader"><rdfs:label>has_leader</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasLooseStarship"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_loose_starship</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasState"><rdfs:label>has_state</rdfs:label><rdfs:comment>Binary state: Wasteland or Sanctuary.</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasSquadron"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_squadron</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasMember"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_member</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasKardashevLevel"><rdfs:label>has_kardashev_level</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasDomain"><rdfs:label>has_domain</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasCategory"><rdfs:label>has_category</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasWhat"><rdfs:label>has_what</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasWhen"><rdfs:label>has_when</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasProduces"><rdfs:label>has_produces</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasHookEventType"><rdfs:label>has_hook_event_type</rdfs:label><rdfs:comment>Hook event type: SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, Notification, Stop</rdfs:comment></owl:ObjectProperty>
+
+    <!-- Seed Ship -->
+    <owl:Class rdf:about="#Seed_Ship">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Seed_Ship</rdfs:label>
+        <rdfs:comment>Root graph node. One per user. Contains starsystems, kardashev map, sanctum.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPart"/><owl:someValuesFrom rdf:resource="#Starsystem_Registry"/></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPart"/><owl:someValuesFrom rdf:resource="#Kardashev_Map"/></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPart"/><owl:someValuesFrom rdf:resource="#Sanctum"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <!-- Starsystem hierarchy -->
+    <owl:Class rdf:about="#Starsystem_Registry"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Starsystem_Registry</rdfs:label></owl:Class>
+    <owl:Class rdf:about="#Starsystem_Collection">
+        <rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Starsystem_Collection</rdfs:label>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPart"/><owl:someValuesFrom rdf:resource="#Collection_Category"/></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasGiintProject"/><owl:someValuesFrom rdf:resource="#GIINT_Project"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+    <owl:Class rdf:about="#Collection_Category"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Collection_Category</rdfs:label></owl:Class>
+    <owl:Class rdf:about="#Hypercluster">
+        <rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Hypercluster</rdfs:label>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasGiintProject"/><owl:someValuesFrom rdf:resource="#GIINT_Project"/></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Collection_Category"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <!-- GIINT hierarchy -->
+    <owl:Class rdf:about="#GIINT_Project">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>GIINT_Project</rdfs:label>
+        <rdfs:comment>A project is a list of features with a vision description of requirements.
+Every feature must meet the requirements that apply to it. A project without features is incomplete.</rdfs:comment>
+        <!-- Must have at least one feature -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasFeature"/><owl:someValuesFrom rdf:resource="#GIINT_Feature"/></owl:Restriction></rdfs:subClassOf>
+        <!-- Must have a path (starsystem directory) -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPath"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#GIINT_Feature">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>GIINT_Feature</rdfs:label>
+        <rdfs:comment>A feature meets specific requirements from the project.
+Its logic of how it meets those requirements depends on its components.
+A feature without components is incomplete.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#GIINT_Project"/></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasComponent"/><owl:someValuesFrom rdf:resource="#GIINT_Component"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#GIINT_Component">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>GIINT_Component</rdfs:label>
+        <rdfs:comment>A component IS code files. Each component is made of patterns from other
+codebases or ontologies that are implemented to make deliverables. A component without deliverables is incomplete. A component must reference
+the code files it consists of.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#GIINT_Feature"/></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasDeliverable"/><owl:someValuesFrom rdf:resource="#GIINT_Deliverable"/></owl:Restriction></rdfs:subClassOf>
+        <!-- Component must reference the code it consists of -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasCodeEntity"/><owl:someValuesFrom rdf:resource="#CodeFile"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#GIINT_Deliverable">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>GIINT_Deliverable</rdfs:label>
+        <rdfs:comment>A deliverable is a concrete build unit. It MUST have:
+A) The patterns it comes from (hasPattern → CodePattern, fully typed in graph)
+B) Example references with context line ranges (hasExampleReference → ExampleReference)
+C) Change specs if modifying existing code (hasChangeSpec → ChangeSpec)
+D) The example code must be in the graph, typed, showing it implements the required patterns
+
+IF ALL OF THIS IS TRUE, the deliverable is REAL (ONT).
+IF NOT, the deliverable is incomplete (SOUP).</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#GIINT_Component"/></owl:Restriction></rdfs:subClassOf>
+        <!-- Must have implementation patterns -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPattern"/><owl:someValuesFrom rdf:resource="#CodePattern"/></owl:Restriction></rdfs:subClassOf>
+        <!-- Must have example references showing where patterns are used -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasExampleReference"/><owl:someValuesFrom rdf:resource="#ExampleReference"/></owl:Restriction></rdfs:subClassOf>
+        <!-- Deliverable must have at least one task (enters as _Unnamed SOUP, filled when agent creates tasks) -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasTask"/><owl:someValuesFrom rdf:resource="#GIINT_Task"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#GIINT_Task">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>GIINT_Task</rdfs:label>
+        <rdfs:comment>An atomic unit of work. Created dynamically by the agent during BUILD.
+Tasks are NOT pre-planned — they emerge as the agent works on a deliverable.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#GIINT_Deliverable"/></owl:Restriction></rdfs:subClassOf>
+        <!-- Task must have a done signal before completion (enters as _Unnamed SOUP, filled when work is done) -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasDoneSignal"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <!-- Deliverable support types -->
+    <owl:Class rdf:about="#ExampleReference">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>ExampleReference</rdfs:label>
+        <rdfs:comment>A typed reference to existing code that demonstrates a pattern.
+Must point to a code entity (CodeFile, CodeFunction, CodeMethod, CodeClass) that IS in the graph.
+The code entity must itself have implementsPattern showing it has the required patterns.
+Must have line ranges showing exactly which lines are relevant.</rdfs:comment>
+        <!-- Must point to a code entity in the graph -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasCodeEntity"/><owl:someValuesFrom rdf:resource="#CodeFile"/></owl:Restriction></rdfs:subClassOf>
+        <!-- Must have line range -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasLineRange"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <!-- Must reference the pattern being demonstrated -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPattern"/><owl:someValuesFrom rdf:resource="#CodePattern"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#ChangeSpec">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>ChangeSpec</rdfs:label>
+        <rdfs:comment>The exact context range of changes to make in a component that already exists.
+Must point to the code entity being modified and specify the line range.</rdfs:comment>
+        <!-- Must point to code being modified -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasCodeEntity"/><owl:someValuesFrom rdf:resource="#CodeFile"/></owl:Restriction></rdfs:subClassOf>
+        <!-- Must have line range of what to change -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasLineRange"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <!-- GIINT auxiliary — full semantic requirements -->
+    <owl:Class rdf:about="#Bug">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Bug</rdfs:label>
+        <rdfs:comment>The exact error observed. Must reference the code where it occurs and describe expected vs actual behavior.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#GIINT_Component"/></owl:Restriction></rdfs:subClassOf>
+        <!-- Bug must reference the code file where the error occurs -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasCodeEntity"/><owl:someValuesFrom rdf:resource="#CodeFile"/></owl:Restriction></rdfs:subClassOf>
+        <!-- Bug must have line range showing where the error is -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasLineRange"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <!-- Bug must have a potential solution (enters as _Unnamed SOUP, filled later) -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPotentialSolution"/><owl:someValuesFrom rdf:resource="#Potential_Solution"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+    <owl:Class rdf:about="#Potential_Solution">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Potential_Solution</rdfs:label>
+        <rdfs:comment>A hypothesis for fixing a bug. Must reference the code to change and the pattern to apply.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Bug"/></owl:Restriction></rdfs:subClassOf>
+        <!-- Solution must reference code to change -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasCodeEntity"/><owl:someValuesFrom rdf:resource="#CodeFile"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+    <owl:Class rdf:about="#Design">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Design</rdfs:label>
+        <rdfs:comment>A design decision or pattern shaping a feature. Must describe the problem pattern and solution pattern.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#GIINT_Feature"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+    <owl:Class rdf:about="#Idea">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Idea</rdfs:label>
+        <rdfs:comment>A snapshot of a thought. Lives under a project.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#GIINT_Project"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+    <owl:Class rdf:about="#Inclusion_Map">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Inclusion_Map</rdfs:label>
+        <rdfs:comment>Structural proof linking tasks to deliverable completion. Must prove specific tasks with evidence of what changed, what was tested, what was produced.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#GIINT_Deliverable"/></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#proves"/><owl:someValuesFrom rdf:resource="#GIINT_Task"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <!-- Navy hierarchy -->
+    <owl:Class rdf:about="#Kardashev_Map"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Kardashev_Map</rdfs:label></owl:Class>
+    <owl:Class rdf:about="#Navy_Fleet"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Navy_Fleet</rdfs:label><rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Kardashev_Map"/></owl:Restriction></rdfs:subClassOf><rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasSquadron"/><owl:someValuesFrom rdf:resource="#Navy_Squadron"/></owl:Restriction></rdfs:subClassOf></owl:Class>
+    <owl:Class rdf:about="#Navy_Squadron"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Navy_Squadron</rdfs:label><rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasMember"/><owl:someValuesFrom rdf:resource="#Navy_Starship"/></owl:Restriction></rdfs:subClassOf></owl:Class>
+    <owl:Class rdf:about="#Navy_Starship">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Navy_Starship</rdfs:label>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Kardashev_Map"/></owl:Restriction></rdfs:subClassOf>
+        <!-- Every starship must have a kardashev level -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasKardashevLevel"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <!-- Every starship must have a path to its directory -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPath"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <!-- Sanctum -->
+    <owl:Class rdf:about="#Sanctum"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Sanctum</rdfs:label></owl:Class>
+    <owl:Class rdf:about="#Sanctum_Ritual"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Sanctum_Ritual</rdfs:label><rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Sanctum"/></owl:Restriction></rdfs:subClassOf></owl:Class>
+    <owl:Class rdf:about="#Sanctum_Goal"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Sanctum_Goal</rdfs:label><rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Sanctum"/></owl:Restriction></rdfs:subClassOf></owl:Class>
+    <owl:Class rdf:about="#Sanctum_Boundary"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Sanctum_Boundary</rdfs:label><rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Sanctum"/></owl:Restriction></rdfs:subClassOf></owl:Class>
+
+    <!-- Discovered/emanation types -->
+    <!-- SkillSpec = the IDEA of a skill. 9 fields that define the boundary/skeleton. -->
+    <owl:Class rdf:about="#SkillSpec">
+        <rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>SkillSpec</rdfs:label>
+        <rdfs:comment>The content-less skeleton of a skill boundary. An Idea-level concept — only metaphors/shadows required. 9 required relationships.</rdfs:comment>
+        <!-- Core 5: what the skill IS ABOUT -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasDomain"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasCategory"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasWhat"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasWhen"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasProduces"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <!-- Extended 4: system links -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasSubdomain"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasRequires"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasStarsystem"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+    <!-- Skill = the REAL THING. HAS a SkillSpec (always). 22 total relationships.
+         Even if entered without explicit SkillSpec, the system acts like it was engineered properly —
+         manufactures the SkillSpec internally from the args. -->
+    <owl:Class rdf:about="#Skill">
+        <rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Skill</rdfs:label>
+        <!-- Skill HAS a SkillSpec — always present -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasSpec"/><owl:someValuesFrom rdf:resource="#SkillSpec"/></owl:Restriction></rdfs:subClassOf>
+        <!-- SkillSpec fields (9, inherited through has_spec but also directly required) -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasDomain"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasCategory"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasWhat"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasWhen"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasProduces"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasSubdomain"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasRequires"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasStarsystem"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <!-- Content + structure (5) -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasContent"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasReference"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasResources"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasScripts"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasTemplates"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <!-- Claude Code integration (8) -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasAllowedTools"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasModelPref"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasContextMode"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasAgentType"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasHook"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasUserInvocable"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasDisableModelInvocation"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasArgumentHint"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <!-- Personal domain (from observation system) -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPersonalDomain"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+    <!-- ============================================== -->
+    <!-- SKILL CATEGORY HIERARCHY (CONSTANT — no additions allowed) -->
+    <!-- These are the ONLY valid values for hasCategory on Skill -->
+    <!-- Like observation tags: fixed enum, not extensible -->
+    <!-- ============================================== -->
+
+    <owl:Class rdf:about="#Skill_Category">
+        <rdfs:subClassOf rdf:resource="#Category"/>
+        <rdfs:label>Skill Category</rdfs:label>
+        <rdfs:comment>
+The category of a skill. CONSTANT — exactly 3 types, no additions.
+All three are thin wrappers around CartON collection activation.
+The differentiator is what happens AFTER context loads.
+        </rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Skill_Category_Understand">
+        <rdfs:subClassOf rdf:resource="#Skill_Category"/>
+        <rdfs:label>Skill Category: Understand</rdfs:label>
+        <rdfs:comment>
+Pure context loading. activate_collection(X), read concepts.
+NO executable component. Never has scripts/.
+Used when you need to discuss, remember, or understand a domain.
+Example: "understand quantum mechanics", "understand MCP architecture"
+        </rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Skill_Category_Preflight">
+        <rdfs:subClassOf rdf:resource="#Skill_Category"/>
+        <rdfs:label>Skill Category: Preflight</rdfs:label>
+        <rdfs:comment>
+Context loading + pointer to flight config. activate_collection(X)
+then points to fly() domain or specific flight.
+Used when you need to prime for a specific task.
+Read context, then browse/start flights.
+        </rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Skill_Category_Single_Turn_Process">
+        <rdfs:subClassOf rdf:resource="#Skill_Category"/>
+        <rdfs:label>Skill Category: Single Turn Process</rdfs:label>
+        <rdfs:comment>
+Context loading + immediate action. activate_collection(X)
+then DO something now in one turn. No flight needed.
+May have scripts/ directory.
+Used when context + action fit in one turn.
+        </rdfs:comment>
+    </owl:Class>
+
+    <!-- hasCategory property: Skill → Skill_Category -->
+    <owl:ObjectProperty rdf:about="#hasCategory">
+        <rdfs:domain rdf:resource="#Skill"/>
+        <rdfs:range rdf:resource="#Skill_Category"/>
+        <rdfs:label>has_category</rdfs:label>
+        <rdfs:comment>Which of the 3 constant skill categories this skill belongs to.</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <!-- ============================================== -->
+    <!-- CATEGORY-DEPENDENT SKILL RESTRICTIONS -->
+    <!-- A Skill with hasCategory X must satisfy X's anchor requirements -->
+    <!-- These are OWL-native versions of the giint_types.py validation -->
+    <!-- ============================================== -->
+
+    <!-- Understand Skill: category subtype. GIINT anchor is OPTIONAL (earns points, not required). -->
+    <owl:Class rdf:about="#Understand_Skill">
+        <owl:equivalentClass>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="#Skill"/>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasCategory"/>
+                        <owl:hasValue rdf:resource="#Skill_Category_Understand"/>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </owl:equivalentClass>
+        <rdfs:label>Understand Skill</rdfs:label>
+        <rdfs:comment>Skill with category=Understand. If it has hasDescribesComponent pointing to a GIINT_Component, it is an emanation skill (earns points). Not required.</rdfs:comment>
+    </owl:Class>
+
+    <!-- Preflight Skill: category subtype. GIINT anchor is OPTIONAL (earns points, not required). -->
+    <owl:Class rdf:about="#Preflight_Skill">
+        <owl:equivalentClass>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="#Skill"/>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasCategory"/>
+                        <owl:hasValue rdf:resource="#Skill_Category_Preflight"/>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </owl:equivalentClass>
+        <rdfs:label>Preflight Skill</rdfs:label>
+        <rdfs:comment>Skill with category=Preflight. GIINT anchor (partOf or hasDescribesComponent) is optional — earns points if present.</rdfs:comment>
+    </owl:Class>
+
+    <!-- STP Skill: category subtype. GIINT anchor is OPTIONAL (earns points, not required). -->
+    <owl:Class rdf:about="#Single_Turn_Process_Skill">
+        <owl:equivalentClass>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="#Skill"/>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasCategory"/>
+                        <owl:hasValue rdf:resource="#Skill_Category_Single_Turn_Process"/>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </owl:equivalentClass>
+        <rdfs:label>Single Turn Process Skill</rdfs:label>
+        <rdfs:comment>Skill with category=STP. GIINT anchor (partOf, hasProduces, or hasDescribesComponent) is optional — earns points if present.</rdfs:comment>
+    </owl:Class>
+
+    <!-- ============================================== -->
+    <!-- SKILL INSTANTIATION PATTERNS -->
+    <!-- What pattern a skill instantiates (how it was created) -->
+    <!-- ============================================== -->
+
+    <owl:Class rdf:about="#Skill_Understand_Pattern">
+        <rdfs:subClassOf rdf:resource="#Pattern"/>
+        <rdfs:label>Skill Understand Pattern</rdfs:label>
+        <rdfs:comment>Pattern for creating understand skills. Context only, no action.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Skill_Preflight_Pattern">
+        <rdfs:subClassOf rdf:resource="#Pattern"/>
+        <rdfs:label>Skill Preflight Pattern</rdfs:label>
+        <rdfs:comment>Pattern for creating preflight skills. Context + flight pointer.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Skill_Single_Turn_Process_Pattern">
+        <rdfs:subClassOf rdf:resource="#Pattern"/>
+        <rdfs:label>Skill Single Turn Process Pattern</rdfs:label>
+        <rdfs:comment>Pattern for creating STP skills. Context + immediate action.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Flight_Config"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Flight_Config</rdfs:label><rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasDomain"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf></owl:Class>
+    <owl:Class rdf:about="#Persona"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Persona</rdfs:label><rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasSkill"/><owl:someValuesFrom rdf:resource="#Skill"/></owl:Restriction></rdfs:subClassOf><rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#configures"/><owl:someValuesFrom rdf:resource="#Starsystem_Collection"/></owl:Restriction></rdfs:subClassOf></owl:Class>
+    <owl:Class rdf:about="#MCP_Server"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>MCP_Server</rdfs:label></owl:Class>
+    <owl:Class rdf:about="#Starship_Pilot"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Starship_Pilot</rdfs:label><rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPart"/><owl:someValuesFrom rdf:resource="#Persona"/></owl:Restriction></rdfs:subClassOf><rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Navy_Starship"/></owl:Restriction></rdfs:subClassOf></owl:Class>
+    <owl:Class rdf:about="#Mission"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Mission</rdfs:label><rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPart"/><owl:someValuesFrom rdf:resource="#Flight_Config"/></owl:Restriction></rdfs:subClassOf></owl:Class>
+    <owl:Class rdf:about="#Starlog"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Starlog</rdfs:label><rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Starsystem_Collection"/></owl:Restriction></rdfs:subClassOf></owl:Class>
+    <owl:Class rdf:about="#Automation"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Automation</rdfs:label></owl:Class>
+    <owl:Class rdf:about="#Agent">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Agent</rdfs:label>
+        <rdfs:comment>A Claude Code agent definition (.md file in .claude/agents/). Base class for all agent types.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasName"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasAllowedTools"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+    <owl:Class rdf:about="#CAVE_Agent"><rdfs:subClassOf rdf:resource="#Agent"/><rdfs:label>CAVE_Agent</rdfs:label><rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPart"/><owl:someValuesFrom rdf:resource="#Automation"/></owl:Restriction></rdfs:subClassOf></owl:Class>
+    <owl:Class rdf:about="#Hook">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Hook</rdfs:label>
+        <rdfs:comment>A Claude Code hook (.py file in .claude/hooks/). Fires on specific events (PreToolUse, PostToolUse, etc.).</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPath"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasName"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasHookEventType"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+    <owl:Class rdf:about="#Slash_Command">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Slash_Command</rdfs:label>
+        <rdfs:comment>A Claude Code slash command definition (.md file). User-invocable command.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasName"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+    <owl:Class rdf:about="#ConfigFile">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>ConfigFile</rdfs:label>
+        <rdfs:comment>A configuration file in .claude/ (CLAUDE.md, settings.json, settings.local.json).</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPath"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+    <owl:Class rdf:about="#Pattern"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Pattern</rdfs:label></owl:Class>
+
+    <!-- Prolog rules stored in the ontology — loaded into Prolog runtime and live forever -->
+    <owl:Class rdf:about="#Prolog_Rule">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Prolog_Rule</rdfs:label>
+        <rdfs:comment>A Prolog rule stored in the ontology. When created through youknow(), it gets asserted into the live Prolog runtime. The rule_body property contains the actual Prolog syntax. Rules persist in domain.owl and reload on every PrologRuntime init.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasRuleBody"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+    <owl:DatatypeProperty rdf:about="#hasRuleBody"><rdfs:label>has_rule_body</rdfs:label><rdfs:comment>The Prolog rule syntax string. Asserted directly into SWI-Prolog.</rdfs:comment></owl:DatatypeProperty>
+    <owl:ObjectProperty rdf:about="#operatesOn"><rdfs:label>operates_on</rdfs:label><rdfs:comment>What type this rule checks/queries when fired.</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#producesType"><rdfs:label>produces_type</rdfs:label><rdfs:comment>What type this rule can produce/discover when it fires.</rdfs:comment></owl:ObjectProperty>
+
+
+    <!-- Starlog hierarchy types -->
+    <owl:Class rdf:about="#Starlog_Project">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Starlog_Project</rdfs:label>
+        <rdfs:comment>Scoped event ledger belonging to one or more starsystems. Contains sessions and debug diary entries.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Starsystem_Collection"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Starlog_Session">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Starlog_Session</rdfs:label>
+        <rdfs:comment>A bounded work session within a starlog project. Has start/end timestamps and goals.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Starlog_Project"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Starlog_Joint_Session">
+        <rdfs:subClassOf rdf:resource="#Starlog_Project"/>
+        <rdfs:label>Starlog_Joint_Session</rdfs:label>
+        <rdfs:comment>A starlog project spanning multiple starsystems. Part_of each member starsystem. Has child sessions in each member.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Debug_Diary_Entry">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Debug_Diary_Entry</rdfs:label>
+        <rdfs:comment>Timestamped observation in a starlog project diary. Typed by entry_type and source.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Starlog_Project"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:ObjectProperty rdf:about="#hasChildSession">
+        <rdfs:subPropertyOf rdf:resource="#hasPart"/>
+        <rdfs:label>has_child_session</rdfs:label>
+        <rdfs:comment>Starlog_Joint_Session → Starlog_Session (child sessions in member starsystems)</rdfs:comment>
+        <rdfs:domain rdf:resource="#Starlog_Joint_Session"/>
+        <rdfs:range rdf:resource="#Starlog_Session"/>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasStarlogProject">
+        <rdfs:subPropertyOf rdf:resource="#hasPart"/>
+        <rdfs:label>has_starlog_project</rdfs:label>
+        <rdfs:comment>Starsystem → Starlog_Project</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <!-- ================================================================== -->
+    <!-- SDNA TYPES — auto-generated from codeness.observe_codeness()       -->
+    <!-- Source: /home/GOD/gnosys-plugin-v2/base/sdna/sdna/                 -->
+    <!-- Generated: 2026-05-05                                              -->
+    <!-- ================================================================== -->
+
+    <!-- SDNA relationship properties -->
+    <owl:ObjectProperty rdf:about="#hasAriadne"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_ariadne</rdfs:label><rdfs:comment>SDNAC → AriadneChain (context preparation)</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasHermesConfig"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_hermes_config</rdfs:label><rdfs:comment>SDNAC → HermesConfig (message configuration)</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasSdnac"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_sdnac</rdfs:label><rdfs:comment>SDNA_Flow → SDNAC</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasFlow"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_flow</rdfs:label><rdfs:comment>SDNA_Flowchain → SDNA_Flow</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasOvp"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_ovp</rdfs:label><rdfs:comment>SDNA_Flowchain → SDNAC (observer viewpoint)</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasElement"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_element</rdfs:label><rdfs:comment>AriadneChain → AriadneElement</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasTransport"><rdfs:label>has_transport</rdfs:label><rdfs:comment>ContextEngineeringLib/Session → TransportType</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasGoal"><rdfs:label>has_goal</rdfs:label><rdfs:comment>HermesConfig → goal string</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasBackend"><rdfs:label>has_backend</rdfs:label><rdfs:comment>HermesConfig → backend provider</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasThen"><rdfs:label>has_then</rdfs:label><rdfs:comment>TransitionAction → TransitionAction (chain link)</rdfs:comment></owl:ObjectProperty>
+
+    <!-- SDNAC: Ariadne + HermesConfig + Poimandres chain -->
+    <owl:Class rdf:about="#Sdnac">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>SDNAC</rdfs:label>
+        <rdfs:comment>SDNA Chain: Ariadne (context prep) + HermesConfig (message) + Poimandres (generation). Constructor: SDNAC(name, ariadne: AriadneChain, config: HermesConfig). Methods: async execute(context, on_message) -> SDNAResult, to_graph() -> CompiledGraph. Source: sdna/sdna.py</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasName"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasAriadne"/><owl:someValuesFrom rdf:resource="#Ariadne_Chain"/></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasHermesConfig"/><owl:someValuesFrom rdf:resource="#Hermes_Config"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <!-- SDNA_Flow: sequence of SDNACs -->
+    <owl:Class rdf:about="#Sdna_Flow">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>SDNA_Flow</rdfs:label>
+        <rdfs:comment>Sequence of SDNACs executed in order. Constructor: SDNAFlow(name, sdnacs: List[SDNAC]). Methods: async execute(context) -> SDNAResult, to_graph() -> CompiledGraph. Source: sdna/sdna.py</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasName"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasSdnac"/><owl:someValuesFrom rdf:resource="#Sdnac"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <!-- SDNA_Flowchain: evaluation chain with OVP -->
+    <owl:Class rdf:about="#Sdna_Flowchain">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>SDNA_Flowchain</rdfs:label>
+        <rdfs:comment>Evaluation chain: flow + OVP observer. Constructor: SDNAFlowchain(name, flow: SDNAFlow, ovp: SDNAC, target, max_cycles, approval_key, feedback_key). Methods: async execute(context) -> SDNAFlowchainResult. Source: sdna/sdna.py</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasName"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasFlow"/><owl:someValuesFrom rdf:resource="#Sdna_Flow"/></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasOvp"/><owl:someValuesFrom rdf:resource="#Sdnac"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <!-- AriadneChain: context preparation -->
+    <owl:Class rdf:about="#Ariadne_Chain">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Ariadne_Chain</rdfs:label>
+        <rdfs:comment>Context preparation chain. Constructor: AriadneChain(name, elements: List[AriadneElement]). Methods: async execute(context, start_at) -> AriadneResult, to_graph() -> CompiledGraph. Source: sdna/ariadne.py</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasName"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasElement"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <!-- HermesConfig: message configuration -->
+    <owl:Class rdf:about="#Hermes_Config">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Hermes_Config</rdfs:label>
+        <rdfs:comment>Message configuration for SDNAC. Fields: name, goal (resolve with inputs), backend, system_prompt, tools, mcp_servers, model, cwd, env, max_turns, hooks, agents, permission_mode. Methods: resolve_goal(inputs), to_sdk_options(), to_runner_kwargs(inputs), to_langgraph_node(). Source: sdna/config.py</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasGoal"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <!-- Poimandres_Result: generation output -->
+    <owl:Class rdf:about="#Poimandres_Result">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Poimandres_Result</rdfs:label>
+        <rdfs:comment>Result of Poimandres generation. Fields: success (bool), output (dict), blocked (bool), error (str), step_result. Source: sdna/poimandres.py</rdfs:comment>
+    </owl:Class>
+
+    <!-- Context_Engineering_Lib: session management -->
+    <owl:Class rdf:about="#Context_Engineering_Lib">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Context_Engineering_Lib</rdfs:label>
+        <rdfs:comment>SDNA context engineering library. Constructor: ContextEngineeringLib(transport: TransportType). Methods: inject(session, context, method), weave(source, target, start, end), dovetail(sessions, strategy), send(session, prompt), send_chain(session, chain). Source: sdna/context_engineering.py</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasTransport"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <!-- Transition_Action: state machine step -->
+    <owl:Class rdf:about="#Transition_Action">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Transition_Action</rdfs:label>
+        <rdfs:comment>State transition action with optional chain link. Fields: then (optional TransitionAction). Methods: execute(lib) -> dict, execute_chain(lib) -> list. Source: sdna/context_engineering.py</rdfs:comment>
+    </owl:Class>
+
+    <!-- SDNA_Session: runtime session -->
+    <owl:Class rdf:about="#Sdna_Session">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>SDNA_Session</rdfs:label>
+        <rdfs:comment>Runtime session for context engineering. Fields: id (str), transport (TransportType), tmux_session, conversation_id, created_at, metadata. Source: sdna/context_engineering.py</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasTransport"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+</rdf:RDF>

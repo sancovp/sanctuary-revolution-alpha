@@ -1,0 +1,43 @@
+# REIFY — turn data into executable operations
+# This is the metaprogramming core: build code from data, then run it
+
+# BUILD-EXPR — construct an s-expression from parts
+{def BUILD-EXPR | op args |
+  {cons op args}}
+
+# REIFY-BINOP — create a binary operation from a symbol
+{def REIFY-BINOP | op-sym |
+  {morph | a b |
+    @{BUILD-EXPR op-sym {list a b}}}}
+
+# MAKE-COUNTER — demonstrates stateful metaprogramming
+# Returns a closure that counts up from N
+{def MAKE-COUNTER | n |
+  {bind state {list n}}
+  {morph | |
+    {bind current {head state}}
+    {set! state {list {+ current 1}}}
+    current}}
+
+# MAKE-MEMO — memoization via self-modification
+# Wraps a function with a result cache
+# (simplified — cache is a linear search through a list)
+{def MAKE-MEMO | fn |
+  {bind cache NIL}
+  {morph | arg |
+    {bind hit {MEMO-LOOKUP cache arg}}
+    {when | hit |
+      {head {tail hit}} |
+      {seq
+        {bind result {fn arg}}
+        {set! cache {cons {list arg result} cache}}
+        result}}}}
+
+{def MEMO-LOOKUP | cache key |
+  {when | {nil? cache} |
+    NIL |
+    {when | {= {head {head cache}} key} |
+      {head cache} |
+      {MEMO-LOOKUP {tail cache} key}}}}
+
+{print :OP :REIFY :LOADED}

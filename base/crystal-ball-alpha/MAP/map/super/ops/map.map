@@ -1,0 +1,23 @@
+# MAP — apply function to each element of a list
+# Returns a new list with results
+
+{def MAP | fn lst |
+  {when | {nil? lst} |
+    NIL |
+    {cons {fn {head lst}} {MAP fn {tail lst}}}}}
+
+# FILTER — keep elements where predicate returns true
+{def FILTER | pred lst |
+  {when | {nil? lst} |
+    NIL |
+    {when | {pred {head lst}} |
+      {cons {head lst} {FILTER pred {tail lst}}} |
+      {FILTER pred {tail lst}}}}}
+
+# REDUCE — fold a list with an accumulator
+{def REDUCE | fn init lst |
+  {when | {nil? lst} |
+    init |
+    {REDUCE fn {fn init {head lst}} {tail lst}}}}
+
+{print :OP :MAP-FILTER-REDUCE :LOADED}

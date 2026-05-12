@@ -1,0 +1,44 @@
+# MATCH — pattern matching on MAP values
+# {MATCH value {list {list pattern1 result1} {list pattern2 result2} ...}}
+# Patterns:
+#   ~_          — wildcard, matches anything
+#   ~SYM        — literal symbol match
+#   number      — literal number match
+#   NIL         — matches NIL
+#   {list ...}  — structural match on lists (recursive)
+
+# MATCH-PAT — test if a value matches a single pattern
+# Returns 1 (match) or NIL (no match)
+{def MATCH-PAT | val pat |
+  {when | {atom? pat} |
+    {when | {= pat ~_} |
+      1 |
+      {= val pat}} |
+    {when | {nil? pat} |
+      {nil? val} |
+      {when | {nil? val} |
+        NIL |
+        {when | {cell? val} |
+          {when | {MATCH-PAT {head val} {head pat}} |
+            {MATCH-PAT {tail val} {tail pat}} |
+            NIL} |
+          NIL}}}}}
+
+# MATCH-CLAUSES — try each clause in order, return first matching result
+# clauses is a list of {pattern result} pairs
+{def MATCH-CLAUSES | val clauses |
+  {when | {nil? clauses} |
+    NIL |
+    {bind clause {head clauses}}
+    {bind pat {head clause}}
+    {bind result {head {tail clause}}}
+    {when | {MATCH-PAT val pat} |
+      result |
+      {MATCH-CLAUSES val {tail clauses}}}}}
+
+# MATCH — the main entry point
+# {MATCH value clauses-list}
+{def MATCH | val clauses |
+  {MATCH-CLAUSES val clauses}}
+
+{print :OP :MATCH :LOADED}

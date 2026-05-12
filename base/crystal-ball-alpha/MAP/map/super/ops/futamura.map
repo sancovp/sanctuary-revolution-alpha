@@ -1,0 +1,120 @@
+# FUTAMURA — Futamura projections for Map
+#
+# The three projections:
+#
+#   1st: {fut1 interp-path program-expr}
+#        specialize(interpreter, program) => compiled-program
+#        All interpreter dispatch for that specific program is reduced away.
+#
+#   2nd: {fut2 interp-path}
+#        specialize(specialize, interpreter) => compiler
+#        A compiler is a function: program => compiled-program
+#        (We return the residual of specializing the PE with interp fixed)
+#
+#   3rd: {fut3}
+#        specialize(specialize, specialize) => compiler-compiler
+#        A compiler-compiler takes an interpreter and returns a compiler.
+#
+# In Map, the PE is exposed as the {pe ~expr alist} builtin.
+# pe-source reads a .map file into a quoted AST.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Helper: build a static-binding alist from name+value pairs
+# {make-static-env {list {list ~NAME1 val1} {list ~NAME2 val2} ...}}
+{def make-static-env | pairs | pairs}
+
+# ─── 1st Futamura Projection ─────────────────────────────────────────────────
+#
+# {fut1 interp-ast program-ast}
+#  => residual program (interpreter specialised to program)
+#
+# interp-ast : a QUOTED interpreter expression  (its source as MAP data)
+# program-ast: a QUOTED program expression      (the static input)
+#
+# Example:
+#   {bind my-interp ~{when {num? EXPR} EXPR {+ {nth 1 EXPR} {nth 2 EXPR}}}}
+#   {fut1 my-interp ~{:PLUS 3 4}}
+
+{def fut1 | interp-ast program-ast |
+  {pe interp-ast {list {list ~EXPR program-ast}}}}
+
+# ─── 2nd Futamura Projection ──────────────────────────────────────────────────
+#
+# The 2nd projection fixes the INTERPRETER as static and leaves the PROGRAM
+# dynamic. The result is a COMPILER: a function that takes a program and
+# returns a compiled program.
+#
+# In MAP we represent this as: the residual of PE'ing a "meta-specialize"
+# expression where INTERP is bound but PROGRAM is free.
+#
+# {fut2 interp-ast} => a morph: | program | {fut1 interp-ast program}
+# (This is the straightforward encoding — the deep version would PE the
+#  specializer source itself, but that requires the PE to be written in Map.)
+
+{def fut2 | interp-ast |
+  {morph | program |
+    {fut1 interp-ast program}}}
+
+# ─── 3rd Futamura Projection ──────────────────────────────────────────────────
+#
+# The 3rd projection fixes SPECIALIZE as static, leaving INTERPRETER dynamic.
+# The result is a COMPILER-COMPILER: takes an interpreter, returns a compiler.
+#
+# {fut3} => a morph: | interp-ast | {fut2 interp-ast}
+# (Same caveat as fut2 — the deep version requires a Map-native PE.)
+
+{def fut3 |  |
+  {morph | interp-ast |
+    {fut2 interp-ast}}}
+
+# ─── Demonstration interpreter ────────────────────────────────────────────────
+#
+# A minimal MAP interpreter for arithmetic expressions.
+# EXPR is the program (static at specialisation time).
+# ENV  is the runtime variable bindings (dynamic).
+#
+# Supported syntax:
+#   42               => 42
+#   ~X               => look up X in ENV
+#   {:PLUS  A B}     => A + B
+#   {:MINUS A B}     => A - B
+#   {:TIMES A B}     => A * B
+#   {:IF C T E}      => if C != 0 then T else E
+#   {:LET X V body}  => evaluate body with X=V
+
+{def ARITH-EVAL | EXPR ENV |
+  {when | {num? EXPR} | EXPR |
+  {when | {atom? EXPR} |
+    {ENV-LOOKUP ENV EXPR} |
+  {seq
+    {bind tag {head EXPR}}
+    {bind a1  {nth 1 EXPR}}
+    {bind a2  {nth 2 EXPR}}
+    {when | {= tag :PLUS}  | {+ {ARITH-EVAL a1 ENV} {ARITH-EVAL a2 ENV}} |
+    {when | {= tag :MINUS} | {- {ARITH-EVAL a1 ENV} {ARITH-EVAL a2 ENV}} |
+    {when | {= tag :TIMES} | {* {ARITH-EVAL a1 ENV} {ARITH-EVAL a2 ENV}} |
+    {when | {= tag :IF}    |
+      {when | {ARITH-EVAL a1 ENV} |
+        {ARITH-EVAL a2 ENV} |
+        {ARITH-EVAL {nth 3 EXPR} ENV}} |
+    :UNKNOWN}}}}}}}}
+
+# ENV-LOOKUP for ARITH-EVAL (simple alist)
+{def ENV-LOOKUP | env key |
+  {when | {nil? env} | 0 |
+    {when | {= {head {head env}} key} |
+      {head {tail {head env}}} |
+      {ENV-LOOKUP {tail env} key}}}}
+
+# ─── Self-check ───────────────────────────────────────────────────────────────
+
+{print :OP :FUTAMURA :LOADED}
+
+# Smoke test: interpret {3 + 4} directly
+{print :DIRECT-INTERP
+  {ARITH-EVAL {list :PLUS 3 4} NIL}}
+
+# 1st projection: compile {3 + 4}  (dispatch should vanish)
+# {print :COMPILED-PROGRAM
+#   {fut1 ~{ARITH-EVAL EXPR ENV} ~{list :PLUS 3 4}}}

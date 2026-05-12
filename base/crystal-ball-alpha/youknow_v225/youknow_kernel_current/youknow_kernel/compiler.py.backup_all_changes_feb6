@@ -1,0 +1,911 @@
+#!/usr/bin/env python3
+"""
+YOUKNOW COMPILER - The ONE Entry Point
+
+This is THE way to interact with YOUKNOW. Everything goes through here.
+
+WHAT THIS IS:
+    A tautology-shaping machine that exploits LLM pattern completion to grow ontologies.
+
+    Input: Any statement (e.g., "Dog is_a Animal")
+    Output: "You said X. {OK|Wrong} because {because()}"
+
+    The output IS the spiral - a derivation chain that DOES what it SAYS.
+    The LLM reads the spiral and completes the placeholders.
+    Forward (compiler) + Backward (LLM) = SPIN = Lotus growth.
+
+WHAT'S REAL (implemented):
+    - HyperedgeValidator: validates is_a claims against hyperedge context
+    - DerivationValidator: checks L0-L6 derivation levels
+    - UARLValidator: SHACL validation with conversational error messages
+    - DualSubstrate: writes to OWL + mirrors to Carton
+    - Cat_of_Cat: traces is_a chains to root
+
+WHAT'S TODO:
+    - Statement parser (extract subject/predicate/object from natural language)
+    - Spiral form generator (build the full derivation chain as response)
+    - Strong compression (use named patterns instead of raw structures)
+    - Wiring all validators into the single compile() function
+
+THE SPIRAL FORM:
+    "Dog is_a Pet"
+    → "Dog is_a Pet" is_a Claim
+    → Claim is_a Autology (claiming IS instantiating)
+    → Autology is_a Self_Description
+    → Self_Description is_a Self_Reference
+    → Self_Reference is_a Pattern_Of_Invariance
+    → Pattern_Of_Invariance is_a Pattern_Of_Pattern
+    → Pattern_Of_Pattern is_a Cat_Of_Pattern
+    → Cat_Of_Pattern part_of Cat_Of_Cat
+
+    If chain breaks: "Wrong because Y is_a ?, part_of ?, instantiates ?"
+    If chain closes: "OK because [full spiral with inclusion maps]"
+
+THREE DATA LAYERS:
+    1. Foundation OWL (frozen) - core types, SHACL shapes, in library
+    2. Domain OWL (dynamic) - user entities, updated every call
+    3. Carton (soup) - persistence, reasoner state
+
+STATELESS:
+    This compiler has NO memory. NO conversational context.
+    The LLM's attention networks keep work coherent.
+    YOUKNOW just mirrors truth about each statement independently.
+"""
+
+from typing import Dict, List, Optional, Any, Tuple
+from dataclasses import dataclass, field
+from enum import Enum
+import re
+
+from .derivation import DerivationLevel
+
+
+# =============================================================================
+# RESPONSE TYPES
+# =============================================================================
+
+class ResponseType(Enum):
+    """Whether the quine closes or breaks."""
+    OK = "OK"      # Quine closes - traces to Cat_of_Cat
+    WRONG = "Wrong"  # Quine breaks - chain is incomplete
+
+
+@dataclass
+class SpiralStep:
+    """One step in the derivation spiral.
+
+    REAL: This data structure exists.
+    TODO: Populate it from actual validators.
+    """
+    subject: str           # The thing at this level
+    predicate: str         # is_a, part_of, instantiates
+    object: str            # What it relates to
+
+    # EMR state at this level (TODO: get from DerivationValidator)
+    embodies: List[str] = field(default_factory=list)   # What features
+    manifests: Dict[str, str] = field(default_factory=dict)  # What structure
+    reifies_via: Optional[str] = None  # Inclusion map
+
+    # Derivation state at this level
+    derivation_level: Optional[DerivationLevel] = None
+    whats_missing_for_next_level: List[str] = field(default_factory=list)
+
+    # Is this step complete or a placeholder?
+    is_placeholder: bool = False
+
+    def to_string(self) -> str:
+        """Format this step for the spiral output."""
+        if self.is_placeholder:
+            return f"{self.subject} {self.predicate} ? (unknown)"
+
+        parts = [f"{self.subject} {self.predicate} {self.object}"]
+
+        if self.embodies:
+            parts.append(f"  embodies {{{', '.join(self.embodies)}}}")
+        if self.manifests:
+            manifest_str = ', '.join(f"{k}: {v}" for k, v in self.manifests.items())
+            parts.append(f"  manifests {{{manifest_str}}}")
+        if self.reifies_via:
+            parts.append(f"  reifies via inclusion map {{{self.reifies_via}}}")
+
+        if self.derivation_level is not None:
+            parts.append(f"  derivation: {self.derivation_level.name}")
+        if self.whats_missing_for_next_level:
+            parts.append(f"  next_level_needs: [{', '.join(self.whats_missing_for_next_level)}]")
+
+        return '\n'.join(parts)
+
+
+@dataclass
+class CompilerResponse:
+    """The full response from the compiler.
+
+    REAL: This data structure exists.
+    TODO: Build it from actual validation.
+    """
+    # The original statement
+    statement: str
+
+    # OK or Wrong
+    response_type: ResponseType
+
+    # The spiral (derivation chain)
+    spiral: List[SpiralStep] = field(default_factory=list)
+
+    # Where the chain breaks (if Wrong)
+    break_point: Optional[str] = None
+    whats_missing: List[str] = field(default_factory=list)
+
+    def to_string(self) -> str:
+        """Format the full response.
+
+        OK = just "OK" (0.01% - graduation, no explanation needed)
+        Wrong = explains what's missing (99.99% - building)
+        """
+        if self.response_type == ResponseType.OK:
+            return "OK"
+
+        # Wrong - show explanation
+        lines = [f"You said {self.statement}. Wrong because:"]
+        lines.append("")
+
+        for step in self.spiral:
+            lines.append(step.to_string())
+
+        lines.append("")
+        lines.append(f"Chain breaks at: {self.break_point}")
+        for missing in self.whats_missing:
+            lines.append(f"  - {missing}")
+
+        return '\n'.join(lines)
+
+
+# =============================================================================
+# STATEMENT PARSER
+# =============================================================================
+
+@dataclass
+class ParsedStatement:
+    """A parsed YOUKNOW statement.
+
+    REAL: Basic regex parsing works.
+    TODO: Handle complex statements (multiple predicates, nested structures).
+    """
+    subject: str
+    predicate: str  # is_a, part_of, instantiates, has_part, etc.
+    object: str
+
+    # Additional predicates in same statement
+    # e.g., "Animal is_a Entity, part_of Living_Things, instantiates Creature"
+    additional: List[Tuple[str, str]] = field(default_factory=list)
+
+    raw: str = ""
+
+
+def parse_statement(statement: str) -> Optional[ParsedStatement]:
+    """Parse a YOUKNOW statement.
+
+    REAL: Basic pattern matching.
+
+    WEAK COMPRESSION: Unknown predicates are accepted and marked for SOUP.
+    They need their own derivation chains to become strong compression.
+
+    Examples:
+        "Dog is_a Animal" → ParsedStatement(Dog, is_a, Animal)
+        "Dog has_trait Loyalty" → ParsedStatement(Dog, has_trait, Loyalty) [weak compression]
+    """
+    statement = statement.strip()
+
+    # STRONG compression predicates (in foundation ontology)
+    STRONG_PREDICATES = {'is_a', 'part_of', 'instantiates', 'has_part', 'embodies', 'manifests', 'reifies'}
+
+    # Pattern: Subject predicate Object
+    # Accept ANY word as predicate (weak compression if not in STRONG_PREDICATES)
+    primary_match = re.match(
+        r'(\w+)\s+(\w+)\s+(\w+)',
+        statement,
+        re.IGNORECASE
+    )
+
+    if not primary_match:
+        return None
+
+    subject = primary_match.group(1)
+    predicate = primary_match.group(2).lower()
+    obj = primary_match.group(3)
+
+    # Look for additional predicates (comma-separated)
+    additional = []
+    rest = statement[primary_match.end():]
+
+    for match in re.finditer(r',\s*(\w+)\s+(\w+)', rest, re.IGNORECASE):
+        additional.append((match.group(1).lower(), match.group(2)))
+
+    return ParsedStatement(
+        subject=subject,
+        predicate=predicate,
+        object=obj,
+        additional=additional,
+        raw=statement
+    )
+
+
+# =============================================================================
+# THE COMPILER
+# =============================================================================
+
+def youknow(statement: str, use_reasoner: bool = True) -> str:
+    """THE entry point. Pure function. Stateless.
+
+    VALIDATION PIPELINE:
+        1. Parse statement
+        2. Build spiral (HyperedgeValidator for EMR)
+        3. Check chain completeness (Python dict traversal)
+        4. [NEW] Reasoner validation (SHACL + Pellet)
+        5. Return OK/Wrong with because()
+
+    Args:
+        statement: Any YOUKNOW statement, e.g., "Dog is_a Animal"
+        use_reasoner: Whether to run SHACL + Pellet validation (default: True)
+
+    Returns:
+        "You said X. {OK|Wrong} because {because()}"
+    """
+    # 1. Parse the statement
+    parsed = parse_statement(statement)
+    if not parsed:
+        return f"You said {statement}. Wrong because: could not parse statement."
+
+    # 1b. Check for WEAK COMPRESSION predicates
+    # Strong predicates are in foundation ontology, weak need their own derivation chains
+    STRONG_PREDICATES = {'is_a', 'part_of', 'instantiates', 'has_part', 'embodies', 'manifests', 'reifies'}
+
+    if parsed.predicate not in STRONG_PREDICATES:
+        # Weak compression - predicate itself needs derivation chain → SOUP
+        pred_missing = [
+            f"{parsed.predicate} is_a ? (unknown)",
+            f"{parsed.predicate} part_of ? (unknown)",
+            f"{parsed.predicate} instantiates ? (unknown)"
+        ]
+        # Persist predicate as Hallucination
+        all_missing = pred_missing + [f"{parsed.object} is_a ? (unknown)"]
+        _persist_to_soup(parsed, [], parsed.predicate, all_missing)
+        # Build response with full state for weak compression path
+        weak_response = CompilerResponse(
+            statement=statement,
+            response_type=ResponseType.WRONG,
+            spiral=[],
+            break_point=parsed.predicate,
+            whats_missing=all_missing
+        )
+        return _build_soup_response(weak_response, [], parsed.predicate, all_missing)
+
+    # 2. Build the spiral (uses HyperedgeValidator for EMR)
+    spiral = _build_spiral(parsed)
+
+    # 3. Check if chain is complete (Python dict traversal)
+    is_complete, break_point, whats_missing = _check_chain_complete(spiral)
+
+    # 4. [NEW] Reasoner validation - SHACL for structure, Pellet for inference
+    if is_complete and use_reasoner:
+        reasoner_result = _validate_with_reasoner(parsed, spiral)
+        if not reasoner_result["valid"]:
+            is_complete = False
+            whats_missing = reasoner_result["errors"]
+            break_point = reasoner_result.get("break_point", parsed.subject)
+
+    # 5. Build response
+    response = CompilerResponse(
+        statement=statement,
+        response_type=ResponseType.OK if is_complete else ResponseType.WRONG,
+        spiral=spiral,
+        break_point=break_point,
+        whats_missing=whats_missing
+    )
+
+    # 6. Persist based on completeness level
+    #
+    # METACIRCULAR SOUP ACCUMULATION (IMPLEMENTED)
+    # =============================================
+    # Errors are not failures - they are TYPED PUZZLE PIECES (Hallucinations).
+    #
+    # When chain breaks at X:
+    #   - Create Hallucination with metadata (what's missing)
+    #   - Persist to SOUP layer
+    #   - Return "SOUP: ..." instead of "Wrong..."
+    #
+    # When chain completes:
+    #   - Persist to ONT layer (domain OWL)
+    #   - Return "OK"
+    #
+    if is_complete:
+        _persist(parsed, spiral)
+        return response.to_string()  # "OK"
+    else:
+        # Chain breaks - persist to SOUP with Hallucination metadata
+        hallucination_meta = _persist_to_soup(parsed, spiral, break_point, whats_missing)
+
+        # Return full state: spiral with derivation levels + what to declare next
+        return _build_soup_response(response, spiral, break_point, whats_missing)
+
+
+def _validate_with_reasoner(parsed: 'ParsedStatement', spiral: List[SpiralStep]) -> dict:
+    """Run SHACL + Pellet validation on the parsed statement.
+
+    Pipeline:
+        1. SHACL validates structure (EMR components present)
+        2. Pellet validates reasoning (transitive chain reaches Cat_of_Cat)
+
+    Returns:
+        {"valid": bool, "errors": List[str], "break_point": Optional[str]}
+    """
+    from .uarl_validator import UARLValidator
+
+    try:
+        validator = UARLValidator()
+
+        # Build concept data from parsed statement
+        concept_data = {
+            "name": parsed.subject,
+            "type": "EmbodimentClaim",  # TODO: Infer type from predicate
+            "intuition": parsed.subject,
+            "compareFrom": parsed.predicate,
+            "mapsTo": parsed.object,
+            "analogicalPattern": f"{parsed.subject}_{parsed.predicate}_{parsed.object}_pattern"
+        }
+
+        # Run SHACL + Pellet validation
+        # NOTE: No check_chain_to - Python handles Cat_of_Cat traversal,
+        # reasoner validates axiom satisfaction (EmbodimentClaim properties)
+        result = validator.validate_with_reasoning(concept_data)
+
+        if result.valid:
+            return {"valid": True, "errors": [], "break_point": None}
+        else:
+            return {
+                "valid": False,
+                "errors": [e.message for e in result.errors],
+                "break_point": parsed.subject
+            }
+
+    except Exception as e:
+        # Reasoner unavailable - log but don't block
+        # TODO: Add proper logging
+        return {
+            "valid": True,  # Pass through if reasoner fails
+            "errors": [f"Reasoner warning: {e}"],
+            "break_point": None
+        }
+
+
+def _build_spiral(parsed: ParsedStatement) -> List[SpiralStep]:
+    """Build the derivation spiral for a statement.
+
+    Uses REAL validators:
+        - HyperedgeValidator for EMR (embodies/manifests/reifies)
+        - DerivationValidator for L0-L6 levels
+        - Cat_of_Cat for chain tracing
+    """
+    from .cat_of_cat import get_cat
+    from .hyperedge import HyperedgeValidator
+    from .derivation import DerivationValidator
+
+    cat = get_cat()
+    hyperedge_validator = HyperedgeValidator(cat=cat)
+    derivation_validator = DerivationValidator(cat=cat)
+
+    spiral = []
+
+    # Step 1: Validate the claim itself using HyperedgeValidator
+    # Build concept dict for the subject
+    subject_concept = None
+    if parsed.subject in cat.entities:
+        entity = cat.entities[parsed.subject]
+        subject_concept = {
+            "name": entity.name,
+            "is_a": entity.is_a,
+            "part_of": entity.part_of,
+            "has_part": entity.has_part,
+            "instantiates": entity.instantiates,
+        }
+
+    # If subject not in ontology, create minimal concept dict
+    if subject_concept is None:
+        subject_concept = {
+            "name": parsed.subject,
+            "is_a": [parsed.object],
+            "part_of": [],
+            "has_part": [],
+            "instantiates": [],
+        }
+
+    claim_result = hyperedge_validator.validate_claim(
+        subject=parsed.subject,
+        object_=parsed.object,
+        concept=subject_concept
+    )
+
+    # Build concept dict for derivation validation
+    concept_dict = {
+        "name": parsed.subject,
+        "is_a": [parsed.object],
+        "part_of": [],
+        "instantiates": [],
+    }
+    # Add additional predicates
+    for pred, obj in parsed.additional:
+        if pred == "part_of":
+            concept_dict["part_of"].append(obj)
+        elif pred == "instantiates":
+            concept_dict["instantiates"].append(obj)
+
+    derivation_state = derivation_validator.validate(concept_dict)
+
+    spiral.append(SpiralStep(
+        subject=parsed.subject,
+        predicate=parsed.predicate,
+        object=parsed.object,
+        embodies=claim_result.supporting_evidence,
+        manifests={},
+        reifies_via=claim_result.witness,
+        derivation_level=derivation_state.level,
+        whats_missing_for_next_level=derivation_state.whats_missing,
+        is_placeholder=not claim_result.valid
+    ))
+
+    # Step 2: Trace the object upward
+    # TODO: Actually look up the object in the ontology
+    # For now, create placeholder steps
+
+    current = parsed.object
+
+    # REAL: Use Cat_of_Cat.trace_to_root()
+    chain = _get_chain(current)
+
+    for i, (entity, parent) in enumerate(chain):
+        is_defined = parent != "?"
+
+        # Build concept dict for this chain entity
+        if entity in cat.entities:
+            chain_entity = cat.entities[entity]
+            chain_concept = {
+                "name": chain_entity.name,
+                "is_a": chain_entity.is_a,
+                "part_of": chain_entity.part_of,
+                "has_part": chain_entity.has_part,
+                "instantiates": chain_entity.instantiates,
+            }
+        else:
+            chain_concept = {
+                "name": entity,
+                "is_a": [parent] if is_defined else [],
+                "part_of": [],
+                "instantiates": [],
+            }
+
+        # Get EMR from HyperedgeValidator
+        chain_claim = hyperedge_validator.validate_claim(
+            subject=entity,
+            object_=parent,
+            concept=chain_concept
+        )
+
+        # Get derivation state
+        chain_deriv = derivation_validator.validate(chain_concept)
+
+        spiral.append(SpiralStep(
+            subject=entity,
+            predicate="is_a",
+            object=parent,
+            embodies=chain_claim.supporting_evidence,
+            manifests={},
+            reifies_via=chain_claim.witness,
+            derivation_level=chain_deriv.level,
+            whats_missing_for_next_level=chain_deriv.whats_missing,
+            is_placeholder=not is_defined
+        ))
+
+        if not is_defined:
+            break  # Chain breaks here
+
+    return spiral
+
+
+def _get_chain(entity: str) -> List[Tuple[str, str]]:
+    """Get is_a chain from Cat_of_Cat.
+
+    REAL: Uses actual CategoryOfCategories.trace_to_root()
+    """
+    from .cat_of_cat import get_cat
+
+    cat = get_cat()
+
+    # Check if entity exists
+    if entity not in cat.entities:
+        return [(entity, "?")]  # Unknown entity
+
+    # Get the chain
+    chain = cat.trace_to_root(entity)
+
+    # Convert to pairs: [(A, B), (B, C), ...]
+    pairs = []
+    for i in range(len(chain) - 1):
+        pairs.append((chain[i], chain[i + 1]))
+
+    # If chain ends at Cat_of_Cat, add final pair
+    if chain and chain[-1] == "Cat_of_Cat":
+        # Cat_of_Cat is_a Cat_of_Cat (self-loop, complete)
+        pass
+    elif chain:
+        # Chain doesn't reach Cat_of_Cat
+        pairs.append((chain[-1], "?"))
+
+    return pairs if pairs else [(entity, "?")]
+
+
+def _check_chain_complete(spiral: List[SpiralStep]) -> Tuple[bool, Optional[str], List[str]]:
+    """Check if the spiral traces all the way to Cat_of_Cat.
+
+    WHAT'S REAL:
+        - Checks for placeholder steps
+
+    WHAT'S TODO:
+        - Use actual DerivationValidator
+        - Check L0-L6 levels
+        - Verify inclusion maps
+
+    Returns:
+        (is_complete, break_point, whats_missing)
+    """
+    for step in spiral:
+        if step.is_placeholder:
+            return (
+                False,
+                step.subject,
+                [
+                    f"{step.subject} is_a ? (unknown)",
+                    f"{step.subject} part_of ? (unknown)",
+                    f"{step.subject} instantiates ? (unknown)"
+                ]
+            )
+
+    # Check if we reached Cat_of_Cat
+    if spiral and spiral[-1].object == "Cat_of_Cat":
+        return (True, None, [])
+
+    return (
+        False,
+        spiral[-1].subject if spiral else "?",
+        ["Chain does not reach Cat_of_Cat"]
+    )
+
+
+def _persist(parsed: ParsedStatement, spiral: List[SpiralStep]) -> None:
+    """Persist valid statements to OWL + Carton via DualSubstrate.
+
+    DualSubstrate pattern: OWL is source of truth, Carton is mirror.
+    Valid chains go to ONT layer in both substrates.
+
+    Args:
+        parsed: The parsed statement
+        spiral: The derivation spiral (enriches OWL entity with EMR data)
+    """
+    from .owl_substrate import DualSubstrate, OWLEntity
+
+    try:
+        dual = DualSubstrate()
+
+        # Build relationships dict from parsed statement
+        relationships = {}
+        if parsed.predicate == "is_a":
+            pass  # is_a goes into OWLEntity.is_a list
+        elif parsed.predicate in ("part_of", "has_part", "instantiates",
+                                   "embodies", "manifests", "reifies"):
+            relationships[parsed.predicate] = [parsed.object]
+
+        # Add additional predicates
+        for pred, obj in parsed.additional:
+            relationships.setdefault(pred, []).append(obj)
+
+        # Extract EMR state from spiral if available
+        emr_state = "embodies"  # default
+        if spiral and spiral[0].reifies_via:
+            emr_state = "reifies"
+        elif spiral and spiral[0].embodies:
+            emr_state = "manifests"
+
+        # Build OWLEntity
+        entity = OWLEntity(
+            name=parsed.subject,
+            description=f"{parsed.subject} {parsed.predicate} {parsed.object}",
+            is_a=[parsed.object] if parsed.predicate == "is_a" else [],
+            relationships=relationships,
+            emr_state=emr_state,
+        )
+
+        # Write to both substrates (OWL + Carton queue)
+        result = dual.add_entity(entity)
+
+        if not result["owl_success"]:
+            print(f"Warning: Failed to persist {parsed.subject} to domain OWL")
+
+    except Exception as e:
+        print(f"Warning: Persistence error for {parsed.subject}: {e}")
+
+
+def _persist_to_soup(
+    parsed: ParsedStatement,
+    spiral: List[SpiralStep],
+    break_point: Optional[str],
+    whats_missing: List[str]
+) -> Dict[str, Any]:
+    """Persist incomplete chain to SOUP with Hallucination metadata.
+
+    SOUP = "Some Ontology Under Production"
+    Incomplete chains are puzzle pieces waiting for their edges.
+
+    Args:
+        parsed: The parsed statement
+        spiral: The derivation spiral (partial)
+        break_point: Where the chain breaks
+        whats_missing: What edges are needed
+
+    Returns:
+        Hallucination metadata dict
+    """
+    from .uarl_validator import UARLValidator, ValidationResult, ValidationError
+
+    # Build hallucination metadata
+    # This captures the "shape" of the puzzle piece - what would complete it
+    hallucination_meta = {
+        "is_hallucination": True,
+        "statement": parsed.raw,
+        "subject": parsed.subject,
+        "predicate": parsed.predicate,
+        "object": parsed.object,
+        "break_point": break_point,
+        "whats_missing": whats_missing,
+        "error_patterns": [f"{parsed.predicate}_unknown_target"],
+        "evolution_target": parsed.object,  # The unknown thing that needs to be defined
+        "would_need": [
+            f"{parsed.object} is_a ?",
+            f"{parsed.object} part_of ?",
+            f"{parsed.object} instantiates ?"
+        ],
+        "spiral_state": [
+            {
+                "subject": s.subject,
+                "predicate": s.predicate,
+                "object": s.object,
+                "is_placeholder": s.is_placeholder
+            }
+            for s in spiral
+        ]
+    }
+
+    # Persist to SOUP via Carton queue
+    # The SOUP layer is a holding area for incomplete concepts
+    try:
+        import os
+        import json
+        from pathlib import Path
+        from datetime import datetime
+        import uuid
+
+        # Get queue directory from environment or default
+        heaven_data = os.getenv('HEAVEN_DATA_DIR', '/tmp/heaven_data')
+        soup_dir = Path(heaven_data) / "soup"
+        soup_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create SOUP entry file
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        unique_id = str(uuid.uuid4())[:8]
+        soup_file = soup_dir / f"{timestamp}_{unique_id}_hallucination.json"
+
+        soup_entry = {
+            "type": "Hallucination",
+            "created_at": datetime.now().isoformat(),
+            "metadata": hallucination_meta,
+            # For promotion tracking
+            "waiting_for": [parsed.object],  # Concepts that would complete this
+            "promoted": False,
+            "promoted_at": None
+        }
+
+        with open(soup_file, 'w') as f:
+            json.dump(soup_entry, f, indent=2)
+
+    except Exception as e:
+        print(f"Warning: SOUP persistence error for {parsed.subject}: {e}")
+
+    # NOTE: Carton queue write removed - Carton now calls YOUKNOW,
+    # so YOUKNOW should NOT queue back (would cause duplicate entries).
+    # The calling Carton add_concept_tool_func handles persistence with layer info.
+
+    return hallucination_meta
+
+
+# NOTE: _queue_to_carton function REMOVED
+# Carton now calls YOUKNOW (not the other way around).
+# The Hook → Carton → YOUKNOW flow means Carton handles all persistence.
+# YOUKNOW just validates and returns result; Carton queues with layer info.
+
+
+def _build_soup_response(
+    response: CompilerResponse,
+    spiral: List[SpiralStep],
+    break_point: Optional[str],
+    whats_missing: List[str]
+) -> str:
+    """Build SOUP response with derivation state and specific next-declaration.
+
+    Format: SOUP:L{level}|{subject}@{break}|chain[n/m]|need[specific]|next:{action}
+
+    This replaces _compress_soup_response which was a lossy regex parser
+    that discarded derivation level, chain progress, and actionable guidance.
+    """
+    # Get subject and its derivation level from first spiral step
+    subject = response.statement.split()[0] if response.statement else "?"
+    level = 0
+
+    if spiral:
+        first_step = spiral[0]
+        if first_step.derivation_level is not None:
+            level = first_step.derivation_level.value
+
+    # Chain progress: defined steps vs total
+    defined_count = sum(1 for s in spiral if not s.is_placeholder)
+    total_count = len(spiral) if spiral else 0
+
+    # Find the break point step to get ITS specific derivation needs
+    break_step = None
+    for step in spiral:
+        if step.subject == break_point:
+            break_step = step
+            break
+
+    # Build need[] and next: from the break point's context
+    if break_step and not break_step.is_placeholder and break_step.whats_missing_for_next_level:
+        # Known entity with specific derivation gap — use derivation-level missing
+        need_items = []
+        for item in break_step.whats_missing_for_next_level:
+            key = item.split(":")[0].strip() if ":" in item else item
+            need_items.append(f"{break_point}.{key}")
+        need_str = ",".join(need_items)
+        first_key = break_step.whats_missing_for_next_level[0].split(":")[0].strip()
+        next_action = f"declare {break_point} {first_key} ?"
+    elif break_point:
+        # Unknown entity (placeholder) — use chain-level whats_missing
+        need_items = []
+        for item in whats_missing:
+            parts = item.split()
+            if len(parts) >= 2:
+                need_items.append(f"{parts[0]}.{parts[1]}")
+        need_str = ",".join(need_items) if need_items else "?"
+        next_action = f"declare {break_point} is_a ?"
+    else:
+        need_str = "?"
+        next_action = "?"
+
+    return f"SOUP:L{level}|{subject}@{break_point or '?'}|chain[{defined_count}/{total_count}]|need[{need_str}]|next:{next_action}"
+
+
+def _compress_soup_response(
+    parsed: ParsedStatement,
+    whats_missing: List[str],
+    break_point: Optional[str]
+) -> str:
+    """Compress SOUP response using symbol table for token efficiency.
+
+    Instead of: "SOUP: Dog is_a Pet. Unknown: Pet is_a ? (unknown), Pet part_of ? (unknown)"
+    Output:     "{1:Pet}|SOUP:?[1]need[is_a,part_of,inst]"
+
+    The symbol table maps repeated entities to single-char keys.
+    LLM attention can track via explicit mapping.
+    """
+    # Collect unique entities from whats_missing
+    # Format: "Pet is_a ? (unknown)" -> extract "Pet"
+    entities = set()
+    missing_rels = set()
+
+    for item in whats_missing:
+        # Parse "Entity rel ? (unknown)" format
+        parts = item.split()
+        if len(parts) >= 2:
+            entities.add(parts[0])
+            if len(parts) >= 3:
+                rel = parts[1]
+                # Compress common relationship names
+                rel_map = {"is_a": "isa", "part_of": "po", "instantiates": "inst"}
+                missing_rels.add(rel_map.get(rel, rel))
+
+    # Add break_point entity if not in entities
+    if break_point and break_point not in entities:
+        entities.add(break_point)
+
+    # Build symbol table: {1:Entity1, 2:Entity2, ...}
+    ent_list = sorted(entities)
+    sym_table = {ent: str(i+1) for i, ent in enumerate(ent_list)}
+
+    # Format symbol table
+    if len(ent_list) == 1:
+        table_str = f"{{1:{ent_list[0]}}}"
+    else:
+        table_str = "{" + ",".join(f"{i+1}:{e}" for i, e in enumerate(ent_list)) + "}"
+
+    # Format missing relationships
+    rels_str = ",".join(sorted(missing_rels)) if missing_rels else "?"
+
+    # Compressed output
+    ent_refs = ",".join(sym_table[e] for e in ent_list)
+    return f"{table_str}|SOUP:?[{ent_refs}]need[{rels_str}]"
+
+
+# =============================================================================
+# CONVENIENCE / INTEGRATION
+# =============================================================================
+
+def compile_and_respond(statement: str) -> str:
+    """Alias for youknow(). THE entry point."""
+    return youknow(statement)
+
+
+# For integration with existing code
+def validate_statement(statement: str) -> Dict[str, Any]:
+    """Return structured validation result.
+
+    TODO: Return structured data instead of string for programmatic use.
+    """
+    parsed = parse_statement(statement)
+    if not parsed:
+        return {"valid": False, "error": "Could not parse statement"}
+
+    spiral = _build_spiral(parsed)
+    is_complete, break_point, whats_missing = _check_chain_complete(spiral)
+
+    return {
+        "valid": is_complete,
+        "statement": statement,
+        "parsed": {
+            "subject": parsed.subject,
+            "predicate": parsed.predicate,
+            "object": parsed.object,
+            "additional": parsed.additional
+        },
+        "spiral": [
+            {
+                "subject": s.subject,
+                "predicate": s.predicate,
+                "object": s.object,
+                "is_placeholder": s.is_placeholder
+            }
+            for s in spiral
+        ],
+        "break_point": break_point,
+        "whats_missing": whats_missing
+    }
+
+
+# =============================================================================
+# DEMO
+# =============================================================================
+
+if __name__ == "__main__":
+    print("=== YOUKNOW COMPILER ===")
+    print()
+
+    # Test 1: Unknown target
+    print("1. Statement with unknown target:")
+    print(youknow("Dog is_a Pet"))
+    print()
+
+    # Test 2: Known chain
+    print("2. Statement with known chain:")
+    print(youknow("Pattern is_a Entity"))
+    print()
+
+    # Test 3: Multiple predicates
+    print("3. Statement with multiple predicates:")
+    result = parse_statement("Animal is_a Entity, part_of Living_Things, instantiates Creature")
+    print(f"Parsed: {result}")
+    print()

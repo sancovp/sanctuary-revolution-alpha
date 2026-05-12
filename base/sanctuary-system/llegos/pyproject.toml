@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "llegos"
+version = "0.1.0"
+description = "Actor model for multi-agent systems (LGPL-3.0)"
+license = "LGPL-3.0-or-later"
+requires-python = ">=3.10"
+dependencies = [
+    "beartype>=0.15.0",
+    "deepmerge>=1.1.0",
+    "svix-ksuid>=0.6.2",
+    "networkx>=3.2",
+    "pydantic==2.10.6",
+    "pydash>=7.0",
+    "pyee>=11.1.0",
+    "sorcery>=0.2.2",
+]

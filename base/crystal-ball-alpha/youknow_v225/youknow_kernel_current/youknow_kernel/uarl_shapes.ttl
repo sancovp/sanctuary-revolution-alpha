@@ -1,0 +1,1268 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix uarl: <http://sanctuary.ai/uarl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+
+# ============================================================
+# UNIVERSAL OWL-DRIVEN SHACL ENFORCEMENT
+#
+# ONE shape that reads ALL owl:Restriction (someValuesFrom)
+# from any class in the ontology and enforces them as closed-world
+# constraints. New types only need OWL restrictions — SHACL
+# enforcement is automatic. No more hand-writing shapes per type.
+#
+# How it works:
+#   1. For each instance, find its rdf:type
+#   2. Walk rdfs:subClassOf to find owl:Restriction entries
+#   3. For each restriction with owl:someValuesFrom:
+#      check that the instance HAS a value for that property
+#      AND that value is typed as the required class
+#   4. Report missing as Violation with human-readable message
+#
+# Replaces 22 hardcoded shapes (929 lines) with ~60 lines.
+# ============================================================
+
+uarl:UniversalRestrictionEnforcer
+    a sh:NodeShape ;
+    sh:targetClass uarl:Entity ;
+    sh:name "Universal OWL Restriction Enforcer" ;
+    sh:description "Reads OWL someValuesFrom restrictions and enforces them. Any type defined in OWL with restrictions gets automatic SHACL enforcement." ;
+    sh:sparql [
+        sh:message "{?typeLabel} requires {?propLabel} pointing to a {?reqLabel}." ;
+        sh:severity sh:Violation ;
+        sh:select """
+PREFIX uarl: <http://sanctuary.ai/uarl#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+SELECT $this ?typeLabel ?propLabel ?reqLabel
+WHERE {
+    $this rdf:type ?type .
+    ?type rdfs:subClassOf ?restriction .
+    ?restriction rdf:type owl:Restriction .
+    ?restriction owl:onProperty ?prop .
+    ?restriction owl:someValuesFrom ?reqType .
+    BIND(REPLACE(STR(?type), ".*#", "") AS ?typeLabel)
+    BIND(REPLACE(STR(?prop), ".*#", "") AS ?propLabel)
+    BIND(REPLACE(STR(?reqType), ".*#", "") AS ?reqLabel)
+    FILTER NOT EXISTS {
+        $this ?prop ?value .
+        ?value rdf:type ?reqType .
+    }
+    FILTER(?type != owl:Thing)
+}
+""" ;
+    ] .
+
+# Also enforce minCardinality restrictions (e.g. must have at least 1 isA)
+uarl:UniversalMinCardinalityEnforcer
+    a sh:NodeShape ;
+    sh:targetClass uarl:Entity ;
+    sh:name "Universal OWL MinCardinality Enforcer" ;
+    sh:description "Reads OWL minCardinality restrictions and enforces minimum property counts." ;
+    sh:sparql [
+        sh:message "{?typeLabel} requires at least {?minCount} value(s) for {?propLabel}." ;
+        sh:severity sh:Violation ;
+        sh:select """
+PREFIX uarl: <http://sanctuary.ai/uarl#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+SELECT $this ?typeLabel ?propLabel ?minCount
+WHERE {
+    $this rdf:type ?type .
+    ?type rdfs:subClassOf ?restriction .
+    ?restriction rdf:type owl:Restriction .
+    ?restriction owl:onProperty ?prop .
+    ?restriction owl:minCardinality ?minCountRaw .
+    BIND(xsd:integer(?minCountRaw) AS ?minCount)
+    BIND(REPLACE(STR(?type), ".*#", "") AS ?typeLabel)
+    BIND(REPLACE(STR(?prop), ".*#", "") AS ?propLabel)
+    FILTER(?minCount > 0)
+    FILTER NOT EXISTS {
+        $this ?prop ?anyValue .
+    }
+    FILTER(?type != owl:Thing)
+}
+""" ;
+    ] .
+
+# ============================================================
+# CORE SENTENCE CHAIN ENFORCER
+#
+# Checks which steps of the automorphic revelation chain exist.
+# Each step is a morphism in the core sentence:
+#   isA → partOf → instantiates → embodies (automorphism) →
+#   produces → reifies → programs → partOf(Reality) = closes
+#
+# Missing ANY step = SOUP (weak compression).
+# ALL steps present = strong compression → ONT admission.
+#
+# This replaces the Python derivation levels (L0-L6) in
+# derivation.py with ontology-driven checking.
+# ============================================================
+
+uarl:CoreSentenceEnforcer
+    a sh:NodeShape ;
+    sh:targetClass uarl:Entity ;
+    sh:name "Core Sentence (Pattern of X Derivation)" ;
+    sh:description "Reports ALL missing core sentence predicates at once. Partial order — not linear. Property chains infer what can be inferred. What remains missing IS the state." ;
+    sh:sparql [
+        sh:message "{?entityLabel} is MISSING: [{?missing}]" ;
+        sh:severity sh:Violation ;
+        sh:select """
+PREFIX uarl: <http://sanctuary.ai/uarl#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+SELECT $this ?entityLabel (GROUP_CONCAT(DISTINCT ?missingPred; separator=", ") AS ?missing)
+WHERE {
+    BIND(REPLACE(STR($this), ".*#", "") AS ?entityLabel)
+    {
+        FILTER NOT EXISTS { $this uarl:isA ?v1 . }
+        BIND("isA" AS ?missingPred)
+    } UNION {
+        FILTER NOT EXISTS { $this uarl:partOf ?v2 . }
+        BIND("partOf" AS ?missingPred)
+    } UNION {
+        FILTER NOT EXISTS { $this uarl:produces ?v3 . }
+        BIND("produces" AS ?missingPred)
+    } UNION {
+        FILTER NOT EXISTS { $this uarl:instantiates ?v4 . }
+        BIND("instantiates" AS ?missingPred)
+    } UNION {
+        FILTER NOT EXISTS { $this uarl:embodies ?v5 . }
+        BIND("embodies" AS ?missingPred)
+    } UNION {
+        FILTER NOT EXISTS { $this uarl:manifests ?v6 . }
+        BIND("manifests" AS ?missingPred)
+    } UNION {
+        FILTER NOT EXISTS { $this uarl:reifies ?v7 . }
+        BIND("reifies" AS ?missingPred)
+    } UNION {
+        FILTER NOT EXISTS { $this uarl:programs ?v8 . }
+        BIND("programs" AS ?missingPred)
+    }
+}
+GROUP BY $this ?entityLabel
+HAVING (COUNT(DISTINCT ?missingPred) > 0)
+""" ;
+    ] .
+
+# ============================================================
+# COMPRESSION CLASSIFIER (SOUP vs ONT)
+#
+# Strong compression = ALL core sentence predicates present
+#   AND all relationship targets ALSO have all predicates
+#   AND entity has abstraction mapping to Cat (Aut closes)
+# Weak compression = some predicates present but not all
+#   OR targets don't have their predicates
+# SOUP = weak compression. ONT = strong compression.
+#
+# This shape ONLY fires when entity has ALL 8 predicates
+# but targets DON'T — meaning: "you're close but not ONT yet
+# because your targets aren't strongly compressed"
+# ============================================================
+
+uarl:WeakCompressionDetector
+    a sh:NodeShape ;
+    sh:targetClass uarl:Entity ;
+    sh:name "Weak Compression (SOUP — targets incomplete)" ;
+    sh:description "Entity has all core sentence predicates but at least one target does not. Weak compression = SOUP." ;
+    sh:sparql [
+        sh:message "{?entityLabel} has WEAK compression: target {?targetLabel} (via {?propLabel}) is missing {?targetMissing}." ;
+        sh:severity sh:Warning ;
+        sh:select """
+PREFIX uarl: <http://sanctuary.ai/uarl#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+SELECT $this ?entityLabel ?propLabel ?targetLabel (GROUP_CONCAT(DISTINCT ?tMissing; separator=", ") AS ?targetMissing)
+WHERE {
+    $this uarl:isA ?v1 .
+    $this uarl:partOf ?v2 .
+    $this uarl:produces ?v3 .
+    $this uarl:instantiates ?v4 .
+    $this uarl:programs ?v5 .
+    BIND(REPLACE(STR($this), ".*#", "") AS ?entityLabel)
+    $this ?prop ?target .
+    FILTER(?prop != rdf:type)
+    FILTER(STRSTARTS(STR(?prop), "http://sanctuary.ai/uarl#"))
+    BIND(REPLACE(STR(?prop), ".*#", "") AS ?propLabel)
+    BIND(REPLACE(STR(?target), ".*#", "") AS ?targetLabel)
+    {
+        FILTER NOT EXISTS { ?target uarl:isA ?tv1 . }
+        BIND("isA" AS ?tMissing)
+    } UNION {
+        FILTER NOT EXISTS { ?target uarl:partOf ?tv2 . }
+        BIND("partOf" AS ?tMissing)
+    } UNION {
+        FILTER NOT EXISTS { ?target uarl:produces ?tv3 . }
+        BIND("produces" AS ?tMissing)
+    } UNION {
+        FILTER NOT EXISTS { ?target uarl:programs ?tv5 . }
+        BIND("programs" AS ?tMissing)
+    }
+}
+GROUP BY $this ?entityLabel ?propLabel ?targetLabel
+HAVING (COUNT(DISTINCT ?tMissing) > 0)
+""" ;
+    ] .
+
+# ============================================================
+# CAT ADMISSION CHECK (ONT gate)
+#
+# For an entity to be ONT (strong compression), it must:
+# 1. Have ALL core sentence predicates (isA, partOf, produces,
+#    instantiates, embodies, manifests, reifies, programs)
+# 2. All targets also strongly compressed (recursive)
+# 3. Have hasEWS pointing to a complete EWS
+# 4. EWS has Abstraction mapping to Cat (has objects,
+#    morphisms, identity, composition → has Aut → Domain)
+#
+# This shape fires when entity CLAIMS programs but doesn't
+# have the Cat admission path.
+# ============================================================
+
+uarl:CatAdmissionCheck
+    a sh:NodeShape ;
+    sh:targetClass uarl:Entity ;
+    sh:name "Cat Admission (ONT gate)" ;
+    sh:description "Entity claims programs but has no EWS with Abstraction mapping to Cat. Cannot be admitted to ONT without Cat interpretation." ;
+    sh:sparql [
+        sh:message "{?entityLabel} claims programs but has no hasEWS. Cannot be ONT without EWS proving the abstraction maps to Cat." ;
+        sh:severity sh:Warning ;
+        sh:select """
+PREFIX uarl: <http://sanctuary.ai/uarl#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+SELECT $this ?entityLabel
+WHERE {
+    $this uarl:programs ?reality .
+    BIND(REPLACE(STR($this), ".*#", "") AS ?entityLabel)
+    FILTER NOT EXISTS { $this uarl:hasEWS ?ews . }
+}
+""" ;
+    ] .
+
+# ============================================================
+# RECURSIVE JUSTIFICATION ENFORCER
+#
+# For every relationship this entity has, checks:
+# 1. The target entity satisfies ITS OWL restrictions too (recursive)
+# 2. The property is valid in the domain (has rdfs:domain/range or is declared)
+#
+# This is the MSC justification check — every relationship must be
+# justified through the domain ontology, not just exist.
+# ============================================================
+
+uarl:RecursiveJustificationEnforcer
+    a sh:NodeShape ;
+    sh:targetClass uarl:Entity ;
+    sh:name "Recursive Relationship Justification" ;
+    sh:description "Every relationship target must itself satisfy its type restrictions. MSC = every relationship justified recursively." ;
+    sh:sparql [
+        sh:message "{?targetLabel} (target of {?propLabel} from {?sourceLabel}) is typed as {?targetTypeLabel} but is missing required {?missingPropLabel} pointing to {?missingReqLabel}." ;
+        sh:severity sh:Violation ;
+        sh:select """
+PREFIX uarl: <http://sanctuary.ai/uarl#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+SELECT $this ?sourceLabel ?propLabel ?targetLabel ?targetTypeLabel ?missingPropLabel ?missingReqLabel
+WHERE {
+    $this ?prop ?target .
+    ?target rdf:type ?targetType .
+    ?targetType rdfs:subClassOf ?restriction .
+    ?restriction rdf:type owl:Restriction .
+    ?restriction owl:onProperty ?missingProp .
+    ?restriction owl:someValuesFrom ?missingReqType .
+    BIND(REPLACE(STR($this), ".*#", "") AS ?sourceLabel)
+    BIND(REPLACE(STR(?prop), ".*#", "") AS ?propLabel)
+    BIND(REPLACE(STR(?target), ".*#", "") AS ?targetLabel)
+    BIND(REPLACE(STR(?targetType), ".*#", "") AS ?targetTypeLabel)
+    BIND(REPLACE(STR(?missingProp), ".*#", "") AS ?missingPropLabel)
+    BIND(REPLACE(STR(?missingReqType), ".*#", "") AS ?missingReqLabel)
+    FILTER NOT EXISTS {
+        ?target ?missingProp ?val .
+        ?val rdf:type ?missingReqType .
+    }
+    FILTER(?targetType != owl:Thing)
+    FILTER(?prop != rdf:type)
+}
+""" ;
+    ] .
+
+# ============================================================
+# DOMAIN VALIDITY ENFORCER
+#
+# Checks that properties used on an entity are valid for its type.
+# If a property has rdfs:domain, the entity must be of that domain.
+# Catches: "you used ships on Goods but ships isn't in Goods Domain"
+# ============================================================
+
+uarl:DomainValidityEnforcer
+    a sh:NodeShape ;
+    sh:targetClass uarl:Entity ;
+    sh:name "Domain Property Validity" ;
+    sh:description "Properties must be valid for the entity's type domain." ;
+    sh:sparql [
+        sh:message "{?entityLabel} uses property {?propLabel} but {?propLabel} has domain {?domainLabel} which {?entityLabel} (typed as {?typeLabel}) is not part of." ;
+        sh:severity sh:Warning ;
+        sh:select """
+PREFIX uarl: <http://sanctuary.ai/uarl#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+SELECT $this ?entityLabel ?propLabel ?domainLabel ?typeLabel
+WHERE {
+    $this ?prop ?anyVal .
+    ?prop rdfs:domain ?domain .
+    $this rdf:type ?type .
+    BIND(REPLACE(STR($this), ".*#", "") AS ?entityLabel)
+    BIND(REPLACE(STR(?prop), ".*#", "") AS ?propLabel)
+    BIND(REPLACE(STR(?domain), ".*#", "") AS ?domainLabel)
+    BIND(REPLACE(STR(?type), ".*#", "") AS ?typeLabel)
+    FILTER NOT EXISTS {
+        ?type rdfs:subClassOf* ?domain .
+    }
+    FILTER(?prop != rdf:type)
+    FILTER(?type != owl:Thing)
+    FILTER(!STRSTARTS(STR(?prop), STR(rdf:)))
+    FILTER(!STRSTARTS(STR(?prop), STR(rdfs:)))
+    FILTER(!STRSTARTS(STR(?prop), STR(owl:)))
+}
+""" ;
+    ] .
+
+# ============================================================
+# COMMENTED OUT 2026-03-30: All 22 hardcoded per-type SHACL shapes replaced by ONE universal SPARQL-based shape that reads OWL restrictions dynamically. New types only need OWL restrictions - SHACL enforcement is automatic.
+# # ============================================================
+# # UARL SHACL CONSTRAINTS
+# # Closed-world validation for the UARL derivation chain
+# # ============================================================
+
+# # ============================================================
+# # PIOEntity - Foundation grounding anchor
+# # ============================================================
+
+# uarl:PIOEntityShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:PIOEntity ;
+    # sh:name "PIOEntity Foundation Anchor" ;
+    # sh:description "PIOEntity is hallucination-in-reality: instantiates Metaphor and carries partial isomorphic self-claims." ;
+    # sh:class uarl:Hallucination ;
+    # sh:class uarl:Reality ;
+    # sh:property [
+        # sh:path uarl:instantiates ;
+        # sh:minCount 1 ;
+        # sh:class uarl:Metaphor ;
+        # sh:name "instantiates metaphor" ;
+        # sh:message "PIOEntity must instantiate Metaphor." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:hasPartialIsomorphicPattern ;
+        # sh:minCount 1 ;
+        # sh:class uarl:PartialIsomorphicPattern ;
+        # sh:name "partial isomorphic pattern" ;
+        # sh:message "PIOEntity must link at least one PartialIsomorphicPattern." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:hasSelfClaim ;
+        # sh:minCount 1 ;
+        # sh:class uarl:ClaimAboutSelf ;
+        # sh:name "self claim" ;
+        # sh:message "PIOEntity must include at least one claim about what it is." ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# # ============================================================
+# # EmbodimentClaim - Must have all 4 bridge components
+# # ============================================================
+
+# uarl:EmbodimentClaimShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:EmbodimentClaim ;
+    # sh:name "Embodiment Claim Validation" ;
+    # sh:description "A valid EmbodimentClaim must have all 4 bridge components: intuition, compareFrom, mapsTo, analogicalPattern" ;
+    
+    # # MUST have intuition (A)
+    # sh:property [
+        # sh:path uarl:intuition ;
+        # sh:minCount 1 ;
+        # sh:name "intuition (A)" ;
+        # sh:message "EmbodimentClaim is missing 'intuition' (A) - what are you thinking about? Structure: A with B embodies C wrt D" ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    
+    # # MUST have compareFrom (B)
+    # sh:property [
+        # sh:path uarl:compareFrom ;
+        # sh:minCount 1 ;
+        # sh:name "compareFrom (B)" ;
+        # sh:message "EmbodimentClaim is missing 'compareFrom' (B) - what are you comparing your intuition from? Structure: A with B embodies C wrt D" ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    
+    # # MUST have mapsTo (C)
+    # sh:property [
+        # sh:path uarl:mapsTo ;
+        # sh:minCount 1 ;
+        # sh:name "mapsTo (C)" ;
+        # sh:message "EmbodimentClaim is missing 'mapsTo' (C) - where does the pattern map to? Structure: A with B embodies C wrt D" ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    
+    # # MUST have analogicalPattern (D)
+    # sh:property [
+        # sh:path uarl:analogicalPattern ;
+        # sh:minCount 1 ;
+        # sh:name "analogicalPattern (D)" ;
+        # sh:message "EmbodimentClaim is missing 'analogicalPattern' (D) - this is THE ACTUAL PATTERN being discovered! Without it, you haven't completed the embodies step. Did you manifest enough to discover the pattern?" ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# # ============================================================
+# # PatternLattice - Must have abstraction level
+# # ============================================================
+
+# uarl:PatternLatticeShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:PatternLattice ;
+    # sh:name "Pattern Lattice Validation" ;
+    # sh:description "A PatternLattice must have an abstraction level to position it in the lattice hierarchy" ;
+    
+    # sh:property [
+        # sh:path uarl:abstractionLevel ;
+        # sh:minCount 1 ;
+        # sh:datatype xsd:integer ;
+        # sh:name "abstraction level" ;
+        # sh:message "PatternLattice is missing 'abstractionLevel'. How abstract is this pattern? Higher = more general, lower = more specific. Set an integer value." ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# # ============================================================
+# # ValidatedLattice - Must instantiate pattern_of_is_a + have subsumes
+# # ============================================================
+
+# uarl:ValidatedLatticeShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:ValidatedLattice ;
+    # sh:name "Validated Lattice Requirements" ;
+    # sh:description "A ValidatedLattice must instantiate pattern_of_is_a and have at least one subsumes relationship" ;
+    
+    # # Must instantiate pattern_of_is_a
+    # sh:property [
+        # sh:path uarl:instantiates ;
+        # sh:minCount 1 ;
+        # sh:class uarl:PatternOfIsA ;
+        # sh:name "instantiates pattern_of_is_a" ;
+        # sh:message "ValidatedLattice does not 'instantiate' pattern_of_is_a. Your lattice structure must replicate the bootstrap pattern: is_a, part_of, and instantiates co-arise. Show how your pattern replicates this." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    
+    # # Must have at least one subsumes (non-trivial lattice)
+    # sh:property [
+        # sh:path uarl:subsumes ;
+        # sh:minCount 1 ;
+        # sh:name "subsumes relationship" ;
+        # sh:message "ValidatedLattice has no 'subsumes' relationships. A lattice needs at least one level of abstraction - an abstract pattern that subsumes specific instances. Add subsumes relationships from abstract to specific." ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# # ============================================================
+# # GroundedLattice - Must be part_of Reality
+# # ============================================================
+
+# uarl:GroundedLatticeShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:GroundedLattice ;
+    # sh:name "Grounded Lattice Requirements" ;
+    # sh:description "A GroundedLattice must have its root connected to Reality via part_of" ;
+    
+    # sh:property [
+        # sh:path uarl:partOf ;
+        # sh:minCount 1 ;
+        # sh:class uarl:Reality ;
+        # sh:name "grounded in Reality" ;
+        # sh:message "GroundedLattice is not connected to Reality. The abstract root of your lattice must be 'part_of' something already in Reality. This is what grounds your pattern - connect it to existing validated ontology." ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# # ============================================================
+# # PROMOTION CHECK: Can this go from Soup to Ont?
+# # ============================================================
+
+# uarl:PatternOfIsAStrongCompressionShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:PatternOfIsA ;
+    # sh:name "PatternOfIsA Strong Compression Requirements" ;
+    # sh:description "PatternOfIsA must be strongly compressed, bounded, and high SES depth before promotion" ;
+
+    # sh:property [
+        # sh:path uarl:hasMSC ;
+        # sh:minCount 1 ;
+        # sh:class uarl:MinimumSufficientCompression ;
+        # sh:name "has MSC" ;
+        # sh:message "PatternOfIsA is missing hasMSC -> MinimumSufficientCompression proof." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+
+    # sh:property [
+        # sh:path uarl:justifies ;
+        # sh:minCount 1 ;
+        # sh:class uarl:DerivationJustification ;
+        # sh:name "justifies coverage" ;
+        # sh:message "PatternOfIsA is missing derivation justifications. Every required relation must be justified." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+
+    # sh:property [
+        # sh:path uarl:catOfCatBounded ;
+        # sh:minCount 1 ;
+        # sh:datatype xsd:boolean ;
+        # sh:hasValue true ;
+        # sh:name "cat-of-cat bounded" ;
+        # sh:message "PatternOfIsA must explicitly assert catOfCatBounded=true for promotion." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+
+    # sh:property [
+        # sh:path uarl:sesTypedDepth ;
+        # sh:minCount 1 ;
+        # sh:datatype xsd:integer ;
+        # sh:minInclusive 6 ;
+        # sh:name "SES typed depth" ;
+        # sh:message "PatternOfIsA requires sesTypedDepth >= 6 (maximized programs threshold)." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+
+    # sh:property [
+        # sh:path uarl:programs ;
+        # sh:minCount 1 ;
+        # sh:class uarl:Reality ;
+        # sh:name "programs reality" ;
+        # sh:message "PatternOfIsA must programs -> Reality for ONT admission." ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# uarl:PromotionReadyShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:PatternOfIsA ;
+    # sh:name "Ready for Promotion to Reality" ;
+    # sh:description "Checks if PatternOfIsA is strongly compressed, bounded, and programs into Reality" ;
+    
+    # # Must have completed the full chain
+    # sh:sparql [
+        # a sh:SPARQLConstraint ;
+        # sh:message "PatternOfIsA is not promotion-ready. Required: hasMSC, justifies coverage, catOfCatBounded=true, sesTypedDepth>=6, compressionMode='strong', and programs->Reality." ;
+        # sh:prefixes [
+            # sh:declare [
+                # sh:prefix "uarl" ;
+                # sh:namespace "http://sanctuary.ai/uarl#"^^xsd:anyURI ;
+            # ]
+        # ] ;
+        # sh:select """
+            # SELECT $this
+            # WHERE {
+                # $this a uarl:PatternOfIsA .
+                # FILTER (
+                    # NOT EXISTS { $this uarl:hasMSC ?msc . ?msc a uarl:MinimumSufficientCompression . } ||
+                    # NOT EXISTS { $this uarl:justifies ?j . ?j a uarl:DerivationJustification . } ||
+                    # NOT EXISTS { $this uarl:catOfCatBounded true } ||
+                    # NOT EXISTS { $this uarl:sesTypedDepth ?d . FILTER(?d >= 6) } ||
+                    # NOT EXISTS { $this uarl:compressionMode "strong" } ||
+                    # NOT EXISTS { $this uarl:programs ?r . ?r a uarl:Reality . }
+                # )
+            # }
+        # """ ;
+    # ] .
+
+# # ============================================================
+# # DERIVATION CHAIN: Core sentence shapes (SOUP → ONT path)
+# # The spectral sequence: is_a → embodies(part_of) → manifests(produces) → reifies → programs
+# # These shapes are checked ONLY when a concept is in SOUP (incomplete)
+# # Complete concepts that hit ONT types skip these entirely
+# # ============================================================
+
+# # L0: Any is_a claim at all — entry to SOUP
+# uarl:DerivationL0Shape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:Entity ;
+    # sh:name "L0: Primitive is_a (SOUP entry)" ;
+    # sh:description "Every entity must have at least one is_a claim. This is the entry point — you said X is_a Y." ;
+    # sh:property [
+        # sh:path uarl:isA ;
+        # sh:minCount 1 ;
+        # sh:name "is_a claim" ;
+        # sh:message "L0 MISSING: No is_a claim exists. You must declare what this thing IS. Say: X is_a Y. This is the primitive claim that enters SOUP." ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# # L1: Embodies — is_a entails containment (part_of)
+# uarl:DerivationL1Shape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:Entity ;
+    # sh:name "L1: Embodies (is_a entails part_of)" ;
+    # sh:description "An is_a claim embodies containment. If X is_a Y then X must be part_of something — it lives somewhere." ;
+    # sh:property [
+        # sh:path uarl:partOf ;
+        # sh:minCount 1 ;
+        # sh:name "part_of (containment)" ;
+        # sh:message "L1 MISSING: is_a exists but no part_of. is_a EMBODIES containment — where does this thing LIVE? What contains it? Add part_of to ground the claim." ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# # L2: Manifests — containment bootstraps produces
+# uarl:DerivationL2Shape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:Entity ;
+    # sh:name "L2: Manifests (containment bootstraps produces)" ;
+    # sh:description "Having is_a + part_of manifests the ability to produce. What does this thing generate?" ;
+    # sh:property [
+        # sh:path uarl:produces ;
+        # sh:minCount 1 ;
+        # sh:name "produces (generativity)" ;
+        # sh:message "L2 MISSING: is_a + part_of exist but no produces. Containment MANIFESTS generativity — what does this thing PRODUCE? What comes out of it?" ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# # L3: Reifies — produces closes on itself as pattern_of_is_a
+# # This is checked by the CatOfCat chain trace, not SHACL
+# # But we add a shape for the explicit reifies predicate
+# uarl:DerivationL3Shape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:Entity ;
+    # sh:name "L3: Reifies (is_a chain closes to Cat_of_Cat)" ;
+    # sh:description "Reification = the is_a chain traces all the way to Cat_of_Cat. Every parent must be known." ;
+    # sh:property [
+        # sh:path uarl:isA ;
+        # sh:minCount 1 ;
+        # sh:name "is_a chain closure" ;
+        # sh:message "L3 MISSING: is_a chain does not close. Every is_a parent must exist in the ontology and trace to Cat_of_Cat. Reification means the chain is REAL, not hypothetical." ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# # ============================================================
+# # ENTITY BASE: Every entity needs the core triple
+# # ============================================================
+
+# uarl:EntityBaseShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:Entity ;
+    # sh:name "Entity Base Requirements" ;
+    # sh:description "Every Entity must have is_a (what it is), part_of (where it lives), and produces (what it generates). These three co-arise." ;
+    # sh:property [
+        # sh:path uarl:isA ;
+        # sh:minCount 1 ;
+        # sh:name "is_a" ;
+        # sh:message "Entity is missing 'is_a'. What IS this thing? Every entity must declare what it is." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:partOf ;
+        # sh:minCount 1 ;
+        # sh:name "part_of" ;
+        # sh:message "Entity is missing 'part_of'. Where does this thing LIVE? Every entity must belong somewhere." ;
+        # sh:severity sh:Warning ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:produces ;
+        # sh:minCount 1 ;
+        # sh:name "produces" ;
+        # sh:message "Entity is missing 'produces'. What does this thing GENERATE? Every entity must produce something (even if abstract)." ;
+        # sh:severity sh:Warning ;
+    # ] .
+
+# # ============================================================
+# # SKILL: Must have all 5 SkillSpec fields + GIINT anchor
+# # ============================================================
+
+# uarl:SkillShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:Skill ;
+    # sh:name "Skill Validation" ;
+    # sh:description "A Skill must have the core SkillSpec fields and be anchored to the GIINT hierarchy." ;
+    # sh:property [
+        # sh:path uarl:hasDomain ;
+        # sh:minCount 1 ;
+        # sh:name "has_domain" ;
+        # sh:message "Skill is missing 'has_domain'. What domain does this skill serve? (paiab, sanctum, cave, etc.)" ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:hasCategory ;
+        # sh:minCount 1 ;
+        # sh:class uarl:Skill_Category ;
+        # sh:name "has_category" ;
+        # sh:message "Skill is missing 'has_category'. Use: Skill_Category_Understand (context only), Skill_Category_Preflight (context + flight), or Skill_Category_Single_Turn_Process (context + action)." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:hasWhat ;
+        # sh:minCount 1 ;
+        # sh:name "has_what" ;
+        # sh:message "Skill is missing 'has_what'. What does this skill teach or do? The subject matter." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:hasWhen ;
+        # sh:minCount 1 ;
+        # sh:name "has_when" ;
+        # sh:message "Skill is missing 'has_when'. When should this skill be used? The trigger condition." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:hasProduces ;
+        # sh:minCount 1 ;
+        # sh:name "has_produces" ;
+        # sh:message "Skill is missing 'has_produces'. What does this skill produce when used? The output/artifact." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:hasDescribesComponent ;
+        # sh:minCount 1 ;
+        # sh:name "has_describes_component" ;
+        # sh:message "Skill is missing 'has_describes_component'. Skills must be anchored to the GIINT hierarchy via a GIINT_Component. What component does this skill describe or serve?" ;
+        # sh:severity sh:Warning ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:hasStarsystem ;
+        # sh:minCount 1 ;
+        # sh:name "has_starsystem" ;
+        # sh:message "Skill is missing 'has_starsystem'. Which starsystem does this skill belong to?" ;
+        # sh:severity sh:Warning ;
+    # ] .
+
+# # ============================================================
+# # GIINT HIERARCHY: Project → Feature → Component → Deliverable → Task
+# # ============================================================
+
+# uarl:GIINTProjectShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:GIINT_Project ;
+    # sh:name "GIINT Project Requirements" ;
+    # sh:description "A project is a list of features with a vision/requirements. Without features it MUST stay in planning." ;
+    # sh:property [
+        # sh:path uarl:hasFeature ;
+        # sh:minCount 1 ;
+        # sh:class uarl:GIINT_Feature ;
+        # sh:name "has_feature" ;
+        # sh:message "GIINT_Project has no features. A project MUST have at least one GIINT_Feature." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:hasPath ;
+        # sh:minCount 1 ;
+        # sh:name "has_path" ;
+        # sh:message "GIINT_Project has no path. A project MUST reference its starsystem directory." ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# uarl:GIINTFeatureShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:GIINT_Feature ;
+    # sh:name "GIINT Feature Requirements" ;
+    # sh:description "A feature meets specific project requirements. Its logic depends on components. Without components it MUST stay in planning." ;
+    # sh:property [
+        # sh:path uarl:partOf ;
+        # sh:minCount 1 ;
+        # sh:class uarl:GIINT_Project ;
+        # sh:name "part_of project" ;
+        # sh:message "GIINT_Feature is not part_of any GIINT_Project. Features must belong to a project." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:hasComponent ;
+        # sh:minCount 1 ;
+        # sh:class uarl:GIINT_Component ;
+        # sh:name "has_component" ;
+        # sh:message "GIINT_Feature has no components. A feature MUST have at least one GIINT_Component explaining HOW it meets requirements. Without components, this feature is incomplete and MUST stay in PLANNING mode." ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# uarl:GIINTComponentShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:GIINT_Component ;
+    # sh:name "GIINT Component Requirements" ;
+    # sh:description "A component IS code files. Made of patterns from other codebases/ontologies implemented to make deliverables." ;
+    # sh:property [
+        # sh:path uarl:partOf ;
+        # sh:minCount 1 ;
+        # sh:class uarl:GIINT_Feature ;
+        # sh:name "part_of feature" ;
+        # sh:message "GIINT_Component is not part_of any GIINT_Feature. Components must belong to a feature." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:hasDeliverable ;
+        # sh:minCount 1 ;
+        # sh:class uarl:GIINT_Deliverable ;
+        # sh:name "has_deliverable" ;
+        # sh:message "GIINT_Component has no deliverables. A component MUST have at least one GIINT_Deliverable." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:hasCodeEntity ;
+        # sh:minCount 1 ;
+        # sh:name "has_code_entity" ;
+        # sh:message "GIINT_Component has no code entity reference. A component IS code files — it MUST reference the CodeFile(s) it consists of via hasCodeEntity." ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# uarl:GIINTDeliverableShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:GIINT_Deliverable ;
+    # sh:name "GIINT Deliverable Requirements" ;
+    # sh:description "A deliverable MUST have: (A) patterns it comes from, (B) example references with line ranges, (C) change specs if modifying existing code. If ANY of these are missing, the deliverable is a HALLUCINATION and routes to GIINT planning." ;
+    # sh:property [
+        # sh:path uarl:partOf ;
+        # sh:minCount 1 ;
+        # sh:class uarl:GIINT_Component ;
+        # sh:name "part_of component" ;
+        # sh:message "GIINT_Deliverable is not part_of any GIINT_Component. Deliverables must belong to a component." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:hasPattern ;
+        # sh:minCount 1 ;
+        # sh:class uarl:CodePattern ;
+        # sh:name "has_pattern" ;
+        # sh:message "GIINT_Deliverable has no patterns. A deliverable MUST reference the CodePattern(s) it implements via hasPattern. The CodePattern must be a fully typed entity in the graph with its own restrictions satisfied." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:hasExampleReference ;
+        # sh:minCount 1 ;
+        # sh:class uarl:ExampleReference ;
+        # sh:name "has_example_reference" ;
+        # sh:message "GIINT_Deliverable has no example references. A deliverable MUST have ExampleReference(s) showing context line ranges of example files that demonstrate the patterns. The ExampleReference must point to a CodeFile in the graph." ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# uarl:GIINTTaskShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:GIINT_Task ;
+    # sh:name "GIINT Task Requirements" ;
+    # sh:description "A GIINT_Task must belong to a deliverable. Tasks are created dynamically during BUILD." ;
+    # sh:property [
+        # sh:path uarl:partOf ;
+        # sh:minCount 1 ;
+        # sh:class uarl:GIINT_Deliverable ;
+        # sh:name "part_of deliverable" ;
+        # sh:message "GIINT_Task is not part_of any GIINT_Deliverable. Tasks must belong to a deliverable." ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# # ============================================================
+# # EXAMPLE REFERENCE: Must point to typed code with line ranges
+# # ============================================================
+
+# uarl:ExampleReferenceShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:ExampleReference ;
+    # sh:name "Example Reference Requirements" ;
+    # sh:description "An ExampleReference must point to a code entity in the graph and specify line ranges." ;
+    # sh:property [
+        # sh:path uarl:hasCodeEntity ;
+        # sh:minCount 1 ;
+        # sh:name "has_code_entity" ;
+        # sh:message "ExampleReference has no code entity. Must point to a CodeFile/CodeFunction/CodeMethod that IS in the graph via hasCodeEntity." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:hasLineRange ;
+        # sh:minCount 1 ;
+        # sh:name "has_line_range" ;
+        # sh:message "ExampleReference has no line range. Must specify which lines are relevant (e.g. '45-120')." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:hasPattern ;
+        # sh:minCount 1 ;
+        # sh:class uarl:CodePattern ;
+        # sh:name "has_pattern" ;
+        # sh:message "ExampleReference has no pattern. Must reference the CodePattern being demonstrated." ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# # ============================================================
+# # CHANGE SPEC: Exact context range for modifications
+# # ============================================================
+
+# uarl:ChangeSpecShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:ChangeSpec ;
+    # sh:name "Change Spec Requirements" ;
+    # sh:description "A ChangeSpec must point to code being modified and specify line ranges." ;
+    # sh:property [
+        # sh:path uarl:hasCodeEntity ;
+        # sh:minCount 1 ;
+        # sh:name "has_code_entity" ;
+        # sh:message "ChangeSpec has no code entity. Must point to the CodeFile being modified." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:hasLineRange ;
+        # sh:minCount 1 ;
+        # sh:name "has_line_range" ;
+        # sh:message "ChangeSpec has no line range. Must specify exactly which lines to change." ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# # ============================================================
+# # INCLUSION MAP: Must prove tasks
+# # ============================================================
+
+# uarl:InclusionMapShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:Inclusion_Map ;
+    # sh:name "Inclusion Map Requirements" ;
+    # sh:description "An Inclusion_Map must prove at least one GIINT_Task." ;
+    # sh:property [
+        # sh:path uarl:proves ;
+        # sh:minCount 1 ;
+        # sh:class uarl:GIINT_Task ;
+        # sh:name "proves tasks" ;
+        # sh:message "Inclusion_Map has no 'proves' relationships. An inclusion map must prove that specific GIINT_Tasks are complete." ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# # ============================================================
+# # HALLUCINATION TYPING: Why did something fail?
+# # ============================================================
+
+# uarl:HallucinationExplainabilityShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:Hallucination ;
+    # sh:name "Hallucination Explainability" ;
+    # sh:description "Hallucinations should have error explanations" ;
+    
+    # sh:property [
+        # sh:path uarl:errorPattern ;
+        # sh:minCount 1 ;
+        # sh:name "error pattern" ;
+        # sh:message "Hallucination is missing 'errorPattern'. What pattern of mistake does this represent? Document it for the SOUP pattern analysis." ;
+        # sh:severity sh:Warning ;
+    # ] ;
+    
+    # sh:property [
+        # sh:path uarl:whatsMissing ;
+        # sh:minCount 1 ;
+        # sh:name "what's missing" ;
+        # sh:message "Hallucination is missing 'whatsMissing'. What would need to be added for this to become Reality? Provide actionable guidance." ;
+        # sh:severity sh:Warning ;
+    # ] .
+
+# # ============================================================
+# # Requires_Evolution metadata
+# # ============================================================
+
+# uarl:RequiresEvolutionReasonShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:Requires_Evolution ;
+    # sh:name "Requires_Evolution reason" ;
+    # sh:description "Requires_Evolution links should include explicit reason text" ;
+
+    # sh:property [
+        # sh:path uarl:reason ;
+        # sh:minCount 1 ;
+        # sh:datatype xsd:string ;
+        # sh:name "reason" ;
+        # sh:message "Requires_Evolution is missing reason text describing what must change." ;
+        # sh:severity sh:Warning ;
+    # ] .
+
+# # ============================================================
+# # GIINT AUXILIARY TYPES — OWL restrictions mirrored as SHACL
+# # ============================================================
+
+# uarl:BugShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:Bug ;
+    # sh:name "Bug Requirements" ;
+    # sh:description "A Bug is the exact error observed. Must reference code location and describe what went wrong." ;
+    # sh:property [
+        # sh:path uarl:partOf ;
+        # sh:minCount 1 ;
+        # sh:class uarl:GIINT_Component ;
+        # sh:name "part_of component" ;
+        # sh:message "Bug must be part_of a GIINT_Component." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:hasCodeEntity ;
+        # sh:minCount 1 ;
+        # sh:name "has_code_entity" ;
+        # sh:message "Bug must reference the CodeFile where the error occurs via hasCodeEntity." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:hasLineRange ;
+        # sh:minCount 1 ;
+        # sh:name "has_line_range" ;
+        # sh:message "Bug must specify the line range where the error occurs." ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# uarl:DesignShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:Design ;
+    # sh:name "Design Requirements" ;
+    # sh:description "A Design is a decision or pattern shaping a feature." ;
+    # sh:property [
+        # sh:path uarl:partOf ;
+        # sh:minCount 1 ;
+        # sh:class uarl:GIINT_Feature ;
+        # sh:name "part_of feature" ;
+        # sh:message "Design must be part_of a GIINT_Feature." ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# uarl:IdeaShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:Idea ;
+    # sh:name "Idea Requirements" ;
+    # sh:description "An Idea is a snapshot of a thought. Lives under a project." ;
+    # sh:property [
+        # sh:path uarl:partOf ;
+        # sh:minCount 1 ;
+        # sh:class uarl:GIINT_Project ;
+        # sh:name "part_of project" ;
+        # sh:message "Idea must be part_of a GIINT_Project." ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# uarl:PotentialSolutionShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:Potential_Solution ;
+    # sh:name "Potential_Solution Requirements" ;
+    # sh:description "A hypothesis for fixing a bug. Must reference the code to change." ;
+    # sh:property [
+        # sh:path uarl:partOf ;
+        # sh:minCount 1 ;
+        # sh:class uarl:Bug ;
+        # sh:name "part_of bug" ;
+        # sh:message "Potential_Solution must be part_of a Bug." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:hasCodeEntity ;
+        # sh:minCount 1 ;
+        # sh:name "has_code_entity" ;
+        # sh:message "Potential_Solution must reference the CodeFile to change via hasCodeEntity." ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# # ============================================================
+# # STARSYSTEM / NAVY TYPES — OWL restrictions mirrored as SHACL
+# # ============================================================
+
+# uarl:HyperclusterShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:Hypercluster ;
+    # sh:name "Hypercluster Requirements" ;
+    # sh:property [
+        # sh:path uarl:hasGiintProject ;
+        # sh:minCount 1 ;
+        # sh:class uarl:GIINT_Project ;
+        # sh:name "has_giint_project" ;
+        # sh:message "Hypercluster must have hasGiintProject pointing to a GIINT_Project." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:partOf ;
+        # sh:minCount 1 ;
+        # sh:class uarl:Collection_Category ;
+        # sh:name "part_of collection_category" ;
+        # sh:message "Hypercluster must be part_of a Collection_Category." ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# uarl:StarsystemCollectionShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:Starsystem_Collection ;
+    # sh:name "Starsystem_Collection Requirements" ;
+    # sh:property [
+        # sh:path uarl:hasPart ;
+        # sh:minCount 1 ;
+        # sh:class uarl:Collection_Category ;
+        # sh:name "has_part collection_category" ;
+        # sh:message "Starsystem_Collection must have Collection_Category children." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:hasGiintProject ;
+        # sh:minCount 1 ;
+        # sh:class uarl:GIINT_Project ;
+        # sh:name "has_giint_project" ;
+        # sh:message "Starsystem_Collection must have hasGiintProject pointing to a GIINT_Project." ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# uarl:NavyFleetShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:Navy_Fleet ;
+    # sh:name "Navy_Fleet Requirements" ;
+    # sh:property [
+        # sh:path uarl:partOf ;
+        # sh:minCount 1 ;
+        # sh:class uarl:Kardashev_Map ;
+        # sh:name "part_of kardashev_map" ;
+        # sh:message "Navy_Fleet must be part_of Kardashev_Map." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:hasSquadron ;
+        # sh:minCount 1 ;
+        # sh:class uarl:Navy_Squadron ;
+        # sh:name "has_squadron" ;
+        # sh:message "Navy_Fleet must have at least one Navy_Squadron." ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# uarl:NavySquadronShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:Navy_Squadron ;
+    # sh:name "Navy_Squadron Requirements" ;
+    # sh:property [
+        # sh:path uarl:hasMember ;
+        # sh:minCount 1 ;
+        # sh:class uarl:Navy_Starship ;
+        # sh:name "has_member" ;
+        # sh:message "Navy_Squadron must have at least one Navy_Starship member." ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# uarl:NavyStarshipShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:Navy_Starship ;
+    # sh:name "Navy_Starship Requirements" ;
+    # sh:property [
+        # sh:path uarl:partOf ;
+        # sh:minCount 1 ;
+        # sh:class uarl:Kardashev_Map ;
+        # sh:name "part_of kardashev_map" ;
+        # sh:message "Navy_Starship must be part_of Kardashev_Map." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:hasKardashevLevel ;
+        # sh:minCount 1 ;
+        # sh:name "has_kardashev_level" ;
+        # sh:message "Navy_Starship must have a kardashev level." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:hasPath ;
+        # sh:minCount 1 ;
+        # sh:name "has_path" ;
+        # sh:message "Navy_Starship must have a path to its directory." ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# uarl:PersonaShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:Persona ;
+    # sh:name "Persona Requirements" ;
+    # sh:property [
+        # sh:path uarl:hasSkill ;
+        # sh:minCount 1 ;
+        # sh:class uarl:Skill ;
+        # sh:name "has_skill" ;
+        # sh:message "Persona must have at least one Skill." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:configures ;
+        # sh:minCount 1 ;
+        # sh:class uarl:Starsystem_Collection ;
+        # sh:name "configures starsystem" ;
+        # sh:message "Persona must configure a Starsystem_Collection." ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# uarl:StarshipPilotShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:Starship_Pilot ;
+    # sh:name "Starship_Pilot Requirements" ;
+    # sh:property [
+        # sh:path uarl:hasPart ;
+        # sh:minCount 1 ;
+        # sh:class uarl:Persona ;
+        # sh:name "has_part persona" ;
+        # sh:message "Starship_Pilot must have a Persona." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:partOf ;
+        # sh:minCount 1 ;
+        # sh:class uarl:Navy_Starship ;
+        # sh:name "part_of starship" ;
+        # sh:message "Starship_Pilot must be part_of a Navy_Starship." ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# # ============================================================
+# # CODE TYPES — OWL restrictions mirrored as SHACL
+# # ============================================================
+
+# uarl:CodePatternShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:CodePattern ;
+    # sh:name "CodePattern Requirements" ;
+    # sh:property [
+        # sh:path uarl:name ;
+        # sh:minCount 1 ;
+        # sh:name "name" ;
+        # sh:message "CodePattern must have a name." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:description ;
+        # sh:minCount 1 ;
+        # sh:name "description" ;
+        # sh:message "CodePattern must have a description." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:template ;
+        # sh:minCount 1 ;
+        # sh:name "template" ;
+        # sh:message "CodePattern must have a template (code template showing the pattern)." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:recognizer ;
+        # sh:minCount 1 ;
+        # sh:name "recognizer" ;
+        # sh:message "CodePattern must have a recognizer (how to detect this pattern in code)." ;
+        # sh:severity sh:Violation ;
+    # ] .
+
+# uarl:CodeFileShape
+    # a sh:NodeShape ;
+    # sh:targetClass uarl:CodeFile ;
+    # sh:name "CodeFile Requirements" ;
+    # sh:property [
+        # sh:path uarl:defines ;
+        # sh:minCount 1 ;
+        # sh:name "defines" ;
+        # sh:message "CodeFile must define at least one CodeClass or CodeFunction." ;
+        # sh:severity sh:Violation ;
+    # ] ;
+    # sh:property [
+        # sh:path uarl:implementsPattern ;
+        # sh:minCount 1 ;
+        # sh:class uarl:CodePattern ;
+        # sh:name "implements_pattern" ;
+        # sh:message "CodeFile must declare which CodePattern(s) it implements." ;
+        # sh:severity sh:Violation ;
+    # ] .

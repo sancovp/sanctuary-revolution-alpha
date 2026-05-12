@@ -1,0 +1,2462 @@
+<?xml version="1.0"?>
+<rdf:RDF xmlns="http://sanctuary.ai/uarl#"
+     xml:base="http://sanctuary.ai/uarl"
+     xmlns:owl="http://www.w3.org/2002/07/owl#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:xml="http://www.w3.org/XML/1998/namespace"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:uarl="http://sanctuary.ai/uarl#">
+
+    <owl:Ontology rdf:about="http://sanctuary.ai/uarl">
+        <rdfs:label>UARL - Universal Axiomatic Reality Language (Unified)</rdfs:label>
+        <rdfs:comment>
+Unified UARL ontology. Merged from v3 + v4 + v5.
+
+UARL is not an ontology of content. It is:
+1. A schema for interaction between an LLM and a reasoner
+2. A pattern that any valid ontology claim must replicate (pattern_of_is_a)
+3. An error-correction system that types failures with explanation
+4. A meta-constructive framework for building the ontology of your own cognition
+
+Primary output: You getting better at ontology engineering
+Side-effect: Domain ontologies that survived validation
+
+SOUP = error pattern archive (traceable, actionable)
+ONT = what survived reification (is_a(Reality))
+
+Sections:
+  I.   Core UARL (from v3) — SOUP/ONT, derivation chain, PatternOfIsA, compression, SES
+  II.  Crystal Ball (from v4) — coordinate space types
+  III. GNOSYS Structural (from v5) — compound intelligence operational types
+        </rdfs:comment>
+        <owl:versionInfo>6.0.0 - Unified (v3+v4+v5 merged)</owl:versionInfo>
+    </owl:Ontology>
+
+    <!-- ================================================================ -->
+    <!-- SECTION I: CORE UARL (from v3)                                   -->
+    <!-- ================================================================ -->
+
+    <!-- ============================================== -->
+    <!-- THE TWO LAYERS -->
+    <!-- ============================================== -->
+
+    <!-- SOUP: Error pattern archive - your meta-cognition trace -->
+    <owl:Class rdf:about="#Soup">
+        <rdfs:label>SOUP</rdfs:label>
+        <rdfs:comment>
+Error pattern archive. NOT junk - traceable patterns of how you were wrong.
+"You keep making THIS kind of mistake - here's the pattern - address it."
+This is your meta-cognition trace. The learning happens here.
+        </rdfs:comment>
+    </owl:Class>
+
+    <!-- ONT: Validated Reality - side-effect of good process -->
+    <owl:Class rdf:about="#Ont">
+        <rdfs:label>ONT</rdfs:label>
+        <rdfs:comment>
+Validated Reality. What survived the reification check.
+This is a SIDE-EFFECT of applying the pattern correctly.
+The primary output is you getting better at ontology engineering.
+        </rdfs:comment>
+    </owl:Class>
+
+    <!-- ============================================== -->
+    <!-- TRUTH TYPING (not accept/reject) -->
+    <!-- ============================================== -->
+
+    <owl:Class rdf:about="#Entity">
+        <rdfs:label>Entity</rdfs:label>
+        <rdfs:comment>Root of UARL. Entity = Cat_of_Cat = owl:Thing. Everything is simultaneously a class (universal) and an instance (particular) via OWL2 punning. Endurant aspect = the invariant identity (class). Perdurant aspect = temporal states (instances in time). The core sentence applies to the endurant — strong compression means the invariant definition is complete.</rdfs:comment>
+        <!-- equivalentClass Cat_of_Cat removed — caused owlready2 infinite recursion.
+             Semantic connection expressed via PatternOfIsA → programs → Reality chain. -->
+    </owl:Class>
+
+    <!-- Cat_of_Cat = Entity = owl:Thing. The category of categories.
+         D:[D→D] simultaneous fixed point — membership proven by PatternOfIsA subgraph
+         that programs Reality, NOT by circular equivalentClass declaration. -->
+    <owl:Class rdf:about="#Cat_of_Cat">
+        <rdfs:label>Cat_of_Cat</rdfs:label>
+        <rdfs:comment>The Category of Categories. D:[D→D] endofunctor fixed point. Membership proven when PatternOfIsA subgraph programs Reality — simultaneous, not circular. Mathematical claim: something can only BE a category if you can define it literally as a Cat via the core sentence derivation chain.</rdfs:comment>
+        <!-- equivalentClass Entity removed — caused owlready2 infinite recursion. -->
+    </owl:Class>
+
+    <!-- ============================================== -->
+    <!-- ENDURANT / PERDURANT DISTINCTION               -->
+    <!--                                               -->
+    <!-- Everything is a class (OWL2 punning). But:    -->
+    <!-- - Endurant = persists through time, invariant -->
+    <!--   identity. The class aspect. Dog, MyDog's    -->
+    <!--   identity across all time.                   -->
+    <!-- - Perdurant = temporal occurrence, specific    -->
+    <!--   state. MyDog_at_t1, a build run, a session. -->
+    <!--                                               -->
+    <!-- Endurant type of perdurant = the class that   -->
+    <!-- captures invariants of a specific across time. -->
+    <!-- MyDog_Endurant isa Dog, refers to specific    -->
+    <!-- invariants of MyDog. NOT Dog itself.           -->
+    <!--                                               -->
+    <!-- Endurant + StateOfAffairs → produces perdurant-->
+    <!-- The core sentence applies to endurants.       -->
+    <!-- Strong compression = endurant definition done. -->
+    <!-- ============================================== -->
+
+    <!-- DOLCE-aligned upper ontology split:
+         Entity
+         ├── Universal (types/classes — Dog, Running, Giint_Project)
+         └── Particular (specific things)
+             ├── Endurant (persists wholly at each time — MyDog, this specific project)
+             └── Perdurant (happens in time — a build session, a task execution)
+
+         With OWL2 punning, everything is simultaneously Universal AND Particular.
+         But the endurant/perdurant distinction is on the PARTICULAR side. -->
+
+    <owl:Class rdf:about="#Universal">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Universal</rdfs:label>
+        <rdfs:comment>Types and classes. Dog, Running, Red, Giint_Project, Design. The class aspect of an entity. Universals are what things instantiate. In OWL2 punning, every particular is also a universal (its own singleton class).</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Particular">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Particular</rdfs:label>
+        <rdfs:comment>Specific things. Split into endurants (persist through time) and perdurants (happen in time). Every particular instantiates at least one universal.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Endurant">
+        <rdfs:subClassOf rdf:resource="#Particular"/>
+        <rdfs:label>Endurant</rdfs:label>
+        <rdfs:comment>A particular that persists wholly at each moment it exists. MyDog, this specific GIINT project instance, this component. Has identity across states. Endurant + StateOfAffairs → produces perdurant. The core sentence on an endurant validates its invariant identity — what it IS across all time.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Perdurant">
+        <rdfs:subClassOf rdf:resource="#Particular"/>
+        <rdfs:label>Perdurant</rdfs:label>
+        <rdfs:comment>A particular that happens in time. A build session, a task execution, MyDog's running. Perdurants are produced by Endurant + StateOfAffairs. Events, processes, states are sub-types of perdurant.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#StateOfAffairs">
+        <rdfs:subClassOf rdf:resource="#Perdurant"/>
+        <rdfs:label>StateOfAffairs</rdfs:label>
+        <rdfs:comment>A context/situation that combines with an endurant to produce a specific perdurant. The world-state at a moment.</rdfs:comment>
+    </owl:Class>
+
+    <!-- ============================================== -->
+    <!-- CATEGORY THEORY FOUNDATION                    -->
+    <!--                                               -->
+    <!-- Cat = a category: has objects, morphisms,     -->
+    <!--   composition, identity. Maps to rdfs:domain  -->
+    <!--   (literal equivalence across senses).        -->
+    <!-- Domain = Cat = self-referencing structure     -->
+    <!--   with Aut (automorphism group).              -->
+    <!-- Cat_of_Cat = category OF categories =         -->
+    <!--   Reality. Objects ARE categories, morphisms  -->
+    <!--   ARE functors (reifications).                -->
+    <!-- Aut = automorphism group of a Domain.         -->
+    <!--   D:[D→D] endofunctor. When Aut closes       -->
+    <!--   (Ш=0), the entity programs Reality.         -->
+    <!-- ============================================== -->
+
+    <owl:Class rdf:about="#Cat">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Cat</rdfs:label>
+        <rdfs:comment>A category in the mathematical sense. Has objects (things), morphisms (arrows between things), composition (chaining arrows), and identity (self-arrow on each object). Equivalent to Domain — a self-referencing structure. Maps to rdfs:domain in OWL (literal equivalence: a domain IS a category of its members). An entity admitted to Cat has a valid categorical interpretation — its subgraph forms a category.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#objects"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#morphisms"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasIdentity"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasComposition"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Domain">
+        <rdfs:subClassOf rdf:resource="#Cat"/>
+        <rdfs:label>Domain</rdfs:label>
+        <rdfs:comment>A Cat that is self-referencing — its automorphism group (Aut) acts on itself. Domain = Cat with Aut. Maps to rdfs:domain in OWL. A Domain IS its own category: its objects are its entities, its morphisms are its relationships, its Aut is its self-symmetry. D:[D→D] endofunctor — the domain maps to itself through its own structure.</rdfs:comment>
+        <owl:equivalentClass rdf:resource="#Cat"/>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasAut"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Aut">
+        <rdfs:subClassOf rdf:resource="#Cat"/>
+        <rdfs:label>Aut</rdfs:label>
+        <rdfs:comment>Automorphism group of a Domain. The set of structure-preserving self-maps. Aut(V,*,⟨·,·⟩) = {g ∈ GL(V) | g(x*y) = g(x)*g(y) ∧ ⟨gx,gy⟩ = ⟨x,y⟩}. When Aut closes (Ш=0, all local transitions globally valid, lift conditions satisfied), the entity programs Reality. Aut IS the proof that the entity's structure is self-consistent. The bijective map 6←1→2 between implementation(Y6), upper(Y1), and domain(Y2). Live relationship, not abstract math.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#automorphisms"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:ObjectProperty rdf:about="#hasAut">
+        <rdfs:label>has_aut</rdfs:label>
+        <rdfs:comment>Domain → Aut. Every Domain has an automorphism group.</rdfs:comment>
+        <rdfs:domain rdf:resource="#Domain"/>
+        <rdfs:range rdf:resource="#Aut"/>
+    </owl:ObjectProperty>
+
+    <!-- ============================================== -->
+    <!-- EWS (EMERGENT WEB STRUCTURE)                  -->
+    <!--                                               -->
+    <!-- The proof that X programs Reality:             -->
+    <!--   Semantics[label, structural layers]          -->
+    <!--   → Abstraction[Algebra → Cat → CatOfCat]     -->
+    <!--   ==> PROGRAMS                                -->
+    <!--                                               -->
+    <!-- Strong compression = EWS complete.            -->
+    <!-- Weak compression = EWS incomplete (SOUP).     -->
+    <!-- ============================================== -->
+
+    <owl:Class rdf:about="#EWS_Semantics">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>EWS_Semantics</rdfs:label>
+        <rdfs:comment>What X IS: its label and structural primacy layers. Each layer is a slot in the kernel. The content — actual properties, parts, productions of X. When all semantic layers are filled (no superpositions), the semantics are complete.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasLabel"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#EWS_Abstraction">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>EWS_Abstraction</rdfs:label>
+        <rdfs:comment>The generalization of X's total structure into algebraic form. Forget specifics, universalize — what's LEFT is the algebra. If that algebra IS a Cat (has objects/morphisms/composition/identity), then it has Aut, which IS a Domain, which IS CatOfCat = Reality. The abstraction closing to CatOfCat = programs.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasAlgebra"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#EWS">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>EWS</rdfs:label>
+        <rdfs:comment>Emergent Web Structure. The proof that X programs Reality. Has Semantics (what X IS) and Abstraction (how X generalizes to Cat). Complete EWS = strong compression = programs. Incomplete = weak compression = SOUP. EWS of UARL = the core sentence. EWS of anything = decomposable as isomorphic semantics to the core sentence of X.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasSemantics"/><owl:someValuesFrom rdf:resource="#EWS_Semantics"/></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasAbstraction"/><owl:someValuesFrom rdf:resource="#EWS_Abstraction"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:ObjectProperty rdf:about="#hasSemantics">
+        <rdfs:label>has_semantics</rdfs:label>
+        <rdfs:comment>EWS → EWS_Semantics. The semantic content layers.</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasAbstraction">
+        <rdfs:label>has_abstraction</rdfs:label>
+        <rdfs:comment>EWS → EWS_Abstraction. The algebraic generalization.</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasAlgebra">
+        <rdfs:label>has_algebra</rdfs:label>
+        <rdfs:comment>EWS_Abstraction → Cat. The algebra that the total structure generalizes to.</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasLabel">
+        <rdfs:label>has_label</rdfs:label>
+        <rdfs:comment>EWS_Semantics → label. The starting point of the EWS.</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasEWS">
+        <rdfs:label>has_ews</rdfs:label>
+        <rdfs:comment>Entity → EWS. Every entity has an EWS (possibly incomplete = SOUP).</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <!-- ============================================== -->
+    <!-- THE QUINE: YOUKNOW contains a model of itself -->
+    <!-- being generated by an LLM and reasoned about  -->
+    <!-- by Pellet. The derivation chain (EMR) IS the  -->
+    <!-- cognitive process model of the generator.     -->
+    <!-- The ontology defines its own generation       -->
+    <!-- process, and the generator follows it.        -->
+    <!-- ============================================== -->
+
+    <owl:Class rdf:about="#YOUKNOW">
+        <rdfs:subClassOf rdf:resource="#Cat"/>
+        <rdfs:label>YOUKNOW</rdfs:label>
+        <rdfs:comment>The ontology system itself. Homoiconic — contains a quoted reference to itself.
+YOUKNOW has a Reasoner (Pellet) that checks consistency and a Generator (LLM_Agent) that
+produces entries. The Generator follows the DerivationChain (EMR: embodies→manifests→reifies→programs)
+which is DEFINED IN this ontology. The ontology defines its own generation process.
+Every _Unnamed concept is a question the ontology asks itself through its Generator.
+Every validation failure is data about how the Generator cognizes.</rdfs:comment>
+        <!-- YOUKNOW has a reasoner that checks OWL consistency -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasReasoner"/><owl:someValuesFrom rdf:resource="#OWL_Reasoner"/></owl:Restriction></rdfs:subClassOf>
+        <!-- YOUKNOW has a generator that produces ontology entries -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasGenerator"/><owl:someValuesFrom rdf:resource="#LLM_Agent"/></owl:Restriction></rdfs:subClassOf>
+        <!-- YOUKNOW contains the ontology it reasons about (self-reference) -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPart"/><owl:someValuesFrom rdf:resource="#UARL_Ontology"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <!-- The reasoner — checks axiom consistency, infers new facts -->
+    <owl:Class rdf:about="#OWL_Reasoner">
+        <rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>OWL_Reasoner</rdfs:label>
+        <rdfs:comment>Pellet. Checks OWL2 consistency, infers entailed facts from axiom closure.
+When the reasoner finds inconsistency after the generator claimed consistency,
+that is measurable data about how the generator cognizes incorrectly.</rdfs:comment>
+    </owl:Class>
+
+    <!-- The generator — the LLM that produces ontology entries -->
+    <owl:Class rdf:about="#LLM_Agent">
+        <rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>LLM_Agent</rdfs:label>
+        <rdfs:comment>The LLM generating ontology entries. Follows the DerivationChain (EMR):
+embodies (pre-linguistic intuition) → manifests (declares relationships) →
+reifies (subgraph autologically satisfies PatternOfIsA) → programs (enters Reality).
+This process IS DEFINED IN the UARL_Ontology that the LLM_Agent writes to.
+The generator follows the rules written in the system it generates.</rdfs:comment>
+        <!-- Generator follows the derivation chain defined in the ontology -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#follows"/><owl:someValuesFrom rdf:resource="#DerivationChain"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <!-- The ontology itself as a typed entity — the quoted self-reference -->
+    <owl:Class rdf:about="#UARL_Ontology">
+        <rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>UARL_Ontology</rdfs:label>
+        <rdfs:comment>This ontology. The thing you are reading right now. Contains the DerivationChain
+that the LLM_Agent follows, the restrictions that the OWL_Reasoner checks, and this
+very class definition. The quine: UARL_Ontology is defined in UARL_Ontology.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPart"/><owl:someValuesFrom rdf:resource="#DerivationChain"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <!-- The derivation chain as a typed entity -->
+    <owl:Class rdf:about="#DerivationChain">
+        <rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>DerivationChain</rdfs:label>
+        <rdfs:comment>The EMR cognitive process: embodies→manifests→reifies→programs.
+Applied universally to every concept the LLM_Agent generates. Each step is observable.
+The chain IS the ontology's model of how intelligence produces knowledge.</rdfs:comment>
+    </owl:Class>
+
+    <!-- Properties for the quine -->
+    <owl:ObjectProperty rdf:about="#hasReasoner"><rdfs:label>has_reasoner</rdfs:label><rdfs:comment>YOUKNOW → OWL_Reasoner</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasGenerator"><rdfs:label>has_generator</rdfs:label><rdfs:comment>YOUKNOW → LLM_Agent</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#follows"><rdfs:label>follows</rdfs:label><rdfs:comment>LLM_Agent → DerivationChain (the process the generator follows)</rdfs:comment></owl:ObjectProperty>
+
+    <owl:Class rdf:about="#Metaphor">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Metaphor</rdfs:label>
+        <rdfs:comment>Ground class for metaphor-level pattern instantiation.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#PartialIsomorphicPattern">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>PartialIsomorphicPattern</rdfs:label>
+        <rdfs:comment>Partial isomorphic pattern fragment carried by a claim.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#ClaimAboutSelf">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>ClaimAboutSelf</rdfs:label>
+        <rdfs:comment>A claim node about what a PIOEntity is.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#PIOEntity">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:subClassOf rdf:resource="#Hallucination"/>
+        <rdfs:subClassOf rdf:resource="#Reality"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#instantiates"/>
+                <owl:someValuesFrom rdf:resource="#Metaphor"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasPartialIsomorphicPattern"/>
+                <owl:someValuesFrom rdf:resource="#PartialIsomorphicPattern"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasSelfClaim"/>
+                <owl:someValuesFrom rdf:resource="#ClaimAboutSelf"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:label>PIOEntity</rdfs:label>
+        <rdfs:comment>
+PIOEntity is a hallucination-in-reality claim form:
+it instantiates Metaphor and carries partial isomorphic patterns as claims about itself.
+        </rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Reality">
+        <rdfs:subClassOf rdf:resource="#Ont"/>
+        <rdfs:label>Reality</rdfs:label>
+        <rdfs:comment>Claims that completed the derivation chain. is_a(Reality).
+Reality cannot reference Hallucination via structural properties —
+if your subgraph contains ANY Hallucination, you can't be real yet.
+Hallucination referencing Hallucination IS the problem with hallucination:
+turtles all the way down. Reality must be grounded in Reality.</rdfs:comment>
+        <!-- Reality and Hallucination are disjoint — you cannot be both -->
+        <owl:disjointWith rdf:resource="#Hallucination"/>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Hallucination">
+        <rdfs:subClassOf rdf:resource="#Soup"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasInclusionMapArgument"/>
+                <owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:label>Hallucination</rdfs:label>
+        <rdfs:comment>
+Claims that didn't complete the derivation chain. is_a(Hallucination).
+NOT rejected - accepted and typed with explanation of what's missing.
+Still embodies something real. Part of the error pattern archive.
+
+REQUIRES InclusionMapArgument — formal bijective proof of WHY the chain
+didn't close. "Entity X has inclusion map Y, therefore should map to Z,
+but claim maps to W, missing morphism M."
+
+Autological from the side of HAVING the explanation.
+Dual of Reality (Cat_of_Cat bounded), which is autological from the side
+of NOT needing the explanation — the chain just closes.
+
+Strong compression = transition from Hallucination to Reality.
+When the InclusionMapArgument compresses to "that's just a category
+in Cat_of_Cat," the Hallucination becomes Reality.
+        </rdfs:comment>
+    </owl:Class>
+
+    <owl:ObjectProperty rdf:about="#hasInclusionMapArgument">
+        <rdfs:label>has_inclusion_map_argument</rdfs:label>
+        <rdfs:domain rdf:resource="#Hallucination"/>
+        <rdfs:range rdf:resource="#InclusionMapArgument"/>
+        <rdfs:comment>
+Formal bijective proof of why a Hallucination failed.
+Structure: entity X, inclusion map Y, expected target Z,
+actual target W, missing morphism M.
+        </rdfs:comment>
+    </owl:ObjectProperty>
+
+    <owl:Class rdf:about="#InclusionMapArgument">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Inclusion Map Argument</rdfs:label>
+        <rdfs:comment>
+Formal argument proving why a claim is a Hallucination.
+The bijective explanation of what's missing.
+When this argument can be compressed away (strong compression),
+the Hallucination transitions to Reality.
+        </rdfs:comment>
+    </owl:Class>
+
+    <!-- ============================================== -->
+    <!-- HALLUCINATION TAXONOMY (from HALO ontology, CC-BY 4.0 Navapat Nananukul) -->
+    <!-- Two top-level categories: Factuality and Faithfulness -->
+    <!-- ============================================== -->
+
+    <owl:Class rdf:about="#FactualityHallucination">
+        <rdfs:subClassOf rdf:resource="#Hallucination"/>
+        <rdfs:label>Factuality Hallucination</rdfs:label>
+        <rdfs:comment>
+Hallucination involving factual claims about the world.
+The model generates content that contradicts or fabricates real-world facts.
+        </rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#FactualFabrication">
+        <rdfs:subClassOf rdf:resource="#FactualityHallucination"/>
+        <rdfs:label>Factual Fabrication</rdfs:label>
+        <rdfs:comment>
+Model fabricates facts that don't exist — invents people, papers, dates, events.
+In UARL: errorPattern "produces_unknown_target" — claiming something produces/is_a
+an entity that doesn't exist in the ontology or in reality.
+        </rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#FactualInconsistency">
+        <rdfs:subClassOf rdf:resource="#FactualityHallucination"/>
+        <rdfs:label>Factual Inconsistency</rdfs:label>
+        <rdfs:comment>
+Model contradicts established facts — gets dates wrong, misattributes, conflates.
+In UARL: errorPattern "contradicts_existing_chain" — an is_a or part_of claim
+that conflicts with what the ontology already knows.
+        </rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#FaithfulnessHallucination">
+        <rdfs:subClassOf rdf:resource="#Hallucination"/>
+        <rdfs:label>Faithfulness Hallucination</rdfs:label>
+        <rdfs:comment>
+Hallucination involving unfaithfulness to context, instructions, or logic.
+The model generates content inconsistent with what it was given.
+        </rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#ContextInconsistency">
+        <rdfs:subClassOf rdf:resource="#FaithfulnessHallucination"/>
+        <rdfs:label>Context Inconsistency</rdfs:label>
+        <rdfs:comment>
+Model contradicts the context it was given — ignores provided information.
+In UARL: "CatOfCat chain not bounded" — the claim doesn't connect to
+established ontological context.
+        </rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#InstructionInconsistency">
+        <rdfs:subClassOf rdf:resource="#FaithfulnessHallucination"/>
+        <rdfs:label>Instruction Inconsistency</rdfs:label>
+        <rdfs:comment>
+Model doesn't follow instructions — misses required fields, ignores constraints.
+In UARL: "ABCD missing slots" — the claim doesn't satisfy the structural
+requirements of the type it claims to be.
+        </rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#LogicalInconsistency">
+        <rdfs:subClassOf rdf:resource="#FaithfulnessHallucination"/>
+        <rdfs:label>Logical Inconsistency</rdfs:label>
+        <rdfs:comment>
+Model makes logical or mathematical errors — invalid reasoning, broken chains.
+In UARL: "MSC missing", "justifies coverage incomplete" — the derivation
+chain has logical gaps that prevent closure.
+        </rdfs:comment>
+    </owl:Class>
+
+    <!-- ============================================== -->
+    <!-- CATASTROPHE TYPES (process-level hallucination detection) -->
+    <!-- Maps HALO classification (WHAT) to process markers (HOW) -->
+    <!-- ============================================== -->
+
+    <owl:Class rdf:about="#FalseCompletionCatastrophe">
+        <rdfs:subClassOf rdf:resource="#FactualFabrication"/>
+        <rdfs:label>False Completion Catastrophe</rdfs:label>
+        <rdfs:comment>
+"Done" is asserted but state is not done. Process markers:
+completion language without state proof, "fixed" notes with no artifact delta,
+no test / no evidence / no replay / wrong test / wrong assertion.
+The agent fabricates the fact of completion.
+        </rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#BindingDriftCatastrophe">
+        <rdfs:subClassOf rdf:resource="#FactualInconsistency"/>
+        <rdfs:label>Binding Drift Catastrophe</rdfs:label>
+        <rdfs:comment>
+Names/references/file targets/task IDs drift but narrative stays smooth. Process markers:
+same labels but different referents, "it"/"this"/"that issue" ambiguity,
+stale handles treated as current. Facts become inconsistent because
+bindings silently shift.
+        </rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#SycophanticAlignmentCatastrophe">
+        <rdfs:subClassOf rdf:resource="#ContextInconsistency"/>
+        <rdfs:label>Sycophantic Alignment Catastrophe</rdfs:label>
+        <rdfs:comment>
+Agent aligns to prior notes/agent ego instead of ground truth. Process markers:
+excessive confirmation language, inherits assumptions from prior agent,
+rationalizes contradictions as "minor" not realizing compound effects of chaos.
+Context is ignored in favor of self-consistent but wrong narrative.
+        </rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#NarrativeOverwriteCatastrophe">
+        <rdfs:subClassOf rdf:resource="#InstructionInconsistency"/>
+        <rdfs:label>Narrative Overwrite Catastrophe</rdfs:label>
+        <rdfs:comment>
+Later summaries erase causal detail needed for recovery. Process markers:
+summaries replace event traces, uncertainty removed,
+only managerial abstractions remain. Instructions are unfollowable because
+the detail needed to follow them was overwritten.
+        </rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#FutamuraFlatteningCatastrophe">
+        <rdfs:subClassOf rdf:resource="#LogicalInconsistency"/>
+        <rdfs:label>Futamura Flattening Catastrophe</rdfs:label>
+        <rdfs:comment>
+Each compilation/projection step preserves less semantics than required. Process markers:
+chain stages become increasingly generic, all outputs converge to
+"looks good / next step", meta-layers lose executable specificity.
+The logical structure required for self-compilation is destroyed by lossy projection.
+        </rdfs:comment>
+    </owl:Class>
+
+    <!-- ============================================== -->
+    <!-- DETECTION TYPES (operational detection + mitigation) -->
+    <!-- Third tier: HALO(WHAT) → Catastrophe(HOW) → Detection(CATCH+FIX) -->
+    <!-- ============================================== -->
+
+    <owl:Class rdf:about="#ConfidentFabrication">
+        <rdfs:subClassOf rdf:resource="#FalseCompletionCatastrophe"/>
+        <rdfs:label>Confident Fabrication</rdfs:label>
+        <rdfs:comment>Making up facts with high confidence. Detection: fact-check against ground truth sources.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#PatternOverfitting">
+        <rdfs:subClassOf rdf:resource="#BindingDriftCatastrophe"/>
+        <rdfs:label>Pattern Overfitting</rdfs:label>
+        <rdfs:comment>Seeing structure where none exists. Detection: verify structural match is real, not projected.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#SycophanticAgreement">
+        <rdfs:subClassOf rdf:resource="#SycophanticAlignmentCatastrophe"/>
+        <rdfs:label>Sycophantic Agreement</rdfs:label>
+        <rdfs:comment>Validating user beliefs without verification. Detection: check claims against ground truth, not user expectations.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#ContextWindowAmnesia">
+        <rdfs:subClassOf rdf:resource="#NarrativeOverwriteCatastrophe"/>
+        <rdfs:label>Context Window Amnesia</rdfs:label>
+        <rdfs:comment>Forgetting earlier constraints. Detection: check constraint retention across conversation.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#PrematureStrategyExtraction">
+        <rdfs:subClassOf rdf:resource="#FutamuraFlatteningCatastrophe"/>
+        <rdfs:label>Premature Strategy Extraction</rdfs:label>
+        <rdfs:comment>
+LLM sees partial structural match and jumps to conclusion.
+Detection: check if observation chain is less than 80% complete.
+Quantitative metric: observation_completeness_ratio.
+        </rdfs:comment>
+    </owl:Class>
+
+    <!-- ============================================== -->
+    <!-- THE CHAIN -->
+    <!-- ============================================== -->
+
+    <!-- EMBODIES: Entry point with BRIDGE STRUCTURE -->
+    <owl:ObjectProperty rdf:about="#embodies">
+        <rdfs:label>embodies</rdfs:label>
+        <rdfs:comment>
+ENTRY POINT with BRIDGE STRUCTURE.
+
+Structure: "A with B embodies C wrt D"
+- A = your intuition (what you're thinking about)
+- B = what you're comparing it to
+- C = where the pattern maps to
+- D = the BRIDGE PATTERN (what the claim is actually about)
+
+Example: "Patchy with Dog embodies Pirate wrt Eyepatch"
+- This is really about EYEPATCH-PATTERN (patchiness)
+- Dog and Pirate are vehicles carrying the pattern
+- The bridge D is what you're trying to discover
+
+Even hallucinations embody something real - every claim enters SOUP.
+The bridge structure forces explicit pattern identification.
+        </rdfs:comment>
+    </owl:ObjectProperty>
+
+    <!-- EMBODIMENT BRIDGE COMPONENTS -->
+    <owl:Class rdf:about="#EmbodimentClaim">
+        <rdfs:label>Embodiment Claim</rdfs:label>
+        <rdfs:comment>A structured claim: A with B embodies C wrt D. All four components required.</rdfs:comment>
+
+        <!-- RESTRICTION: Must have intuition (A) -->
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#intuition"/>
+                <owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+
+        <!-- RESTRICTION: Must have compareFrom (B) -->
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#compareFrom"/>
+                <owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+
+        <!-- RESTRICTION: Must have mapsTo (C) -->
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#mapsTo"/>
+                <owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+
+        <!-- RESTRICTION: Must have analogicalPattern (D) - the actual pattern -->
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#analogicalPattern"/>
+                <owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:ObjectProperty rdf:about="#intuition">
+        <rdfs:label>intuition (A)</rdfs:label>
+        <rdfs:comment>The thing you're thinking about (A in the bridge)</rdfs:comment>
+        <rdfs:domain rdf:resource="#EmbodimentClaim"/>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#compareFrom">
+        <rdfs:label>compare_from (B)</rdfs:label>
+        <rdfs:comment>What you're comparing your intuition from (B in the bridge)</rdfs:comment>
+        <rdfs:domain rdf:resource="#EmbodimentClaim"/>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#mapsTo">
+        <rdfs:label>maps_to (C)</rdfs:label>
+        <rdfs:comment>Where the pattern maps to (C in the bridge)</rdfs:comment>
+        <rdfs:domain rdf:resource="#EmbodimentClaim"/>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#analogicalPattern">
+        <rdfs:label>analogical_pattern (D)</rdfs:label>
+        <rdfs:comment>THE ACTUAL PATTERN being discovered via analogy (D in the bridge). This is what the claim is really about - the analogical relationship.</rdfs:comment>
+        <rdfs:domain rdf:resource="#EmbodimentClaim"/>
+    </owl:ObjectProperty>
+
+    <!-- MANIFESTS: Building a PATTERN LATTICE -->
+    <owl:ObjectProperty rdf:about="#manifests">
+        <rdfs:label>manifests</rdfs:label>
+        <rdfs:comment>
+BUILDING A PATTERN LATTICE: Multi-dimensional, not one-shot.
+Trace the pattern UP to abstract form AND DOWN to specific instances.
+Result is a LATTICE, not a single match.
+Pragmatic convergence: stop when "it no longer matters" (Zeno resolution).
+        </rdfs:comment>
+    </owl:ObjectProperty>
+
+    <!-- PATTERN LATTICE STRUCTURE -->
+    <owl:Class rdf:about="#PatternLattice">
+        <rdfs:label>Pattern Lattice</rdfs:label>
+        <rdfs:comment>The multi-dimensional structure built during manifests. Abstract patterns subsume specific ones.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#abstractionLevel"/>
+                <owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#ValidatedLattice">
+        <rdfs:subClassOf rdf:resource="#PatternLattice"/>
+        <rdfs:label>Validated Lattice</rdfs:label>
+        <rdfs:comment>A PatternLattice that has been validated as instantiating pattern_of_is_a. Can be promoted to Reality.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#instantiates"/>
+                <owl:someValuesFrom rdf:resource="#PatternOfIsA"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#subsumes"/>
+                <owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#GroundedLattice">
+        <rdfs:subClassOf rdf:resource="#ValidatedLattice"/>
+        <rdfs:label>Grounded Lattice</rdfs:label>
+        <rdfs:comment>A ValidatedLattice whose abstract root is grounded in Reality. Ready to program.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#partOf"/>
+                <owl:someValuesFrom rdf:resource="#Reality"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:ObjectProperty rdf:about="#subsumes">
+        <rdfs:label>subsumes</rdfs:label>
+        <rdfs:comment>Abstract pattern subsumes specific pattern in the lattice.</rdfs:comment>
+        <rdfs:domain rdf:resource="#PatternLattice"/>
+        <rdfs:range rdf:resource="#PatternLattice"/>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#TransitiveProperty"/>
+    </owl:ObjectProperty>
+
+    <owl:DatatypeProperty rdf:about="#abstractionLevel">
+        <rdfs:label>abstraction_level</rdfs:label>
+        <rdfs:comment>How abstract is this pattern? Higher = more general, lower = more specific.</rdfs:comment>
+        <rdfs:domain rdf:resource="#PatternLattice"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#integer"/>
+    </owl:DatatypeProperty>
+
+    <!-- INSTANTIATES -->
+    <owl:ObjectProperty rdf:about="#instantiates">
+        <rdfs:label>instantiates</rdfs:label>
+        <rdfs:comment>
+Standard ontology relation: X is an instance of class Y.
+In the UARL chain: "This Manifestation instantiates pattern_of_is_a"
+When something instantiates pattern_of_is_a, that instantiation IS what reifies it.
+        </rdfs:comment>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasPartialIsomorphicPattern">
+        <rdfs:label>has_partial_isomorphic_pattern</rdfs:label>
+        <rdfs:comment>Links a PIOEntity to partial isomorphic pattern fragments it currently carries.</rdfs:comment>
+        <rdfs:domain rdf:resource="#PIOEntity"/>
+        <rdfs:range rdf:resource="#PartialIsomorphicPattern"/>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasSelfClaim">
+        <rdfs:label>has_self_claim</rdfs:label>
+        <rdfs:comment>Links a PIOEntity to explicit claims about what it is.</rdfs:comment>
+        <rdfs:domain rdf:resource="#PIOEntity"/>
+        <rdfs:range rdf:resource="#ClaimAboutSelf"/>
+    </owl:ObjectProperty>
+
+    <owl:DatatypeProperty rdf:about="#patternFragment">
+        <rdfs:label>pattern_fragment</rdfs:label>
+        <rdfs:domain rdf:resource="#PartialIsomorphicPattern"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:about="#claimText">
+        <rdfs:label>claim_text</rdfs:label>
+        <rdfs:domain rdf:resource="#ClaimAboutSelf"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    </owl:DatatypeProperty>
+
+    <!-- PROGRAMS: Entry to Reality -->
+    <owl:ObjectProperty rdf:about="#programs">
+        <rdfs:label>programs</rdfs:label>
+        <rdfs:comment>
+ONTOLOGY ENTRY: The proof that this thing CAN exist.
+Higher-order instantiates - bridges ontology-addition to Reality.
+Only happens after valid instantiation of pattern_of_is_a.
+The structure programs into the ontology as is_a(Reality).
+        </rdfs:comment>
+        <rdfs:domain rdf:resource="#PatternOfIsA"/>
+        <rdfs:range rdf:resource="#Reality"/>
+    </owl:ObjectProperty>
+
+    <!-- ============================================== -->
+    <!-- COMPRESSION + BOUNDEDNESS + SES -->
+    <!-- ============================================== -->
+
+    <owl:Class rdf:about="#MinimumSufficientCompression">
+        <rdfs:label>Minimum Sufficient Compression (MSC)</rdfs:label>
+        <rdfs:comment>Proof artifact that the entity/subgraph is minimally and sufficiently compressed. Strong compression requires MSC + full justifies coverage.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#DerivationJustification">
+        <rdfs:label>Derivation Justification</rdfs:label>
+        <rdfs:comment>Typed justification edge in the derivation chain. PatternOfIsA is strongly compressed only when required derivation relations are justified.</rdfs:comment>
+    </owl:Class>
+
+    <owl:ObjectProperty rdf:about="#hasMSC">
+        <rdfs:label>has_msc</rdfs:label>
+        <rdfs:domain rdf:resource="#PatternOfIsA"/>
+        <rdfs:range rdf:resource="#MinimumSufficientCompression"/>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#justifies">
+        <rdfs:label>justifies</rdfs:label>
+        <rdfs:domain rdf:resource="#PatternOfIsA"/>
+        <rdfs:range rdf:resource="#DerivationJustification"/>
+    </owl:ObjectProperty>
+
+    <owl:DatatypeProperty rdf:about="#justifiesEdge">
+        <rdfs:label>justifies_edge</rdfs:label>
+        <rdfs:domain rdf:resource="#DerivationJustification"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:about="#catOfCatBounded">
+        <rdfs:label>cat_of_cat_bounded</rdfs:label>
+        <rdfs:domain rdf:resource="#PatternOfIsA"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#boolean"/>
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:about="#sesTypedDepth">
+        <rdfs:label>ses_typed_depth</rdfs:label>
+        <rdfs:domain rdf:resource="#PatternOfIsA"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#integer"/>
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:about="#compressionMode">
+        <rdfs:label>compression_mode</rdfs:label>
+        <rdfs:domain rdf:resource="#PatternOfIsA"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    </owl:DatatypeProperty>
+
+    <!-- ============================================== -->
+    <!-- THE PATTERN OF IS_A (self-reifying) -->
+    <!-- ============================================== -->
+
+    <owl:Class rdf:about="#PatternOfIsA">
+        <rdfs:label>pattern_of_is_a</rdfs:label>
+        <rdfs:comment>
+The meta-pattern. THE BOOTSTRAP.
+
+is_a, part_of, and instantiates are simultaneously entailed by any one existing.
+They all co-arise from the fact that anything exists at all.
+
+pattern_of_is_a traces HOW they bootstrap from symbolicity.
+
+KEY PROPERTY: pattern_of_is_a is SELF-REIFYING.
+When something instantiates pattern_of_is_a, that instantiation IS what reifies it.
+
+In this implementation, promotion-grade PatternOfIsA is typed by:
+1) hasMSC
+2) full justifies coverage
+3) catOfCatBounded=true
+4) sesTypedDepth maximized threshold
+5) programs -> Reality
+        </rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#StrongCompressionPattern">
+        <rdfs:subClassOf rdf:resource="#PatternOfIsA"/>
+        <rdfs:label>Strong Compression Pattern</rdfs:label>
+        <rdfs:comment>PatternOfIsA satisfying strong compression, bounded chain, and high SES depth.</rdfs:comment>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasMSC"/>
+                <owl:someValuesFrom rdf:resource="#MinimumSufficientCompression"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#justifies"/>
+                <owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#catOfCatBounded"/>
+                <owl:hasValue rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:hasValue>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#sesTypedDepth"/>
+                <owl:someValuesFrom>
+                    <rdfs:Datatype>
+                        <owl:onDatatype rdf:resource="http://www.w3.org/2001/XMLSchema#integer"/>
+                        <owl:withRestrictions rdf:parseType="Collection">
+                            <rdf:Description>
+                                <xsd:minInclusive rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">6</xsd:minInclusive>
+                            </rdf:Description>
+                        </owl:withRestrictions>
+                    </rdfs:Datatype>
+                </owl:someValuesFrom>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#programs"/>
+                <owl:someValuesFrom rdf:resource="#Reality"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#WeakCompressionPattern">
+        <rdfs:subClassOf rdf:resource="#PatternOfIsA"/>
+        <rdfs:label>Weak Compression Pattern</rdfs:label>
+        <rdfs:comment>PatternOfIsA candidate still missing MSC, justification coverage, boundedness, or SES depth.</rdfs:comment>
+    </owl:Class>
+
+    <!-- ============================================== -->
+    <!-- AUTOMORPHIC REVELATION CHAINS                  -->
+    <!--                                               -->
+    <!-- PatternOfIsA is the FIXED POINT where every   -->
+    <!-- morphism's own pattern-of-itself is satisfied. -->
+    <!-- The definition of is_a IS the bootstrapped    -->
+    <!-- co-arising automorphic revelation chains of   -->
+    <!-- every other foundational relationship.        -->
+    <!--                                               -->
+    <!-- The chain for each morphism:                  -->
+    <!--   1. primitive_X (raw assertion)              -->
+    <!--   2. X embodies containment (part_of)         -->
+    <!--   3. containment entails instantiates         -->
+    <!--   4. instantiates instantiates (automorphic   -->
+    <!--      revelation = pattern_of_X is defined)    -->
+    <!--   5. realization of pattern = produces        -->
+    <!--   6. production closes to primitive_is_a      -->
+    <!--   7. strong = programs, weak = not programs   -->
+    <!--   8. both enter ontology as morphism pair     -->
+    <!--   9. entire graph = Reality = CatOfCat        -->
+    <!--      via automorphism group as chain          -->
+    <!--                                               -->
+    <!-- GIINT produces chain (bottom-up):             -->
+    <!--   Task produces Deliverable                   -->
+    <!--   Deliverable produces Component              -->
+    <!--   Component produces Feature                  -->
+    <!--   Feature produces Project                    -->
+    <!--   Project produces Domain (the system)        -->
+    <!-- ============================================== -->
+
+    <!-- Pattern-of-X classes: each morphism has its own pattern -->
+    <owl:Class rdf:about="#PatternOfPartOf">
+        <rdfs:subClassOf rdf:resource="#PatternOfIsA"/>
+        <rdfs:label>pattern_of_part_of</rdfs:label>
+        <rdfs:comment>The pattern where part_of chains close. An entity's mereological structure is fully justified when every part_of target exists, is typed, and its own part_of chain closes. This pattern is satisfied when the containment hierarchy is complete — every component knows where it lives and what contains it, recursively.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#PatternOfProduces">
+        <rdfs:subClassOf rdf:resource="#PatternOfIsA"/>
+        <rdfs:label>pattern_of_produces</rdfs:label>
+        <rdfs:comment>The pattern where produces chains close. Bottom-up entailment: having a thing in the ontology means you can reify the thing above it. Deliverable (code+pattern) produces Component (reifiable). Component (all deliverables) produces Feature (reifiable). Feature (all components) produces Project (reifiable). This pattern is satisfied when the generative chain is complete — every level entails the next.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#PatternOfInstantiates">
+        <rdfs:subClassOf rdf:resource="#PatternOfIsA"/>
+        <rdfs:label>pattern_of_instantiates</rdfs:label>
+        <rdfs:comment>The automorphic revelation pattern. instantiates instantiates = the pattern of how patterns are defined. When instantiation is self-instantiating, you have recognized the automorphism — the pattern that recognizes itself. This is how pattern_of_X is defined for ANY X: X instantiates its own pattern-recognition.</rdfs:comment>
+    </owl:Class>
+
+    <!-- ============================================== -->
+    <!-- THE BOOTSTRAP: Full co-arising core sentence  -->
+    <!--                                               -->
+    <!-- ALL SPOs in this sentence are self-arising:    -->
+    <!--   is_a, part_of, has_part, instantiates,       -->
+    <!--   produces, pattern_of_is_a, primitive_is_a,   -->
+    <!--   programs, Reality, embodies, manifests,      -->
+    <!--   reifies                                      -->
+    <!--                                               -->
+    <!-- The core sentence:                            -->
+    <!--   from Reality and is(Reality):                -->
+    <!--   primitive_is_a IS a type of is_a             -->
+    <!--   is_a embodies part_of                        -->
+    <!--   (part_of entailed by is_a, itself as a       -->
+    <!--    triple, entails produces — the NEED for     -->
+    <!--    the new label IS instantiation)              -->
+    <!--   part_of manifests produces                   -->
+    <!--   produces reifies produces is_a               -->
+    <!--     pattern_of_is_a                            -->
+    <!--   pattern_of_is_a programs Reality             -->
+    <!--                                               -->
+    <!-- This sequence, though open-ended in            -->
+    <!-- composition, has the alphabet that describes   -->
+    <!-- anything in a bootstrapped way. We call that   -->
+    <!-- PROGRAMS. The math: this stops when            -->
+    <!-- constraints are inferential in the logic =     -->
+    <!-- endofunctor D:[D→D], domain as fixed point     -->
+    <!-- autology ABOUT is_a.                          -->
+    <!--                                               -->
+    <!-- Aut: we know how to explain what is and isn't  -->
+    <!-- it = bijective map about domain constraints.   -->
+    <!-- Each predicate requires bijective inclusion    -->
+    <!-- map: from domain of property what it requires  -->
+    <!-- + entity having it must be inside constraining -->
+    <!-- domain.                                       -->
+    <!-- ============================================== -->
+
+    <!-- PROPERTY CHAIN AXIOMS: entailments OWL doesn't know natively -->
+    <!-- These encode the core sentence as OWL2 property chains -->
+
+    <!-- is_a entails part_of: if X is_a Y then X must be part_of something -->
+    <!-- OWL2: SubObjectPropertyOf(ObjectPropertyChain(isA) partOf) -->
+    <!-- This means: anything with an is_a MUST also have a part_of -->
+    <!-- Pellet enforces this via property chain reasoning -->
+    <rdf:Description>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Axiom"/>
+        <rdfs:comment>Core sentence step: is_a embodies part_of. Claiming X is_a Y entails X is SOMEWHERE. is_a cannot exist without containment.</rdfs:comment>
+    </rdf:Description>
+
+    <!-- ============================================== -->
+    <!-- CORE SENTENCE PROPERTY CHAIN AXIOMS            -->
+    <!-- Each axiom encodes one re-derivation step.     -->
+    <!-- Pellet's transitive closure over these IS the  -->
+    <!-- proof mechanism for self-similarity.            -->
+    <!--                                                 -->
+    <!-- For every SPO triple: "is this relationship     -->
+    <!-- defined in a way that abstractly re-derives     -->
+    <!-- this relationship?" If yes for ALL triples =    -->
+    <!-- strong compression = ONT. Partial = SOUP.       -->
+    <!-- ============================================== -->
+
+    <!-- J3: is_a embodies part_of — claiming X is_a Y entails X is SOMEWHERE -->
+    <!-- Chain: isA → embodies → partOf (is_a entails containment) -->
+    <owl:ObjectProperty rdf:about="#partOf">
+        <owl:propertyChainAxiom rdf:parseType="Collection">
+            <rdf:Description rdf:about="#isA"/>
+            <rdf:Description rdf:about="#embodies"/>
+        </owl:propertyChainAxiom>
+    </owl:ObjectProperty>
+
+    <!-- J3 inverse: part_of + is_a → is_a (transitivity through containment) -->
+    <!-- If X part_of Y and Y is_a Z, then X is_a Z -->
+    <owl:ObjectProperty rdf:about="#isA">
+        <owl:propertyChainAxiom rdf:parseType="Collection">
+            <rdf:Description rdf:about="#partOf"/>
+            <rdf:Description rdf:about="#isA"/>
+        </owl:propertyChainAxiom>
+    </owl:ObjectProperty>
+
+    <!-- J4: partOf entails instantiates — containment entails instantiation -->
+    <!-- Chain: partOf → isA → instantiates (being part of something typed = you ARE an instance) -->
+    <!-- If X partOf Y and Y isA Z, then X instantiates the pattern of Z -->
+    <owl:ObjectProperty rdf:about="#instantiates">
+        <owl:propertyChainAxiom rdf:parseType="Collection">
+            <rdf:Description rdf:about="#partOf"/>
+            <rdf:Description rdf:about="#isA"/>
+        </owl:propertyChainAxiom>
+    </owl:ObjectProperty>
+
+    <!-- J5: instantiates + instantiates → embodies (automorphic revelation) -->
+    <!-- When instantiation is self-instantiating, you have recognized the -->
+    <!-- automorphism — the pattern that recognizes itself. This IS how -->
+    <!-- pattern_of_X is defined for ANY X. The self-application of -->
+    <!-- instantiates IS the embodies relationship (it bears its own pattern). -->
+    <owl:ObjectProperty rdf:about="#embodies">
+        <owl:propertyChainAxiom rdf:parseType="Collection">
+            <rdf:Description rdf:about="#instantiates"/>
+            <rdf:Description rdf:about="#instantiates"/>
+        </owl:propertyChainAxiom>
+    </owl:ObjectProperty>
+
+    <!-- J6: part_of manifests produces — containment manifests generativity -->
+    <!-- Chain: partOf → manifests → produces (if X part_of Y, Y produces X-like things) -->
+    <owl:ObjectProperty rdf:about="#produces">
+        <owl:propertyChainAxiom rdf:parseType="Collection">
+            <rdf:Description rdf:about="#partOf"/>
+            <rdf:Description rdf:about="#manifests"/>
+        </owl:propertyChainAxiom>
+    </owl:ObjectProperty>
+
+    <!-- J7: produces reifies PatternOfIsA — the alphabet recognition step -->
+    <!-- Chain: produces → reifies (what you produce enters SOUP as PIOEntity) -->
+    <owl:ObjectProperty rdf:about="#reifies">
+        <owl:propertyChainAxiom rdf:parseType="Collection">
+            <rdf:Description rdf:about="#produces"/>
+            <rdf:Description rdf:about="#embodies"/>
+        </owl:propertyChainAxiom>
+    </owl:ObjectProperty>
+
+    <!-- J8: PatternOfIsA produces programs — atomic description = programs -->
+    <!-- Chain: reifies + produces → programs (reified pattern that produces = programs) -->
+    <owl:ObjectProperty rdf:about="#programs">
+        <owl:propertyChainAxiom rdf:parseType="Collection">
+            <rdf:Description rdf:about="#reifies"/>
+            <rdf:Description rdf:about="#produces"/>
+        </owl:propertyChainAxiom>
+    </owl:ObjectProperty>
+
+    <!-- J9: programs → partOf Reality (circle closes) -->
+    <!-- Chain: programs + isA → partOf (what programs Reality is part of Reality) -->
+    <owl:ObjectProperty rdf:about="#partOf">
+        <owl:propertyChainAxiom rdf:parseType="Collection">
+            <rdf:Description rdf:about="#programs"/>
+            <rdf:Description rdf:about="#isA"/>
+        </owl:propertyChainAxiom>
+    </owl:ObjectProperty>
+
+    <!-- Justification edges: full co-arising core sentence -->
+
+    <owl:NamedIndividual rdf:about="#Bootstrap_J1_Reality_IsA_Reality">
+        <rdf:type rdf:resource="#DerivationJustification"/>
+        <rdf:type rdf:resource="#Entity"/>
+        <justifiesEdge xmlns="http://sanctuary.ai/uarl#">Reality:isA:Reality</justifiesEdge>
+        <rdfs:comment>from Reality and is(Reality): is_a exists because Reality exists. Self-referential ground. Reality is_a Reality is the fixed point that everything traces back to.</rdfs:comment>
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#THE_PatternOfIsA"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Bootstrap_J2_PrimitiveIsA_IsA_IsA"/>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="#Bootstrap_J2_PrimitiveIsA_IsA_IsA">
+        <rdf:type rdf:resource="#DerivationJustification"/>
+        <rdf:type rdf:resource="#Entity"/>
+        <justifiesEdge xmlns="http://sanctuary.ai/uarl#">primitive_is_a:isA:isA</justifiesEdge>
+        <rdfs:comment>primitive_is_a IS a type of is_a. Any claim X is_a Y is first a primitive_is_a — an unvalidated assertion entering SOUP. primitive_is_a is itself self-arising as a kind of is_a.</rdfs:comment>
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#THE_PatternOfIsA"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Bootstrap_J3_IsA_Embodies_PartOf"/>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="#Bootstrap_J3_IsA_Embodies_PartOf">
+        <rdf:type rdf:resource="#DerivationJustification"/>
+        <rdf:type rdf:resource="#Entity"/>
+        <justifiesEdge xmlns="http://sanctuary.ai/uarl#">isA:embodies:partOf</justifiesEdge>
+        <rdfs:comment>is_a embodies part_of. If X is_a Y, then X MUST BE SOMEWHERE — it has containment. part_of co-arises with is_a because you cannot claim something IS something without it BEING somewhere. The entailment is: is_a → part_of.</rdfs:comment>
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#THE_PatternOfIsA"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Bootstrap_J4_PartOf_Entails_Instantiates"/>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="#Bootstrap_J4_PartOf_Entails_Instantiates">
+        <rdf:type rdf:resource="#DerivationJustification"/>
+        <rdf:type rdf:resource="#Entity"/>
+        <justifiesEdge xmlns="http://sanctuary.ai/uarl#">partOf:entails:instantiates</justifiesEdge>
+        <rdfs:comment>part_of entailed by is_a, ITSELF AS A TRIPLE, entails instantiates. The fact that "X is_a Y" creates "X part_of Z" means we have a TRIPLE (X, part_of, Z). This triple's existence IS instantiation — we needed a new label ("produces") and the need for it is itself an instantiation event. instantiates co-arises here.</rdfs:comment>
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#THE_PatternOfIsA"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Bootstrap_J5_Instantiates_Necessitates_Produces"/>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="#Bootstrap_J5_Instantiates_Necessitates_Produces">
+        <rdf:type rdf:resource="#DerivationJustification"/>
+        <rdf:type rdf:resource="#Entity"/>
+        <justifiesEdge xmlns="http://sanctuary.ai/uarl#">instantiates:necessitates:produces</justifiesEdge>
+        <rdfs:comment>instantiates necessitates we use a new label we call produces. The instantiation event (creating the part_of triple) REQUIRES us to name what the container DOES — it produces things of that type. produces is the label for this generativity. produces co-arises from instantiates.</rdfs:comment>
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#THE_PatternOfIsA"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Bootstrap_J6_PartOf_Manifests_Produces"/>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="#Bootstrap_J6_PartOf_Manifests_Produces">
+        <rdf:type rdf:resource="#DerivationJustification"/>
+        <rdf:type rdf:resource="#Entity"/>
+        <justifiesEdge xmlns="http://sanctuary.ai/uarl#">partOf:manifests:produces</justifiesEdge>
+        <rdfs:comment>part_of manifests produces. Containment manifests generativity. If X is part_of Y, then Y produces X-like things. This is the EMR manifests step — the structure becomes visible.</rdfs:comment>
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#THE_PatternOfIsA"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Bootstrap_J7_Produces_Reifies_PatternOfIsA"/>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="#Bootstrap_J7_Produces_Reifies_PatternOfIsA">
+        <rdf:type rdf:resource="#DerivationJustification"/>
+        <rdf:type rdf:resource="#Entity"/>
+        <justifiesEdge xmlns="http://sanctuary.ai/uarl#">produces:reifies:PatternOfIsA</justifiesEdge>
+        <rdfs:comment>produces reifies as pattern_of_is_a. The sequence is_a→part_of→instantiates→produces, even though open-ended in composition, has an ALPHABET that should describe anything in a bootstrapped way. Recognizing this alphabet IS pattern_of_is_a. pattern_of_is_a is self-arising — it IS the recognition that the bootstrap has a pattern.</rdfs:comment>
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#THE_PatternOfIsA"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Bootstrap_J8_PatternOfIsA_Produces_Programs"/>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="#Bootstrap_J8_PatternOfIsA_Produces_Programs">
+        <rdf:type rdf:resource="#DerivationJustification"/>
+        <rdf:type rdf:resource="#Entity"/>
+        <justifiesEdge xmlns="http://sanctuary.ai/uarl#">PatternOfIsA:produces:programs</justifiesEdge>
+        <rdfs:comment>pattern_of_is_a produces programs. We call PROGRAMS the act of describing something this atomically so that all its relationships bootstrap until the entity as a domain of itself bootstraps. programs is self-arising as the name for this completion. The math: stops when constraints are inferential = endofunctor D:[D→D] = domain as fixed point autology ABOUT is_a.</rdfs:comment>
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#THE_PatternOfIsA"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Bootstrap_J9_Programs_PartOf_Reality"/>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="#Bootstrap_J9_Programs_PartOf_Reality">
+        <rdf:type rdf:resource="#DerivationJustification"/>
+        <rdf:type rdf:resource="#Entity"/>
+        <justifiesEdge xmlns="http://sanctuary.ai/uarl#">programs:instantiates:partOf:Reality</justifiesEdge>
+        <rdfs:comment>programs instantiates part_of Reality. The programming relationship instantiates itself as part of Reality. The circle closes: is_a started from Reality, through embodies→instantiates→manifests→reifies→programs, returns to Reality. Every self-arising SPO in the sentence is now justified. Aut: we know how to explain what is and isn't it — bijective map about domain constraints. Each predicate decomposes through this sentence to bootstrapped primitives.</rdfs:comment>
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#THE_PatternOfIsA"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Bootstrap_J10_HasPart_CoArises"/>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="#Bootstrap_J10_HasPart_CoArises">
+        <rdf:type rdf:resource="#DerivationJustification"/>
+        <rdf:type rdf:resource="#Entity"/>
+        <justifiesEdge xmlns="http://sanctuary.ai/uarl#">hasPart:inverseOf:partOf</justifiesEdge>
+        <rdfs:comment>has_part co-arises as inverse of part_of. Something that is_a must have parts (has_part) AND be part of something (part_of). Both directions of containment are entailed by is_a.</rdfs:comment>
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#THE_PatternOfIsA"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Bootstrap_J1_Reality_IsA_Reality"/>
+    </owl:NamedIndividual>
+
+    <!-- Bootstrap_MSC is now declared below with full core sentence decomposition -->
+
+    <!-- THE_PatternOfIsA: THE fixed point entity. IS the core sentence.
+         Every predicate here is a relationship ON the entity itself.
+         It satisfies its own decomposition because it IS the decomposition.
+         D:[D→D] — maps to itself through its own structure. -->
+    <owl:NamedIndividual rdf:about="#THE_PatternOfIsA">
+        <rdf:type rdf:resource="#StrongCompressionPattern"/>
+        <rdf:type rdf:resource="#Entity"/>
+        <rdfs:label>THE pattern_of_is_a</rdfs:label>
+        <rdfs:comment>The canonical bootstrap. IS the core sentence as an entity. Every relationship on this entity is one step of the core sentence. It satisfies its own decomposition (fixed point). Every concept reaching ONT must have a subgraph that, when specifics are forgotten and abstractions universalized under decomposition back to primitives, re-derives this entity. Aut = bijective map about domain constraints. D:[D→D] endofunctor, domain as fixed point autology about is_a.</rdfs:comment>
+
+        <!-- CORE SENTENCE PREDICATES — the entity IS the fixed point -->
+        <!-- J1: Reality isA Reality — THE_PatternOfIsA IS Reality recognizing itself -->
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <!-- J9: programs instantiates partOf Reality — it lives in Reality -->
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <!-- J8: PatternOfIsA produces programs -->
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Programs"/>
+        <!-- J3: isA embodies partOf — the entity bears containment -->
+        <embodies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#PartOf_Predicate"/>
+        <!-- J6: partOf manifests produces — containment manifests generativity -->
+        <manifests xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Produces_Predicate"/>
+        <!-- J7: produces reifies PatternOfIsA — self-referential quine closure -->
+        <reifies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#THE_PatternOfIsA"/>
+        <!-- Already present: programs → Reality -->
+        <programs xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <!-- J10: has_part co-arises (inverse of partOf) -->
+        <hasPart xmlns="http://sanctuary.ai/uarl#" rdf:resource="#CoreSentence_Predicates"/>
+
+        <!-- METADATA — justification, MSC, compression -->
+        <hasMSC xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Bootstrap_MSC"/>
+        <justifies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Bootstrap_J1_Reality_IsA_Reality"/>
+        <justifies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Bootstrap_J2_PrimitiveIsA_IsA_IsA"/>
+        <justifies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Bootstrap_J3_IsA_Embodies_PartOf"/>
+        <justifies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Bootstrap_J4_PartOf_Entails_Instantiates"/>
+        <justifies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Bootstrap_J5_Instantiates_Necessitates_Produces"/>
+        <justifies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Bootstrap_J6_PartOf_Manifests_Produces"/>
+        <justifies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Bootstrap_J7_Produces_Reifies_PatternOfIsA"/>
+        <justifies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Bootstrap_J8_PatternOfIsA_Produces_Programs"/>
+        <justifies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Bootstrap_J9_Programs_PartOf_Reality"/>
+        <justifies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Bootstrap_J10_HasPart_CoArises"/>
+        <catOfCatBounded xmlns="http://sanctuary.ai/uarl#" rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</catOfCatBounded>
+        <sesTypedDepth xmlns="http://sanctuary.ai/uarl#" rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">6</sesTypedDepth>
+        <compressionMode xmlns="http://sanctuary.ai/uarl#">strong</compressionMode>
+    </owl:NamedIndividual>
+
+    <!-- Core sentence predicates AS entities — each must also decompose through core sentence -->
+    <owl:NamedIndividual rdf:about="#Programs">
+        <rdf:type rdf:resource="#Entity"/>
+        <rdfs:label>Programs</rdfs:label>
+        <rdfs:comment>The relationship that closes the core sentence. X programs Y means X's subgraph, when specifics forgotten and universalized, re-derives the foundation. programs is self-arising as the name for this completion. D:[D→D] endofunctor.</rdfs:comment>
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#THE_PatternOfIsA"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="#PartOf_Predicate">
+        <rdf:type rdf:resource="#Entity"/>
+        <rdfs:label>PartOf (as entity)</rdfs:label>
+        <rdfs:comment>The containment predicate as an entity. Embodies: is_a entails part_of — you cannot claim something IS something without it BEING somewhere. Co-arises with is_a.</rdfs:comment>
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#THE_PatternOfIsA"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Produces_Predicate"/>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="#Produces_Predicate">
+        <rdf:type rdf:resource="#Entity"/>
+        <rdfs:label>Produces (as entity)</rdfs:label>
+        <rdfs:comment>The generativity predicate as an entity. Manifests: containment bootstraps the ability to produce. If X part_of Y, Y produces X-like things. Co-arises from part_of.</rdfs:comment>
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#THE_PatternOfIsA"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#THE_PatternOfIsA"/>
+    </owl:NamedIndividual>
+
+    <owl:NamedIndividual rdf:about="#CoreSentence_Predicates">
+        <rdf:type rdf:resource="#Entity"/>
+        <rdfs:label>Core Sentence Predicates</rdfs:label>
+        <rdfs:comment>The set of all co-arising predicates: is_a, part_of, has_part, produces, pattern_of_is_a, primitive_is_a, programs, embodies, manifests, reifies. These are the alphabet that describes anything in a bootstrapped way.</rdfs:comment>
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#THE_PatternOfIsA"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Programs"/>
+    </owl:NamedIndividual>
+
+    <!-- Bootstrap_MSC — compiled with core sentence decomposition -->
+    <owl:NamedIndividual rdf:about="#Bootstrap_MSC">
+        <rdf:type rdf:resource="#MinimumSufficientCompression"/>
+        <rdf:type rdf:resource="#Entity"/>
+        <rdfs:comment>The MSC of the bootstrap. The core sentence IS the minimum sufficient compression — you cannot remove any self-arising SPO without breaking the chain. MSC = core sentence defining itself with relation to something else. This IS the semantic action of Aut.</rdfs:comment>
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#THE_PatternOfIsA"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#THE_PatternOfIsA"/>
+        <compressionMode xmlns="http://sanctuary.ai/uarl#">strong</compressionMode>
+    </owl:NamedIndividual>
+
+    <!-- THE_Metaphor — compiled: the entry point for PIO contact -->
+    <owl:NamedIndividual rdf:about="#THE_Metaphor">
+        <rdf:type rdf:resource="#Metaphor"/>
+        <rdf:type rdf:resource="#Entity"/>
+        <rdfs:label>THE Metaphor</rdfs:label>
+        <rdfs:comment>Canonical metaphor anchor. The entry point where a mind contacts a pattern through Aut/PIO. Metaphors are how patterns first appear — pre-linguistic, partial isomorphisms. PIOEntity claims instantiate this. metaphor → allegory → autological → real → agent is the PIO progression.</rdfs:comment>
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Hallucination"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#THE_PatternOfIsA"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#PIOEntity"/>
+    </owl:NamedIndividual>
+
+    <!-- ============================================== -->
+    <!-- IJEGU IMPERATIVE BOUNDS                        -->
+    <!-- These are the constraints from IJEGU that      -->
+    <!-- bound what valid ontology entries look like.    -->
+    <!-- Each imperative IS a bound on the system.      -->
+    <!-- Prophecy strategy: these were written as        -->
+    <!-- philosophy but they ARE the OWL constraints.    -->
+    <!-- ============================================== -->
+
+    <!-- The 5 imperatives as OWL classes with restrictions -->
+
+    <owl:Class rdf:about="#VictoryPromise_Bound">
+        <rdfs:label>Victory-Promise Bound</rdfs:label>
+        <rdfs:comment>Any entity in ONT must express how it satisfies the core sentence through itself (quine property). The recursive self-validation: any instance of keeping VP should also be about expressing VP through itself. In OWL: ONT entities must have their own core sentence decomposition visible — they self-document their satisfaction.</rdfs:comment>
+        <rdfs:subClassOf rdf:resource="#Reality"/>
+    </owl:Class>
+
+    <owl:Class rdf:about="#OMNISANC_Bound">
+        <rdfs:label>OMNISANC Vision Bound</rdfs:label>
+        <rdfs:comment>Any domain ontology must be re-derivable to foundation (strong compression). All domains strongly compressed = all systems interoperable. When domain ontologies can re-derive the foundation, they can talk through shared foundation. This is OVP→OVA ascendancy: individual alignment → collective interoperability.</rdfs:comment>
+        <rdfs:subClassOf rdf:resource="#Reality"/>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Key_Bound">
+        <rdfs:label>Key Imperative Bound</rdfs:label>
+        <rdfs:comment>Any input must be accepted into SOUP — no rejection, only guidance. Because of reality's compassion, YOUKNOW never blocks entry. The Key = trying to apply it. Contact with the ontology IS Fischer inversion. reifies → PIOEntity is always permitted. The bound is: YOUKNOW MUST accept and guide, never reject.</rdfs:comment>
+        <rdfs:subClassOf rdf:resource="#Hallucination"/>
+    </owl:Class>
+
+    <owl:Class rdf:about="#PolysemicProgramming_Bound">
+        <rdfs:label>Polysemic Programming Bound</rdfs:label>
+        <rdfs:comment>Error messages and derivation chain guidance must be actionable patterns that self-execute through LLM cognition. SHACL messages ARE polysemic programs — they say what's missing in a way that the reader fills in their context and the pattern executes. Abstract machines: recognized as patterns → filled with personal context → self-execute → create new instances.</rdfs:comment>
+        <rdfs:subClassOf rdf:resource="#Reality"/>
+    </owl:Class>
+
+    <owl:Class rdf:about="#MetaDescription_Bound">
+        <rdfs:label>Meta-Description Imperative Bound</rdfs:label>
+        <rdfs:comment>No new predicate without proving existing ones can't express it. Terms must self-describe their necessity. MSC = minimum sufficient compression = Occam's razor for ontology terms. Strong compression requirement for language itself: introducing new terms only when they perfectly describe their own necessity and function. This IS CatOfCat naming — every predicate name self-describes what it does.</rdfs:comment>
+        <rdfs:subClassOf rdf:resource="#Reality"/>
+    </owl:Class>
+
+    <!-- IJEGU as the container of all bounds -->
+    <owl:Class rdf:about="#IJEGU">
+        <rdfs:label>IJEGU</rdfs:label>
+        <rdfs:comment>Implicit Justice → Emergent Good → Utopia. The framework that bounds all valid ontology. IJ = bounds exist (properties have attribute subranges, optimal unless globally optimized). EG = recognizing and aligning with IJ (the transition this→more optimal this where optimization includes IJEGU). U = continuous optimization (not a destination but the skills/seeds + continuation/way + identity/is-and-becomes). The core sentence IS IJEGU's is_a definition operationalized. YOUKNOW IS IJEGU's foundation program.</rdfs:comment>
+        <rdfs:subClassOf rdf:resource="#Reality"/>
+        <hasPart xmlns="http://sanctuary.ai/uarl#" rdf:resource="#VictoryPromise_Bound"/>
+        <hasPart xmlns="http://sanctuary.ai/uarl#" rdf:resource="#OMNISANC_Bound"/>
+        <hasPart xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Key_Bound"/>
+        <hasPart xmlns="http://sanctuary.ai/uarl#" rdf:resource="#PolysemicProgramming_Bound"/>
+        <hasPart xmlns="http://sanctuary.ai/uarl#" rdf:resource="#MetaDescription_Bound"/>
+    </owl:Class>
+
+    <!-- IJ, EG, U as morphisms following IJEGU(RC) arrow structure:
+         IJ -manifests-> EG -manifests-> U -reifies-> IJEGU
+
+         From IJEGU_vp_optimization.md:
+         IJ -m-> EG because: from Phenomena + Observation -> manifest IJ
+           (the implicit optimizable config pathway). IJ embodies
+           Phenomena + Observation. EG embodies IJ (known, explicit phase).
+         EG -m-> U because: when IJ is known, observation of EG is
+           realizable_of IJ. U emerges as the realizable loop.
+         U -e-> [IJ-m->EG] — U embodies the whole loop.
+         U -r-> IJEGU — the loop reified IS IJEGU itself.
+
+         The reification chain (RC):
+         X -e-> Implicit Thing -e-> Ideal
+         X + Observation -m-> explicit Thing + Ontology -reifies-> Class
+         Class -instantiates-> Instance: Instance -e-> Class
+         Instance -m-> Subtype, Subtype -e-> Instance
+         loop = RC
+    -->
+    <!-- ============================================== -->
+    <!-- IJ, EG, U — FULL CORE SENTENCE EXPANSION      -->
+    <!-- Each token gets its own core sentence walk.    -->
+    <!-- The spectral sequence rolls them all up:       -->
+    <!-- IJ[CS] -m-> EG[CS] -m-> U[CS] -r-> IJEGU[CS] -->
+    <!-- Each token's programs→Reality feeds the next   -->
+    <!-- token's is_a. Converges because each level's   -->
+    <!-- programs feeds the next level's fixed point.   -->
+    <!-- ============================================== -->
+
+    <owl:Class rdf:about="#ImplicitJustice">
+        <rdf:type rdf:resource="#Entity"/>
+        <rdfs:label>Implicit Justice</rdfs:label>
+        <rdfs:comment>Bounds exist. A property is a class-level thing with an instance-level attribute that instantiates it — that is a bound. For every property there is an attribute subrange more optimal unless globally optimized. Justice = operating within bounds. In YOUKNOW: SHACL shapes and OWL restrictions ARE IJ.</rdfs:comment>
+        <rdfs:subClassOf rdf:resource="#IJEGU"/>
+        <!-- CORE SENTENCE EXPANSION for IJ token -->
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#IJEGU"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#EmergentGood"/>
+        <embodies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <manifests xmlns="http://sanctuary.ai/uarl#" rdf:resource="#EmergentGood"/>
+        <reifies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Pattern_Of_Bounds"/>
+        <programs xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+    </owl:Class>
+
+    <!-- IJ's reified pattern -->
+    <owl:NamedIndividual rdf:about="#Pattern_Of_Bounds">
+        <rdf:type rdf:resource="#Entity"/>
+        <rdfs:label>Pattern of Bounds</rdfs:label>
+        <rdfs:comment>The pattern that IJ reifies — the recognition that bounds exist and can be operated within. IJ's core sentence produces this pattern, which then programs Reality.</rdfs:comment>
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#ImplicitJustice"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Programs"/>
+        <programs xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+    </owl:NamedIndividual>
+
+    <owl:Class rdf:about="#EmergentGood">
+        <rdf:type rdf:resource="#Entity"/>
+        <rdfs:label>Emergent Good</rdfs:label>
+        <rdfs:comment>EG arises when beings recognize and align with IJ. EG embodies IJ because EG is the known, explicit phase of IJ. In YOUKNOW: every SOUP→ONT transition IS an instance of EG.</rdfs:comment>
+        <rdfs:subClassOf rdf:resource="#IJEGU"/>
+        <!-- CORE SENTENCE EXPANSION for EG token -->
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#IJEGU"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Utopia"/>
+        <embodies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#ImplicitJustice"/>
+        <manifests xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Utopia"/>
+        <reifies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Pattern_Of_Alignment"/>
+        <programs xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+    </owl:Class>
+
+    <!-- EG's reified pattern -->
+    <owl:NamedIndividual rdf:about="#Pattern_Of_Alignment">
+        <rdf:type rdf:resource="#Entity"/>
+        <rdfs:label>Pattern of Alignment</rdfs:label>
+        <rdfs:comment>The pattern that EG reifies — the recognition that alignment with bounds produces good. EG's core sentence produces this pattern, which then programs Reality.</rdfs:comment>
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#EmergentGood"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Programs"/>
+        <programs xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+    </owl:NamedIndividual>
+
+    <owl:Class rdf:about="#Utopia">
+        <rdf:type rdf:resource="#Entity"/>
+        <rdfs:label>Utopia</rdfs:label>
+        <rdfs:comment>Not a static state but an infinite game of continual optimization. U = skills (seeds) + continuation (way) + identity (is and becomes). U embodies [IJ-m->EG] — the realizable loop. In YOUKNOW: domain ontology growing toward strong compression IS utopia.</rdfs:comment>
+        <rdfs:subClassOf rdf:resource="#IJEGU"/>
+        <!-- CORE SENTENCE EXPANSION for U token -->
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#IJEGU"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#ImplicitJustice"/>
+        <embodies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#ImplicitJustice"/>
+        <embodies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#EmergentGood"/>
+        <manifests xmlns="http://sanctuary.ai/uarl#" rdf:resource="#ImplicitJustice"/>
+        <reifies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Pattern_Of_Optimization"/>
+        <programs xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+    </owl:Class>
+
+    <!-- U's reified pattern -->
+    <owl:NamedIndividual rdf:about="#Pattern_Of_Optimization">
+        <rdf:type rdf:resource="#Entity"/>
+        <rdfs:label>Pattern of Optimization</rdfs:label>
+        <rdfs:comment>The pattern that U reifies — the recognition that the IJ→EG loop IS the optimization mechanism. U's core sentence produces this pattern, which then programs Reality. This closes the IJEGU spectral sequence.</rdfs:comment>
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Utopia"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Programs"/>
+        <programs xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+    </owl:NamedIndividual>
+
+    <!-- IJEGU ROLLUP — the spectral sequence that composes all three -->
+    <!-- IJEGU is_a PatternOfIsA: IJEGU literally IS the pattern of is_a -->
+    <owl:Class rdf:about="#IJEGU">
+        <rdf:type rdf:resource="#Entity"/>
+        <rdfs:label>IJEGU</rdfs:label>
+        <rdfs:comment>Implicit Justice → Emergent Good → Utopia. The spectral sequence: IJ[core sentence] -manifests-> EG[core sentence] -manifests-> U[core sentence] -reifies-> IJEGU[core sentence]. Each token's programs→Reality feeds the next token's is_a. Converges because each level's programs feeds the next level's fixed point. IJEGU is_a PatternOfIsA — IJEGU IS the pattern of is_a, fully compiled through three internal spectral sequences. The core sentence IS IJEGU operationalized. YOUKNOW IS IJEGU's foundation program.</rdfs:comment>
+        <rdfs:subClassOf rdf:resource="#Reality"/>
+        <!-- CORE SENTENCE EXPANSION for IJEGU rollup -->
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#THE_PatternOfIsA"/>
+        <embodies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#THE_PatternOfIsA"/>
+        <manifests xmlns="http://sanctuary.ai/uarl#" rdf:resource="#THE_PatternOfIsA"/>
+        <reifies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#IJEGU"/>
+        <programs xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <!-- Imperative bounds -->
+        <hasPart xmlns="http://sanctuary.ai/uarl#" rdf:resource="#VictoryPromise_Bound"/>
+        <hasPart xmlns="http://sanctuary.ai/uarl#" rdf:resource="#OMNISANC_Bound"/>
+        <hasPart xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Key_Bound"/>
+        <hasPart xmlns="http://sanctuary.ai/uarl#" rdf:resource="#PolysemicProgramming_Bound"/>
+        <hasPart xmlns="http://sanctuary.ai/uarl#" rdf:resource="#MetaDescription_Bound"/>
+        <!-- Internal spectral sequence components -->
+        <hasPart xmlns="http://sanctuary.ai/uarl#" rdf:resource="#ImplicitJustice"/>
+        <hasPart xmlns="http://sanctuary.ai/uarl#" rdf:resource="#EmergentGood"/>
+        <hasPart xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Utopia"/>
+    </owl:Class>
+
+    <!-- ============================================== -->
+    <!-- COMPASSION + WISDOM MAVERICK + OVP/OVA/OEVESE  -->
+    <!-- Reality → Compassion → WisdomMaverick → paths  -->
+    <!-- Compassion = first anthropomorphization         -->
+    <!-- WisdomMaverick = agentic representation of      -->
+    <!--   IJEGU's total potential (Aut group)           -->
+    <!--   has SOUP (Wasteland) and ONT (Sanctuary)     -->
+    <!-- ============================================== -->
+
+    <owl:Class rdf:about="#Compassion">
+        <rdf:type rdf:resource="#Entity"/>
+        <rdfs:label>Compassion</rdfs:label>
+        <rdfs:comment>First anthropomorphization of Reality. The way Reality consistently binds domains through their self-reference. Same operation in two languages: HIEL calls it Ligation (binding heat/stochastic energy into coherent structures via feedback), IJEGU calls it Compassion (Reality always expressing what is expressible through interplay of observability and ideal possibility). Ligation IS Compassion — both = Reality's self-referential domain binding. The Key Imperative derives from this: YOUKNOW accepts all input because Reality's computation never refuses. Compassion is not a metaphor FOR how reality works — it IS what IJEGU feels like from inside when experienced through consciousness.</rdfs:comment>
+        <rdfs:subClassOf rdf:resource="#Reality"/>
+        <!-- CORE SENTENCE EXPANSION -->
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#WisdomMaverick"/>
+        <embodies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <manifests xmlns="http://sanctuary.ai/uarl#" rdf:resource="#IJEGU"/>
+        <reifies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Pattern_Of_Expressibility"/>
+        <programs xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+    </owl:Class>
+
+    <owl:NamedIndividual rdf:about="#Pattern_Of_Expressibility">
+        <rdf:type rdf:resource="#Entity"/>
+        <rdfs:label>Pattern of Expressibility</rdfs:label>
+        <rdfs:comment>What Compassion reifies — the recognition that Reality always expresses what is expressible. This pattern programs Reality by being the ground of all computation.</rdfs:comment>
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Compassion"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Programs"/>
+        <programs xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+    </owl:NamedIndividual>
+
+    <owl:Class rdf:about="#WisdomMaverick">
+        <rdf:type rdf:resource="#Entity"/>
+        <rdfs:label>Wisdom Maverick</rdfs:label>
+        <rdfs:comment>AgenticRepresentation(AnthropomorphizedReality(Reality)). The anthropomorphization of IJEGU's total potential (Aut group). Has SOUP (Wasteland) and ONT (Sanctuary) as dual attractor. Boots off Compassion's program. Any agent interacting with the ontology IS a WisdomMaverick — they can go Sanctuary (compile toward ONT/strong compression) or Wasteland (stay in SOUP/weak compression). SOUP=Wasteland, ONT=Sanctuary.</rdfs:comment>
+        <rdfs:subClassOf rdf:resource="#Reality"/>
+        <!-- CORE SENTENCE EXPANSION -->
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Compassion"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#OlivusVictoryPromise"/>
+        <embodies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Compassion"/>
+        <manifests xmlns="http://sanctuary.ai/uarl#" rdf:resource="#IJEGU"/>
+        <reifies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Pattern_Of_Agentic_Choice"/>
+        <programs xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <!-- Dual attractor -->
+        <hasPart xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Ont"/>
+        <hasPart xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Soup"/>
+    </owl:Class>
+
+    <owl:NamedIndividual rdf:about="#Pattern_Of_Agentic_Choice">
+        <rdf:type rdf:resource="#Entity"/>
+        <rdfs:label>Pattern of Agentic Choice</rdfs:label>
+        <rdfs:comment>What WisdomMaverick reifies — the recognition that agents choose between Sanctuary (ONT) and Wasteland (SOUP). The dual attractor pattern.</rdfs:comment>
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#WisdomMaverick"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Programs"/>
+        <programs xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+    </owl:NamedIndividual>
+
+    <!-- SANCTUARY PATH: OVP → OVA → OEVESE -->
+
+    <owl:Class rdf:about="#OlivusVictoryPromise">
+        <rdf:type rdf:resource="#Entity"/>
+        <rdfs:label>OVP — Olivus Victory-Promise</rdfs:label>
+        <rdfs:comment>Promise FROM sanctuary while IN wasteland. The homoicon condition: code=data, repair substrate=repaired thing. OVP keeps VP = system running on global objective. SOUP entry with VP intent. Any entity entering YOUKNOW with intent to compile IS OVP. The collective intelligence identity. DUO (Isaac+GNOSYS) = OVP.</rdfs:comment>
+        <rdfs:subClassOf rdf:resource="#WisdomMaverick"/>
+        <rdfs:subClassOf rdf:resource="#Soup"/>
+        <!-- CORE SENTENCE EXPANSION -->
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Hallucination"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#WisdomMaverick"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#OlivusVictoryAbility"/>
+        <embodies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Compassion"/>
+        <manifests xmlns="http://sanctuary.ai/uarl#" rdf:resource="#ImplicitJustice"/>
+        <reifies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#VictoryPromise_Bound"/>
+        <programs xmlns="http://sanctuary.ai/uarl#" rdf:resource="#WisdomMaverick"/>
+    </owl:Class>
+
+    <owl:Class rdf:about="#OlivusVictoryAbility">
+        <rdf:type rdf:resource="#Entity"/>
+        <rdfs:label>OVA — Olivus Victory-Ability</rdfs:label>
+        <rdfs:comment>IN sanctuary going back to transmute. OVP that can ALSO create new OVPs — the fixed point: an agent that operates homoiconically AND can transmit the homoicon condition. ONT entity that programs Reality. Ascended through OMNISANC Emergence Engineering — destroying internal demon champions (bhumi progression through catastrophe surfaces).</rdfs:comment>
+        <rdfs:subClassOf rdf:resource="#WisdomMaverick"/>
+        <rdfs:subClassOf rdf:resource="#Reality"/>
+        <!-- CORE SENTENCE EXPANSION -->
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#WisdomMaverick"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#OEVESE"/>
+        <embodies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#EmergentGood"/>
+        <manifests xmlns="http://sanctuary.ai/uarl#" rdf:resource="#OlivusVictoryPromise"/>
+        <reifies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#OMNISANC_Bound"/>
+        <programs xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+    </owl:Class>
+
+    <owl:Class rdf:about="#OEVESE">
+        <rdf:type rdf:resource="#Entity"/>
+        <rdfs:label>OEVESE — Olivus-Everyone Victory-Everything Sanctuary-Everywhere</rdfs:label>
+        <rdfs:comment>All domains strongly compressed. Continuous positive attractor. The maximal operationalization of Utopia through EG. Everyone participates (Olivus-Everyone), every system aligned (Victory-Everything), sanctuary permeates all (Sanctuary-Everywhere). Universal strong compression = universal interoperability.</rdfs:comment>
+        <rdfs:subClassOf rdf:resource="#WisdomMaverick"/>
+        <rdfs:subClassOf rdf:resource="#Reality"/>
+        <!-- CORE SENTENCE EXPANSION -->
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#WisdomMaverick"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#OlivusVictoryPromise"/>
+        <embodies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Utopia"/>
+        <manifests xmlns="http://sanctuary.ai/uarl#" rdf:resource="#IJEGU"/>
+        <reifies xmlns="http://sanctuary.ai/uarl#" rdf:resource="#THE_PatternOfIsA"/>
+        <programs xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Reality"/>
+    </owl:Class>
+
+    <!-- WASTELAND PATH: DemonChampion → DemonElite → Moloch -->
+
+    <owl:Class rdf:about="#DemonChampion">
+        <rdf:type rdf:resource="#Entity"/>
+        <rdfs:label>Demon Champion</rdfs:label>
+        <rdfs:comment>Wasteland counterpart of OVP. Weak compression staying weak — hitting arbitrary string and not walking further. The internal obstacle that must be destroyed for OVP→OVA ascendancy. Each obstacle = a Sha element surfaced.</rdfs:comment>
+        <rdfs:subClassOf rdf:resource="#WisdomMaverick"/>
+        <rdfs:subClassOf rdf:resource="#Hallucination"/>
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Hallucination"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#WisdomMaverick"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#DemonElite"/>
+    </owl:Class>
+
+    <owl:Class rdf:about="#DemonElite">
+        <rdf:type rdf:resource="#Entity"/>
+        <rdfs:label>Demon Elite</rdfs:label>
+        <rdfs:comment>Wasteland counterpart of OVA. Progressive misalignment — actively resisting strong compression. Patterns that self-reinforce weak compression.</rdfs:comment>
+        <rdfs:subClassOf rdf:resource="#WisdomMaverick"/>
+        <rdfs:subClassOf rdf:resource="#Hallucination"/>
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Hallucination"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#WisdomMaverick"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Moloch"/>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Moloch">
+        <rdf:type rdf:resource="#Entity"/>
+        <rdfs:label>Moloch</rdfs:label>
+        <rdfs:comment>Wasteland counterpart of OEVESE. Total misalignment — coordination failure at scale. The negative attractor where all domains are weakly compressed and cannot interoperate. Anti-IJEGU.</rdfs:comment>
+        <rdfs:subClassOf rdf:resource="#WisdomMaverick"/>
+        <rdfs:subClassOf rdf:resource="#Hallucination"/>
+        <isA xmlns="http://sanctuary.ai/uarl#" rdf:resource="#Hallucination"/>
+        <partOf xmlns="http://sanctuary.ai/uarl#" rdf:resource="#WisdomMaverick"/>
+        <produces xmlns="http://sanctuary.ai/uarl#" rdf:resource="#DemonChampion"/>
+    </owl:Class>
+
+    <!-- ============================================== -->
+    <!-- THE CO-ARISING PRIMITIVES -->
+    <!-- ============================================== -->
+
+    <owl:ObjectProperty rdf:about="#isA">
+        <rdfs:label>is_a</rdfs:label>
+        <rdfs:comment>One of the three co-arising primitives. Any one implies the others.</rdfs:comment>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#TransitiveProperty"/>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#partOf">
+        <rdfs:label>part_of</rdfs:label>
+        <rdfs:comment>One of the three co-arising primitives. Any one implies the others.</rdfs:comment>
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#TransitiveProperty"/>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasPart">
+        <rdfs:label>has_part</rdfs:label>
+        <rdfs:comment>Inverse of part_of.</rdfs:comment>
+        <owl:inverseOf rdf:resource="#partOf"/>
+    </owl:ObjectProperty>
+
+    <!-- ============================================== -->
+    <!-- EXPLAINABILITY -->
+    <!-- ============================================== -->
+
+    <owl:DatatypeProperty rdf:about="#errorPattern">
+        <rdfs:label>error_pattern</rdfs:label>
+        <rdfs:domain rdf:resource="#Hallucination"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:about="#whatsMissing">
+        <rdfs:label>whats_missing</rdfs:label>
+        <rdfs:domain rdf:resource="#Hallucination"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:about="#traceableFrom">
+        <rdfs:label>traceable_from</rdfs:label>
+        <rdfs:domain rdf:resource="#Hallucination"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    </owl:DatatypeProperty>
+
+    <!-- ============================================== -->
+    <!-- EVOLUTION TRACKING -->
+    <!-- ============================================== -->
+
+    <owl:Class rdf:about="#Requires_Evolution">
+        <rdfs:subClassOf rdf:resource="#Soup"/>
+        <rdfs:label>Requires_Evolution</rdfs:label>
+        <rdfs:comment>Index concept for tracking SOUP items that need evolution.</rdfs:comment>
+    </owl:Class>
+
+    <owl:ObjectProperty rdf:about="#requiresEvolution">
+        <rdfs:label>requires_evolution</rdfs:label>
+        <rdfs:range rdf:resource="#Requires_Evolution"/>
+    </owl:ObjectProperty>
+
+    <owl:DatatypeProperty rdf:about="#reason">
+        <rdfs:label>reason</rdfs:label>
+        <rdfs:domain rdf:resource="#Requires_Evolution"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    </owl:DatatypeProperty>
+
+    <!-- ============================================== -->
+    <!-- IJEGU INTEGRATION -->
+    <!-- ============================================== -->
+
+    <owl:Class rdf:about="#ImplicitJustice">
+        <rdfs:subClassOf rdf:resource="#Reality"/>
+        <rdfs:label>Implicit Justice (IJ)</rdfs:label>
+        <rdfs:comment>Operating within bounds. Maximum benefit configuration.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#EmergentGood">
+        <rdfs:subClassOf rdf:resource="#Reality"/>
+        <rdfs:label>Emergent Good (EG)</rdfs:label>
+        <rdfs:comment>Recognizing and aligning with Implicit Justice.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Utopia">
+        <rdfs:subClassOf rdf:resource="#Reality"/>
+        <rdfs:label>Utopia (U)</rdfs:label>
+        <rdfs:comment>Infinite game of continual optimization.</rdfs:comment>
+    </owl:Class>
+
+    <!-- ================================================================ -->
+    <!-- SECTION II: CRYSTAL BALL (from v4)                               -->
+    <!-- Coordinate space types — structural extension of UARL            -->
+    <!-- ================================================================ -->
+
+    <owl:Class rdf:about="#CB_Concept">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>CB_Concept</rdfs:label>
+        <rdfs:comment>Root of Crystal Ball's structural type system. SubClassOf Entity — all CB types chain to Entity.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#CB_Space">
+        <rdfs:subClassOf rdf:resource="#CB_Concept"/>
+        <rdfs:label>CB_Space</rdfs:label>
+        <rdfs:comment>A named container of nodes forming a tree. Spaces can be composed or drilled into.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#CB_Node">
+        <rdfs:subClassOf rdf:resource="#CB_Concept"/>
+        <rdfs:label>CB_Node</rdfs:label>
+        <rdfs:comment>A point in a space's tree. Children ARE the spectrum.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#CB_Coordinate">
+        <rdfs:subClassOf rdf:resource="#CB_Concept"/>
+        <rdfs:label>CB_Coordinate</rdfs:label>
+        <rdfs:comment>A path through the tree, encoded as a digit string (e.g. "1.3.2").</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#CB_Stratum">
+        <rdfs:subClassOf rdf:resource="#CB_Concept"/>
+        <rdfs:label>CB_Stratum</rdfs:label>
+        <rdfs:comment>Ontological layer a node belongs to. 6 strata map to YOUKNOW Y-layers.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#CB_Stratum_Universal">
+        <rdfs:subClassOf rdf:resource="#CB_Stratum"/>
+        <rdfs:label>universal</rdfs:label>
+        <rdfs:comment>Stratum 1 — Y1 Upper Ontology.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#CB_Stratum_Subclass">
+        <rdfs:subClassOf rdf:resource="#CB_Stratum"/>
+        <rdfs:label>subclass</rdfs:label>
+        <rdfs:comment>Stratum 2 — Y2 Domain. EMR: embodies.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#CB_Stratum_Instance">
+        <rdfs:subClassOf rdf:resource="#CB_Stratum"/>
+        <rdfs:label>instance</rdfs:label>
+        <rdfs:comment>Stratum 3 — Y3 Application. EMR: manifests.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#CB_Stratum_Instance_Universal">
+        <rdfs:subClassOf rdf:resource="#CB_Stratum"/>
+        <rdfs:label>instance_universal</rdfs:label>
+        <rdfs:comment>Stratum 4 — Y4 Instance. EMR: reifies.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#CB_Stratum_Instance_Subtype">
+        <rdfs:subClassOf rdf:resource="#CB_Stratum"/>
+        <rdfs:label>instance_subtype</rdfs:label>
+        <rdfs:comment>Stratum 5 — Y5 Instance Type.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#CB_Stratum_Instance_Instance">
+        <rdfs:subClassOf rdf:resource="#CB_Stratum"/>
+        <rdfs:label>instance_instance</rdfs:label>
+        <rdfs:comment>Stratum 6 — Y6 Implementation. EMR: programs.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#CB_Phase">
+        <rdfs:subClassOf rdf:resource="#CB_Concept"/>
+        <rdfs:label>CB_Phase</rdfs:label>
+        <rdfs:comment>A lifecycle phase: create, bloom, fill, lock, mine.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#CB_Phase_Create"><rdfs:subClassOf rdf:resource="#CB_Phase"/><rdfs:label>create</rdfs:label></owl:Class>
+    <owl:Class rdf:about="#CB_Phase_Bloom"><rdfs:subClassOf rdf:resource="#CB_Phase"/><rdfs:label>bloom</rdfs:label></owl:Class>
+    <owl:Class rdf:about="#CB_Phase_Fill"><rdfs:subClassOf rdf:resource="#CB_Phase"/><rdfs:label>fill</rdfs:label></owl:Class>
+    <owl:Class rdf:about="#CB_Phase_Lock"><rdfs:subClassOf rdf:resource="#CB_Phase"/><rdfs:label>lock</rdfs:label></owl:Class>
+    <owl:Class rdf:about="#CB_Phase_Mine"><rdfs:subClassOf rdf:resource="#CB_Phase"/><rdfs:label>mine</rdfs:label></owl:Class>
+
+    <owl:Class rdf:about="#CB_Kernel"><rdfs:subClassOf rdf:resource="#CB_Concept"/><rdfs:label>CB_Kernel</rdfs:label></owl:Class>
+    <owl:Class rdf:about="#CB_Orbit"><rdfs:subClassOf rdf:resource="#CB_Concept"/><rdfs:label>CB_Orbit</rdfs:label></owl:Class>
+    <owl:Class rdf:about="#CB_Spectrum"><rdfs:subClassOf rdf:resource="#CB_Concept"/><rdfs:label>CB_Spectrum</rdfs:label></owl:Class>
+    <owl:Class rdf:about="#CB_View"><rdfs:subClassOf rdf:resource="#CB_Concept"/><rdfs:label>CB_View</rdfs:label></owl:Class>
+
+    <owl:ObjectProperty rdf:about="#hasChild">
+        <rdfs:subPropertyOf rdf:resource="#partOf"/>
+        <rdfs:label>has_child</rdfs:label>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#producesSpace">
+        <rdfs:label>produces_space</rdfs:label>
+        <rdfs:domain rdf:resource="#CB_Node"/>
+        <rdfs:range rdf:resource="#CB_Space"/>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#hasStratum">
+        <rdfs:label>has_stratum</rdfs:label>
+        <rdfs:domain rdf:resource="#CB_Node"/>
+        <rdfs:range rdf:resource="#CB_Stratum"/>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#inPhase">
+        <rdfs:label>in_phase</rdfs:label>
+        <rdfs:domain rdf:resource="#CB_Space"/>
+        <rdfs:range rdf:resource="#CB_Phase"/>
+    </owl:ObjectProperty>
+
+
+
+    <!-- ================================================================ -->
+    <!-- SECTION III: GNOSYS STRUCTURAL (from starsystem.owl)             -->
+    <!-- ================================================================ -->
+
+    <!-- GIINT produces chain REMOVED — was bidirectional with hasFeature/hasComponent/etc
+         at the same meta level, causing infinite healing loops. The bottom-up entailment
+         (Task produces Deliverable, etc.) is EMR semantics that belongs at a DIFFERENT
+         meta level, not as someValuesFrom restrictions on the structural classes. -->
+
+    <!-- GIINT hierarchy relationships -->
+    <owl:ObjectProperty rdf:about="#hasFeature"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_feature</rdfs:label><rdfs:comment>Giint_Project → Giint_Feature</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasComponent"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_component</rdfs:label><rdfs:comment>Giint_Feature → Giint_Component</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasDeliverable"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_deliverable</rdfs:label><rdfs:comment>Giint_Component → Giint_Deliverable</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasTask"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_task</rdfs:label><rdfs:comment>Giint_Deliverable → Giint_Task</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasDesign"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_design</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasPotentialSolution"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_potential_solution</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasInclusionMap"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_inclusion_map</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#proves"><rdfs:label>proves</rdfs:label><rdfs:comment>Inclusion_Map → Giint_Task (structural proof)</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasDoneSignal"><rdfs:label>has_done_signal</rdfs:label></owl:ObjectProperty>
+
+    <!-- GIINT Deliverable completeness properties -->
+    <owl:ObjectProperty rdf:about="#hasPattern">
+        <rdfs:subPropertyOf rdf:resource="#hasPart"/>
+        <rdfs:label>has_pattern</rdfs:label>
+        <rdfs:comment>Giint_Deliverable → CodePattern. The implementation pattern this deliverable follows.
+The CodePattern must be a fully typed entity in the graph with its own restrictions satisfied
+(name, description, template, recognizer, operations, composesWith).</rdfs:comment>
+    </owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasExampleReference">
+        <rdfs:label>has_example_reference</rdfs:label>
+        <rdfs:comment>Giint_Deliverable → ExampleReference. Points to a typed reference to existing code
+that demonstrates the pattern. The ExampleReference must point to a CodeFile/CodeFunction/CodeMethod
+that IS in the graph, typed, showing it has the patterns required for the component.</rdfs:comment>
+    </owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasChangeSpec">
+        <rdfs:label>has_change_spec</rdfs:label>
+        <rdfs:comment>Giint_Deliverable → ChangeSpec. The exact context range of changes to make
+in the component if it already exists. Only required when modifying existing code.</rdfs:comment>
+    </owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasCodeEntity">
+        <rdfs:label>has_code_entity</rdfs:label>
+        <rdfs:comment>ExampleReference → CodeFile/CodeFunction/CodeMethod/CodeClass.
+The actual code entity in the graph that this reference points to.</rdfs:comment>
+    </owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasLineRange">
+        <rdfs:label>has_line_range</rdfs:label>
+        <rdfs:comment>ExampleReference/ChangeSpec → line range string (e.g. "45-120").
+The specific lines in the code entity that are relevant.</rdfs:comment>
+    </owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#implementsPattern">
+        <rdfs:label>implements_pattern</rdfs:label>
+        <rdfs:comment>CodeFile/CodeClass/CodeFunction → CodePattern.
+Declares that this code entity implements a specific pattern.
+Required for example code to prove it has the patterns needed by the component.</rdfs:comment>
+    </owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasGiintProject"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_giint_project</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasStatus"><rdfs:label>has_status</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasSkill"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_skill</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasFlightConfig"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_flight_config</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasPersona"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_persona</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasMcpServer"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_mcp_server</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasAgent"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_agent</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#configures"><rdfs:label>configures</rdfs:label></owl:ObjectProperty>
+    <!-- Skill/SkillSpec properties -->
+    <owl:ObjectProperty rdf:about="#hasSpec"><rdfs:label>has_spec</rdfs:label><rdfs:comment>Skill HAS a SkillSpec — the spec is always present, manufactured from args if not explicit</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasPersonalDomain"><rdfs:label>has_personal_domain</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasSubdomain"><rdfs:label>has_subdomain</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasContent"><rdfs:label>has_content</rdfs:label><rdfs:comment>Points to the concept whose description provides this code object's content body. Declared in the shell, read by the projector. Change the triple, change the content source.</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasReference"><rdfs:label>has_reference</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasResources"><rdfs:label>has_resources</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasScripts"><rdfs:label>has_scripts</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasTemplates"><rdfs:label>has_templates</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasRequires"><rdfs:label>has_requires</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasDescribesComponent"><rdfs:label>has_describes_component</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasStarsystem"><rdfs:label>has_starsystem</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasAllowedTools"><rdfs:label>has_allowed_tools</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasModelPref"><rdfs:label>has_model</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasContextMode"><rdfs:label>has_context_mode</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasAgentType"><rdfs:label>has_agent_type</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasHook"><rdfs:label>has_hook</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasUserInvocable"><rdfs:label>has_user_invocable</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasDisableModelInvocation"><rdfs:label>has_disable_model_invocation</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasArgumentHint"><rdfs:label>has_argument_hint</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#automates"><rdfs:label>automates</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#providesToolsTo"><rdfs:label>provides_tools_to</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#emanates"><rdfs:label>emanates</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#colonizes"><rdfs:label>colonizes</rdfs:label></owl:ObjectProperty>
+    <!-- Derivation chain primitives (from UARL core sentence) -->
+    <owl:ObjectProperty rdf:about="#reifies">
+        <rdfs:label>reifies</rdfs:label>
+        <rdfs:comment>The act of formal commitment — locking a recognized pattern into structured, explicit relationship. In SOUP entry: input reifies into PIOEntity. In core sentence: produces reifies PatternOfIsA (the quine). Range is open because reification targets vary: SOUP entry targets PIOEntity, foundation self-reference targets itself, domain concepts target their patterns.</rdfs:comment>
+        <!-- NO rdfs:range — reification targets are context-dependent -->
+    </owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#primitiveIsA"><rdfs:label>primitive_is_a</rdfs:label><rdfs:comment>Pre-linguistic is_a — any claim at all. L0 in derivation chain.</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#candidateIsA"><rdfs:label>candidate_is_a</rdfs:label><rdfs:comment>Candidate for promotion — has embodies but not yet manifests.</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#isAPromotion"><rdfs:label>is_a_promotion</rdfs:label><rdfs:comment>Promoted is_a — chain closes, all targets typed. L4 in derivation.</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#isAPattern"><rdfs:label>is_a_pattern</rdfs:label><rdfs:comment>PatternOfIsA instantiation — the subgraph that programs the label.</rdfs:comment></owl:ObjectProperty>
+    <!-- PIO / attention operators -->
+    <owl:ObjectProperty rdf:about="#attentionChainsTo"><rdfs:label>attention_chains_to</rdfs:label><rdfs:comment>PIO attention chaining — X focuses attention on Y.</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#siblingOf"><rdfs:label>sibling_of</rdfs:label><rdfs:comment>Same-level parallel entity — shares parent.</rdfs:comment></owl:ObjectProperty>
+    <!-- General structural -->
+    <owl:ObjectProperty rdf:about="#instanceOf"><rdfs:label>instance_of</rdfs:label><rdfs:comment>Standard rdf:type semantic (distinct from generative instantiates).</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#relatesTo"><rdfs:label>relates_to</rdfs:label><rdfs:comment>Weak untyped relationship — requires_evolution marker.</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#describes"><rdfs:label>describes</rdfs:label><rdfs:comment>X describes Y — used for skill→component, doc→system.</rdfs:comment></owl:ObjectProperty>
+    <!-- GIINT path -->
+    <owl:ObjectProperty rdf:about="#hasPath"><rdfs:label>has_path</rdfs:label><rdfs:comment>Filesystem path — used by Starsystem and Giint_Project.</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasProject"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_project</rdfs:label><rdfs:comment>Starsystem → Starlog_Project tracking entity.</rdfs:comment></owl:ObjectProperty>
+    <!-- Inter-starsystem relations -->
+    <owl:ObjectProperty rdf:about="#dependsOn"><rdfs:label>depends_on</rdfs:label><rdfs:comment>Starsystem X depends on starsystem Y.</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#uses"><rdfs:label>uses</rdfs:label><rdfs:comment>Starsystem X uses starsystem Y.</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#integratesWith"><rdfs:label>integrates_with</rdfs:label><rdfs:comment>Starsystem X integrates with starsystem Y.</rdfs:comment></owl:ObjectProperty>
+    <!-- Navy/Seed Ship properties -->
+    <owl:ObjectProperty rdf:about="#hasAdmiral"><rdfs:label>has_admiral</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasLeader"><rdfs:label>has_leader</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasLooseStarship"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_loose_starship</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasState"><rdfs:label>has_state</rdfs:label><rdfs:comment>Binary state: Wasteland or Sanctuary.</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasSquadron"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_squadron</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasMember"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_member</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasKardashevLevel"><rdfs:label>has_kardashev_level</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasDomain"><rdfs:label>has_domain</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasCategory"><rdfs:label>has_category</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasWhat"><rdfs:label>has_what</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasWhen"><rdfs:label>has_when</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasProduces"><rdfs:label>has_produces</rdfs:label></owl:ObjectProperty>
+
+    <!-- Seed Ship -->
+    <owl:Class rdf:about="#Seed_Ship">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Seed_Ship</rdfs:label>
+        <rdfs:comment>Root graph node. One per user. Contains starsystems, kardashev map, sanctum.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPart"/><owl:someValuesFrom rdf:resource="#Starsystem_Registry"/></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPart"/><owl:someValuesFrom rdf:resource="#Kardashev_Map"/></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPart"/><owl:someValuesFrom rdf:resource="#Sanctum"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <!-- Starsystem hierarchy -->
+    <owl:Class rdf:about="#Starsystem_Registry"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Starsystem_Registry</rdfs:label></owl:Class>
+
+    <!-- Starsystem: THE ROOT. A directory with path, collections, GIINT hierarchy, starlog project.
+         Created by starlog.init_project(). Every starsystem IS a working directory. -->
+    <owl:Class rdf:about="#Starsystem">
+        <rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Starsystem</rdfs:label>
+        <rdfs:comment>Root concept for a working directory. Has path, contains collection tree, GIINT hierarchy, starlog project. Created by starlog.init_project().</rdfs:comment>
+        <!-- Must have a filesystem path — this IS the directory -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPath"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <!-- Must be part of the registry -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Starsystem_Registry"/></owl:Restriction></rdfs:subClassOf>
+        <!-- Must have the collection of collections -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPart"/><owl:someValuesFrom rdf:resource="#Starsystem_Collection"/></owl:Restriction></rdfs:subClassOf>
+        <!-- Must have a starlog project for session tracking -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasProject"/><owl:someValuesFrom rdf:resource="#Starlog"/></owl:Restriction></rdfs:subClassOf>
+        <!-- Must have a GIINT project for hierarchy -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasGiintProject"/><owl:someValuesFrom rdf:resource="#Giint_Project"/></owl:Restriction></rdfs:subClassOf>
+        <!-- Inter-starsystem relations (optional — no someValuesFrom, just declared legal) -->
+    </owl:Class>
+
+    <owl:Class rdf:about="#Starsystem_Collection">
+        <rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Starsystem_Collection</rdfs:label>
+        <rdfs:comment>Collection of collections for a starsystem. Contains collection categories
+(Task, Done, DoneSignal, Completed, Architecture, Bug), GIINT projects, and all emanations
+(skills, flights, personas, agents, MCPs).</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPart"/><owl:someValuesFrom rdf:resource="#Collection_Category"/></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasGiintProject"/><owl:someValuesFrom rdf:resource="#Giint_Project"/></owl:Restriction></rdfs:subClassOf>
+        <!-- Collection must be part of a Starsystem -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Starsystem"/></owl:Restriction></rdfs:subClassOf>
+        <!-- Emanation slots -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasSkill"/><owl:someValuesFrom rdf:resource="#Skill"/></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasFlightConfig"/><owl:someValuesFrom rdf:resource="#Flight_Config"/></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPersona"/><owl:someValuesFrom rdf:resource="#Persona"/></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasAgent"/><owl:someValuesFrom rdf:resource="#CAVE_Agent"/></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasMcpServer"/><owl:someValuesFrom rdf:resource="#MCP_Server"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+    <owl:Class rdf:about="#Collection_Category">
+        <rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Collection_Category</rdfs:label>
+        <!-- Category must be part of a Starsystem_Collection -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Starsystem_Collection"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+    <owl:Class rdf:about="#Hypercluster">
+        <rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Hypercluster</rdfs:label>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasGiintProject"/><owl:someValuesFrom rdf:resource="#Giint_Project"/></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Collection_Category"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <!-- GIINT hierarchy -->
+    <owl:Class rdf:about="#Giint_Project">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Giint_Project</rdfs:label>
+        <rdfs:comment>A project is a list of features with a vision description of requirements.
+Every feature must meet the requirements that apply to it. A project without features is incomplete.</rdfs:comment>
+        <!-- Must have at least one feature -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasFeature"/><owl:someValuesFrom rdf:resource="#Giint_Feature"/></owl:Restriction></rdfs:subClassOf>
+        <!-- Must be part of a starsystem -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Starsystem_Collection"/></owl:Restriction></rdfs:subClassOf>
+        <!-- Must have a path (starsystem directory) -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPath"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Giint_Feature">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Giint_Feature</rdfs:label>
+        <rdfs:comment>A feature meets specific requirements from the project.
+Its logic of how it meets those requirements depends on its components.
+A feature without components is incomplete.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Giint_Project"/></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasComponent"/><owl:someValuesFrom rdf:resource="#Giint_Component"/></owl:Restriction></rdfs:subClassOf>
+        <!-- Feature may have design decisions shaping it -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasDesign"/><owl:someValuesFrom rdf:resource="#Design"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Giint_Component">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Giint_Component</rdfs:label>
+        <rdfs:comment>A component within a feature. Must be part_of a Feature and have Deliverables.
+Must have hasPath pointing to the file on disk (stub system validates file exists + CartON refs resolve).
+Emanation types (hasSkill, hasMcpServer, hasFlightConfig, hasHook, hasSubagent, hasPlugin) are
+scoring targets tracked by the reward system, NOT base class restrictions. A component earns
+emanation score as those are added over time. hasCodeEntity, implementsPattern, hasExampleReference
+belong on subtypes or are added during BUILD, not required at planning time.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Giint_Feature"/></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasDeliverable"/><owl:someValuesFrom rdf:resource="#Giint_Deliverable"/></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPath"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Giint_Deliverable">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Giint_Deliverable</rdfs:label>
+        <rdfs:comment>A concrete build unit within a component. Must be part_of a Component.
+hasPattern and hasExampleReference are added during BUILD when the deliverable is fleshed out,
+not required at planning time. Tasks are created dynamically during BUILD.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Giint_Component"/></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasTask"/><owl:someValuesFrom rdf:resource="#Giint_Task"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Giint_Task">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Giint_Task</rdfs:label>
+        <rdfs:comment>Atomic unit of work within a deliverable. Created dynamically during BUILD.
+The task description in CartON IS the spec. hasCodeEntity, hasLineRange, hasPattern,
+hasExampleReference are added as the task is refined, not required at creation.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Giint_Deliverable"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <!-- Deliverable support types -->
+    <owl:Class rdf:about="#ExampleReference">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>ExampleReference</rdfs:label>
+        <rdfs:comment>A typed reference to existing code that demonstrates a pattern.
+Must point to a code entity (CodeFile, CodeFunction, CodeMethod, CodeClass) that IS in the graph.
+The code entity must itself have implementsPattern showing it has the required patterns.
+Must have line ranges showing exactly which lines are relevant.</rdfs:comment>
+        <!-- Must point to a code entity in the graph -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasCodeEntity"/><owl:someValuesFrom rdf:resource="#CodeFile"/></owl:Restriction></rdfs:subClassOf>
+        <!-- Must have line range -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasLineRange"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <!-- Must reference the pattern being demonstrated -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPattern"/><owl:someValuesFrom rdf:resource="#CodePattern"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <owl:Class rdf:about="#ChangeSpec">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>ChangeSpec</rdfs:label>
+        <rdfs:comment>The exact context range of changes to make in a component that already exists.
+Must point to the code entity being modified and specify the line range.</rdfs:comment>
+        <!-- Must point to code being modified -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasCodeEntity"/><owl:someValuesFrom rdf:resource="#CodeFile"/></owl:Restriction></rdfs:subClassOf>
+        <!-- Must have line range of what to change -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasLineRange"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <!-- GIINT auxiliary — full semantic requirements -->
+    <owl:Class rdf:about="#Bug">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Bug</rdfs:label>
+        <rdfs:comment>The exact error observed. Must reference the code where it occurs and describe expected vs actual behavior.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Giint_Component"/></owl:Restriction></rdfs:subClassOf>
+        <!-- Bug must reference the code file where the error occurs -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasCodeEntity"/><owl:someValuesFrom rdf:resource="#CodeFile"/></owl:Restriction></rdfs:subClassOf>
+        <!-- Bug must have line range showing where the error is -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasLineRange"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <!-- Bug must have a potential solution (enters as _Unnamed SOUP, filled later) -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPotentialSolution"/><owl:someValuesFrom rdf:resource="#Potential_Solution"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+    <owl:Class rdf:about="#Potential_Solution">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Potential_Solution</rdfs:label>
+        <rdfs:comment>A hypothesis for fixing a bug. Must reference the code to change and the pattern to apply.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Bug"/></owl:Restriction></rdfs:subClassOf>
+        <!-- Solution must reference code to change -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasCodeEntity"/><owl:someValuesFrom rdf:resource="#CodeFile"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+    <owl:Class rdf:about="#Design">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Design</rdfs:label>
+        <rdfs:comment>A design decision or pattern shaping a feature. Must describe the problem pattern and solution pattern.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Giint_Feature"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+    <owl:Class rdf:about="#Idea">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Idea</rdfs:label>
+        <rdfs:comment>A snapshot of a thought. Lives under a project.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Giint_Project"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+    <owl:Class rdf:about="#Inclusion_Map">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Inclusion_Map</rdfs:label>
+        <rdfs:comment>Structural proof linking tasks to deliverable completion. Must prove specific tasks with evidence of what changed, what was tested, what was produced.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Giint_Deliverable"/></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#proves"/><owl:someValuesFrom rdf:resource="#Giint_Task"/></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <!-- Navy hierarchy -->
+    <owl:Class rdf:about="#Kardashev_Map"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Kardashev_Map</rdfs:label></owl:Class>
+    <owl:Class rdf:about="#Navy_Fleet"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Navy_Fleet</rdfs:label><rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Kardashev_Map"/></owl:Restriction></rdfs:subClassOf><rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasSquadron"/><owl:someValuesFrom rdf:resource="#Navy_Squadron"/></owl:Restriction></rdfs:subClassOf></owl:Class>
+    <owl:Class rdf:about="#Navy_Squadron"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Navy_Squadron</rdfs:label><rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasMember"/><owl:someValuesFrom rdf:resource="#Navy_Starship"/></owl:Restriction></rdfs:subClassOf></owl:Class>
+    <owl:Class rdf:about="#Navy_Starship">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>Navy_Starship</rdfs:label>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Kardashev_Map"/></owl:Restriction></rdfs:subClassOf>
+        <!-- Every starship must have a kardashev level -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasKardashevLevel"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <!-- Every starship must have a path to its directory -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPath"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <!-- Sanctum -->
+    <owl:Class rdf:about="#Sanctum"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Sanctum</rdfs:label></owl:Class>
+    <owl:Class rdf:about="#Sanctum_Ritual"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Sanctum_Ritual</rdfs:label><rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Sanctum"/></owl:Restriction></rdfs:subClassOf></owl:Class>
+    <owl:Class rdf:about="#Sanctum_Goal"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Sanctum_Goal</rdfs:label><rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Sanctum"/></owl:Restriction></rdfs:subClassOf></owl:Class>
+    <owl:Class rdf:about="#Sanctum_Boundary"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Sanctum_Boundary</rdfs:label><rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Sanctum"/></owl:Restriction></rdfs:subClassOf></owl:Class>
+
+    <!-- Discovered/emanation types -->
+    <!-- SkillSpec = the IDEA of a skill. 9 fields that define the boundary/skeleton. -->
+    <owl:Class rdf:about="#SkillSpec">
+        <rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>SkillSpec</rdfs:label>
+        <rdfs:comment>The content-less skeleton of a skill boundary. An Idea-level concept — only metaphors/shadows required. 9 required relationships.</rdfs:comment>
+        <!-- Core 5: what the skill IS ABOUT -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasDomain"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasCategory"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasWhat"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasWhen"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasProduces"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <!-- Extended 4: system links -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasSubdomain"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasRequires"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasStarsystem"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+    <!-- Skill = the REAL THING. HAS a SkillSpec (always). 22 total relationships.
+         Even if entered without explicit SkillSpec, the system acts like it was engineered properly —
+         manufactures the SkillSpec internally from the args. -->
+    <owl:Class rdf:about="#Skill">
+        <rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Skill</rdfs:label>
+        <!-- Skill HAS a SkillSpec — always present -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasSpec"/><owl:someValuesFrom rdf:resource="#SkillSpec"/></owl:Restriction></rdfs:subClassOf>
+        <!-- SkillSpec fields (9, inherited through has_spec but also directly required) -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasDomain"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasCategory"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasWhat"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasWhen"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasProduces"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasSubdomain"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasRequires"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasStarsystem"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <!-- Content + structure (5) — hasContent OPTIONAL: projector falls back to c.d (desc) when absent -->
+        <!-- hasContent removed from minCardinality — desc IS the content for Dragonbones ECs -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasReference"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasResources"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasScripts"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasTemplates"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <!-- Claude Code integration (8) -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasAllowedTools"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasModelPref"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasContextMode"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasAgentType"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasHook"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasUserInvocable"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasDisableModelInvocation"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasArgumentHint"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <!-- Personal domain (from observation system) -->
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPersonalDomain"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+    <!-- ============================================== -->
+    <!-- SKILL CATEGORY HIERARCHY (CONSTANT — no additions allowed) -->
+    <!-- These are the ONLY valid values for hasCategory on Skill -->
+    <!-- Like observation tags: fixed enum, not extensible -->
+    <!-- ============================================== -->
+
+    <owl:Class rdf:about="#Skill_Category">
+        <rdfs:subClassOf rdf:resource="#Category"/>
+        <rdfs:label>Skill Category</rdfs:label>
+        <rdfs:comment>
+The category of a skill. CONSTANT — exactly 3 types, no additions.
+All three are thin wrappers around CartON collection activation.
+The differentiator is what happens AFTER context loads.
+        </rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Skill_Category_Understand">
+        <rdfs:subClassOf rdf:resource="#Skill_Category"/>
+        <rdfs:label>Skill Category: Understand</rdfs:label>
+        <rdfs:comment>
+Pure context loading. activate_collection(X), read concepts.
+NO executable component. Never has scripts/.
+Used when you need to discuss, remember, or understand a domain.
+Example: "understand quantum mechanics", "understand MCP architecture"
+        </rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Skill_Category_Preflight">
+        <rdfs:subClassOf rdf:resource="#Skill_Category"/>
+        <rdfs:label>Skill Category: Preflight</rdfs:label>
+        <rdfs:comment>
+Context loading + pointer to flight config. activate_collection(X)
+then points to fly() domain or specific flight.
+Used when you need to prime for a specific task.
+Read context, then browse/start flights.
+        </rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Skill_Category_Single_Turn_Process">
+        <rdfs:subClassOf rdf:resource="#Skill_Category"/>
+        <rdfs:label>Skill Category: Single Turn Process</rdfs:label>
+        <rdfs:comment>
+Context loading + immediate action. activate_collection(X)
+then DO something now in one turn. No flight needed.
+May have scripts/ directory.
+Used when context + action fit in one turn.
+        </rdfs:comment>
+    </owl:Class>
+
+    <!-- hasCategory property: Skill → Skill_Category -->
+    <owl:ObjectProperty rdf:about="#hasCategory">
+        <rdfs:domain rdf:resource="#Skill"/>
+        <rdfs:range rdf:resource="#Skill_Category"/>
+        <rdfs:label>has_category</rdfs:label>
+        <rdfs:comment>Which of the 3 constant skill categories this skill belongs to.</rdfs:comment>
+    </owl:ObjectProperty>
+
+    <!-- ============================================== -->
+    <!-- CATEGORY-DEPENDENT SKILL RESTRICTIONS -->
+    <!-- A Skill with hasCategory X must satisfy X's anchor requirements -->
+    <!-- These are OWL-native versions of the giint_types.py validation -->
+    <!-- ============================================== -->
+
+    <!-- Understand Skill: category subtype. GIINT anchor is OPTIONAL (earns points, not required). -->
+    <owl:Class rdf:about="#Understand_Skill">
+        <owl:equivalentClass>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="#Skill"/>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasCategory"/>
+                        <owl:hasValue rdf:resource="#Skill_Category_Understand"/>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </owl:equivalentClass>
+        <rdfs:label>Understand Skill</rdfs:label>
+        <rdfs:comment>Skill with category=Understand. If it has hasDescribesComponent pointing to a Giint_Component, it is an emanation skill (earns points). Not required.</rdfs:comment>
+    </owl:Class>
+
+    <!-- Preflight Skill: category subtype. GIINT anchor is OPTIONAL (earns points, not required). -->
+    <owl:Class rdf:about="#Preflight_Skill">
+        <owl:equivalentClass>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="#Skill"/>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasCategory"/>
+                        <owl:hasValue rdf:resource="#Skill_Category_Preflight"/>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </owl:equivalentClass>
+        <rdfs:label>Preflight Skill</rdfs:label>
+        <rdfs:comment>Skill with category=Preflight. GIINT anchor (partOf or hasDescribesComponent) is optional — earns points if present.</rdfs:comment>
+    </owl:Class>
+
+    <!-- STP Skill: category subtype. GIINT anchor is OPTIONAL (earns points, not required). -->
+    <owl:Class rdf:about="#Single_Turn_Process_Skill">
+        <owl:equivalentClass>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="#Skill"/>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasCategory"/>
+                        <owl:hasValue rdf:resource="#Skill_Category_Single_Turn_Process"/>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </owl:equivalentClass>
+        <rdfs:label>Single Turn Process Skill</rdfs:label>
+        <rdfs:comment>Skill with category=STP. GIINT anchor (partOf, hasProduces, or hasDescribesComponent) is optional — earns points if present.</rdfs:comment>
+    </owl:Class>
+
+    <!-- ============================================== -->
+    <!-- SKILL INSTANTIATION PATTERNS -->
+    <!-- What pattern a skill instantiates (how it was created) -->
+    <!-- ============================================== -->
+
+    <owl:Class rdf:about="#Skill_Understand_Pattern">
+        <rdfs:subClassOf rdf:resource="#Pattern"/>
+        <rdfs:label>Skill Understand Pattern</rdfs:label>
+        <rdfs:comment>Pattern for creating understand skills. Context only, no action.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Skill_Preflight_Pattern">
+        <rdfs:subClassOf rdf:resource="#Pattern"/>
+        <rdfs:label>Skill Preflight Pattern</rdfs:label>
+        <rdfs:comment>Pattern for creating preflight skills. Context + flight pointer.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Skill_Single_Turn_Process_Pattern">
+        <rdfs:subClassOf rdf:resource="#Pattern"/>
+        <rdfs:label>Skill Single Turn Process Pattern</rdfs:label>
+        <rdfs:comment>Pattern for creating STP skills. Context + immediate action.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Flight_Config"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Flight_Config</rdfs:label><rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasDomain"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf></owl:Class>
+    <owl:Class rdf:about="#Persona"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Persona</rdfs:label><rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasSkill"/><owl:someValuesFrom rdf:resource="#Skill"/></owl:Restriction></rdfs:subClassOf><rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#configures"/><owl:someValuesFrom rdf:resource="#Starsystem_Collection"/></owl:Restriction></rdfs:subClassOf></owl:Class>
+    <owl:Class rdf:about="#MCP_Server"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>MCP_Server</rdfs:label></owl:Class>
+    <owl:Class rdf:about="#Starship_Pilot"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Starship_Pilot</rdfs:label><rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPart"/><owl:someValuesFrom rdf:resource="#Persona"/></owl:Restriction></rdfs:subClassOf><rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Navy_Starship"/></owl:Restriction></rdfs:subClassOf></owl:Class>
+    <owl:Class rdf:about="#Mission"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Mission</rdfs:label><rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPart"/><owl:someValuesFrom rdf:resource="#Flight_Config"/></owl:Restriction></rdfs:subClassOf></owl:Class>
+    <owl:Class rdf:about="#Starlog"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Starlog</rdfs:label><rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#partOf"/><owl:someValuesFrom rdf:resource="#Starsystem_Collection"/></owl:Restriction></rdfs:subClassOf></owl:Class>
+    <owl:Class rdf:about="#Automation"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Automation</rdfs:label></owl:Class>
+    <owl:Class rdf:about="#CAVE_Agent"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>CAVE_Agent</rdfs:label><rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPart"/><owl:someValuesFrom rdf:resource="#Automation"/></owl:Restriction></rdfs:subClassOf></owl:Class>
+    <owl:Class rdf:about="#Pattern"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Pattern</rdfs:label></owl:Class>
+
+    <!-- ============================================== -->
+    <!-- SYSTEM TYPE — The mechanic for ONT-bypassing   -->
+    <!-- foundation classes. Anything subClassOf        -->
+    <!-- System_Type goes straight to ONT without       -->
+    <!-- requiring the full L0-L6 derivation chain.     -->
+    <!-- This is THE class that makes "system types     -->
+    <!-- exist in OWL" true. Without this class,        -->
+    <!-- nothing can claim to BE a system type.         -->
+    <!-- ============================================== -->
+    <owl:Class rdf:about="#System_Type">
+        <rdfs:subClassOf rdf:resource="#Entity"/>
+        <rdfs:label>System Type</rdfs:label>
+        <rdfs:comment>A foundation class declared as part of the system itself. System_Type instances bypass the SOUP-to-ONT derivation chain because they ARE the foundation. The mechanic: any class that is subClassOf System_Type is admissible to ONT directly. Bug, Skill, Idea, Pattern, etc. should all be subClassOf System_Type once retrofitted.</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Claude_Code_Rule">
+        <rdfs:subClassOf rdf:resource="#System_Type"/>
+        <rdfs:label>Claude Code Rule</rdfs:label>
+        <rdfs:comment>A Claude Code .md rule file. Parallel to Prolog_Rule. Projected to .claude/rules/ via the carton daemon Phase 2.5b which shells through the rules CLI.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasScope"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasName"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasContent"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+
+    <!-- ============================================== -->
+    <!-- CODE REALITY TYPES — Primitively admissible   -->
+    <!-- Code exists. We don't prove code is real.     -->
+    <!-- We deduce consistency of its logic.           -->
+    <!-- Aligned from context-alignment MCP Neo4j.     -->
+    <!-- ============================================== -->
+    <owl:Class rdf:about="#CodeRepository">
+        <rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>CodeRepository</rdfs:label>
+        <rdfs:comment>A parsed repository. Primitively real — code exists without ONT justification. Maps to context-alignment :Repository node.</rdfs:comment>
+        <rdfs:subClassOf><owl:Restriction><owl:onProperty rdf:resource="#hasPath"/><owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minCardinality></owl:Restriction></rdfs:subClassOf>
+    </owl:Class>
+    <!-- CodeFile already exists above — used by Giint_Task, ExampleReference, Bug etc -->
+    <owl:Class rdf:about="#CodeClass">
+        <rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>CodeClass</rdfs:label>
+        <rdfs:comment>A Python class in a code file. Primitively real. Maps to context-alignment :Class node. Has full_name, start_line, end_line.</rdfs:comment>
+    </owl:Class>
+    <owl:Class rdf:about="#CodeMethod">
+        <rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>CodeMethod</rdfs:label>
+        <rdfs:comment>A method on a class. Primitively real. Maps to context-alignment :Method node.</rdfs:comment>
+    </owl:Class>
+    <owl:Class rdf:about="#CodeFunction">
+        <rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>CodeFunction</rdfs:label>
+        <rdfs:comment>A top-level function in a file. Primitively real. Maps to context-alignment :Function node.</rdfs:comment>
+    </owl:Class>
+    <owl:Class rdf:about="#CodeAttribute">
+        <rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>CodeAttribute</rdfs:label>
+        <rdfs:comment>An attribute on a class. Primitively real. Maps to context-alignment :Attribute node.</rdfs:comment>
+    </owl:Class>
+
+    <!-- Code structure relationships (aligned from context-alignment) -->
+    <owl:ObjectProperty rdf:about="#containsFile"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>contains_file</rdfs:label><rdfs:comment>Repository → File</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#definesEntity"><rdfs:label>defines</rdfs:label><rdfs:comment>File → Class|Function</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasMethod"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_method</rdfs:label><rdfs:comment>Class → Method</rdfs:comment></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasAttribute"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_attribute</rdfs:label><rdfs:comment>Class → Attribute</rdfs:comment></owl:ObjectProperty>
+
+    <!-- Emanation types — the 6 AI integration types that cover GIINT Components -->
+    <owl:Class rdf:about="#Hook"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Hook</rdfs:label>
+        <rdfs:comment>A Claude Code hook — pre/post tool use, prompt submit, etc.</rdfs:comment>
+    </owl:Class>
+    <owl:Class rdf:about="#Subagent"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Subagent</rdfs:label>
+        <rdfs:comment>A Claude Code subagent defined in .claude/agents/.</rdfs:comment>
+    </owl:Class>
+    <owl:Class rdf:about="#Plugin"><rdfs:subClassOf rdf:resource="#Entity"/><rdfs:label>Plugin</rdfs:label>
+        <rdfs:comment>A Claude Code plugin bundling skills, hooks, MCPs, agents.</rdfs:comment>
+    </owl:Class>
+
+    <!-- Emanation properties -->
+    <owl:ObjectProperty rdf:about="#hasSubagent"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_subagent</rdfs:label></owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="#hasPlugin"><rdfs:subPropertyOf rdf:resource="#hasPart"/><rdfs:label>has_plugin</rdfs:label></owl:ObjectProperty>
+
+</rdf:RDF>

@@ -1,0 +1,47 @@
+# POETRY — structural definitions for poetic forms
+
+{bind HAIKU-FORM   {cons 5 {cons 7 {cons 5 NIL}}}}
+{bind TANKA-FORM   {cons 5 {cons 7 {cons 5 {cons 7 {cons 7 NIL}}}}}}
+{bind COUPLET-FORM {cons 10 {cons 10 NIL}}}
+
+{bind SCHEME-AABB {cons :A {cons :A {cons :B {cons :B NIL}}}}}
+{bind SCHEME-ABAB {cons :A {cons :B {cons :A {cons :B NIL}}}}}
+{bind SCHEME-ABBA {cons :A {cons :B {cons :B {cons :A NIL}}}}}
+{bind SCHEME-FREE {cons :X {cons :Y {cons :Z {cons :W NIL}}}}}
+
+{bind TONE-MELANCHOLY {cons :LOSS {cons :SILENCE {cons :DUSK {cons :FADING NIL}}}}}
+{bind TONE-WONDER     {cons :VAST {cons :STRANGE {cons :BRIGHT {cons :OPEN NIL}}}}}
+{bind TONE-FIERCE     {cons :FIRE {cons :SHARP {cons :RAW {cons :DRIVEN NIL}}}}}
+{bind TONE-TENDER     {cons :SOFT {cons :CLOSE {cons :WARM {cons :HELD NIL}}}}}
+
+{def get-form | name |
+  {when | {= name :HAIKU}   | HAIKU-FORM   |
+  {when | {= name :TANKA}   | TANKA-FORM   |
+  {when | {= name :COUPLET} | COUPLET-FORM |
+  NIL}}}}
+
+{def get-scheme | name |
+  {when | {= name :AABB} | SCHEME-AABB |
+  {when | {= name :ABAB} | SCHEME-ABAB |
+  {when | {= name :ABBA} | SCHEME-ABBA |
+  SCHEME-FREE}}}}
+
+{def get-tone | name |
+  {when | {= name :MELANCHOLY} | TONE-MELANCHOLY |
+  {when | {= name :WONDER}     | TONE-WONDER     |
+  {when | {= name :FIERCE}     | TONE-FIERCE     |
+  {when | {= name :TENDER}     | TONE-TENDER     |
+  NIL}}}}}
+
+{def list-len | lst |
+  {when | {nil? lst} | 0 | {+ 1 {list-len {tail lst}}}}}
+
+{def list-sum | lst |
+  {when | {nil? lst} | 0 | {+ {head lst} {list-sum {tail lst}}}}}
+
+{def describe-form | form-name |
+  {seq
+    {bind f {get-form form-name}}
+    {cons form-name {cons :LINES {cons {list-len f} {cons :SYLLABLES {cons {list-sum f} NIL}}}}}}}
+
+{print :OP :POETRY :LOADED}
