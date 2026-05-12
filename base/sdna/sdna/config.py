@@ -337,12 +337,44 @@ class DovetailModel(BaseModel):
 
     Declares expected outputs from previous step and
     how to map them to inputs for the next step.
+
+    file_inputs: Load files into context before extraction.
+        Maps context key to file path. Files are loaded as:
+        - dict if valid JSON
+        - str (full contents) if not JSON and <= 10k chars
+        - str "You must read {path} before continuing" if > 10k chars
     """
     name: str = ""
     expected_outputs: List[str] = Field(default_factory=list)
     input_map: Dict[str, HermesConfigInput] = Field(default_factory=dict)
+    file_inputs: Dict[str, str] = Field(default_factory=dict)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    FILE_INLINE_LIMIT: int = 10_000
+
+    def _load_file_inputs(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Load file_inputs into context. JSON parsed to dict, else str or read pointer."""
+        import json as _json
+        from pathlib import Path as _Path
+
+        ctx = dict(context)
+        for key, file_path in self.file_inputs.items():
+            p = _Path(file_path)
+            if not p.exists():
+                ctx[key] = None
+                continue
+            raw = p.read_text()
+            try:
+                ctx[key] = _json.loads(raw)
+                continue
+            except (_json.JSONDecodeError, ValueError):
+                pass
+            if len(raw) <= self.FILE_INLINE_LIMIT:
+                ctx[key] = raw
+            else:
+                ctx[key] = f"You must read {file_path} before continuing"
+        return ctx
 
     def validate_outputs(self, result: Dict[str, Any]) -> List[str]:
         """Check expected outputs are present. Returns missing keys."""
@@ -360,13 +392,15 @@ class DovetailModel(BaseModel):
         return missing
 
     def prepare_next_inputs(self, previous_result: Dict[str, Any]) -> Dict[str, Any]:
-        """Transform previous outputs into next step inputs."""
-        missing = self.validate_outputs(previous_result)
+        """Load file_inputs into context, then extract via input_map."""
+        enriched = self._load_file_inputs(previous_result)
+
+        missing = self.validate_outputs(enriched)
         if missing:
             raise ValueError(f"Dovetail '{self.name}' missing outputs: {missing}")
 
         next_inputs = {}
         for input_name, input_spec in self.input_map.items():
-            next_inputs[input_name] = input_spec.extract(previous_result)
+            next_inputs[input_name] = input_spec.extract(enriched)
 
         return next_inputs
