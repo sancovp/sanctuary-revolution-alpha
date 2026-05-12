@@ -9,6 +9,17 @@ set -e
 # Resolve script directory (no hardcoded paths)
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# Source env (API keys + Neo4j creds). Spawnee bootstrap inside each
+# Python daemon is the primary defense (see spawnee-side-env-bootstrap.md),
+# but exporting here means subprocesses get a sane baseline even before
+# they call _get_strata_carton_env. :- defaults preserve any caller overrides.
+source /home/GOD/system_config.sh 2>/dev/null || true
+export NEO4J_URI="${NEO4J_URI:-bolt://host.docker.internal:7687}"
+export NEO4J_USER="${NEO4J_USER:-neo4j}"
+export NEO4J_PASSWORD="${NEO4J_PASSWORD:-password}"
+export HEAVEN_DATA_DIR="${HEAVEN_DATA_DIR:-/tmp/heaven_data}"
+export CHROMA_PERSIST_DIR="${CHROMA_PERSIST_DIR:-/tmp/carton_chroma_db}"
+
 # Configuration
 SESSION="${CAVE_SESSION:-cave}"
 WORKDIR="${CAVE_WORKDIR:-$(pwd)}"
@@ -26,6 +37,18 @@ echo ""
 # CLEAN KILL — stop everything before starting fresh
 # ============================================================================
 echo "  [1/7] Clearing previous incarnation..."
+
+# Container-default services that squat sancrev ports.
+# This container is the Anthropic computer-use-demo image; on container boot
+# it auto-launches:
+#   - /home/GOD/core/image/http_server.py on :8080 (the CAVE port) — old HEAVEN API
+#   - streamlit on :8501 (computer_use_demo UI)
+#   - websockify on :6080 (noVNC bridge to :5900)
+# Without these kills, CAVE bring-up below silently fails on EADDRINUSE
+# while the broken curl-s health check returns 0 from the demo's 404 page.
+pkill -f "bin/python http_server\.py" 2>/dev/null || true
+pkill -f "computer_use_demo/streamlit\.py" 2>/dev/null || true
+pkill -f "websockify.*noVNC" 2>/dev/null || true
 
 # Kill CAVE/sancrev http_server
 if [ -f /tmp/cave.pid ]; then
