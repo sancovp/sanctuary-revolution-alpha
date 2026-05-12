@@ -18,6 +18,17 @@ import time
 import signal
 import logging
 
+# Spawnee-side env bootstrap: pull NEO4J_*, OPENAI_API_KEY, HEAVEN_DATA_DIR,
+# CHROMA_PERSIST_DIR from strata carton config BEFORE any module-level env
+# reads or carton imports. Works no matter who spawns this module
+# (start_sancrev.sh, cron, MCP, hook subprocess). Never trust env inheritance.
+try:
+    from sdna.defaults import _get_strata_carton_env
+    for _k, _v in _get_strata_carton_env().items():
+        os.environ.setdefault(_k, _v)
+except Exception:
+    pass
+
 logger = logging.getLogger(__name__)
 
 CACHE_FILE = os.path.join(
