@@ -85,6 +85,21 @@ class AutomationSchema:
     delivery: Optional[dict] = None        # Serialized DeliveryTarget
     session_target: str = "main"           # "main" or "isolated"
 
+    # Chain — full chain spec for ChainTool execution
+    chain_spec: Optional[dict] = None  # ChainTool JSON spec (config_link, chain, eval_chain)
+
+    # Deliverable gate — paths that must exist after execution for success
+    expected_deliverables: list = field(default_factory=list)
+
+    # Dependencies — automation names that must have last succeeded before this fires
+    depends_on: list = field(default_factory=list)
+
+    # One-shot — auto-unregister after firing once
+    one_shot: bool = False
+
+    # Parallel — list of automation names to fire simultaneously with this one
+    parallel: list = field(default_factory=list)
+
     # Metadata
     priority: int = 5
     tags: list = field(default_factory=list)
@@ -114,6 +129,11 @@ class AutomationSchema:
             "delivery": self.delivery,
             "session_target": self.session_target,
             "priority": self.priority,
+            "chain_spec": self.chain_spec,
+            "expected_deliverables": self.expected_deliverables,
+            "depends_on": self.depends_on,
+            "one_shot": self.one_shot,
+            "parallel": self.parallel,
             "tags": self.tags,
             "enabled": self.enabled,
         }

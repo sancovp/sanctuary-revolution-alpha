@@ -221,11 +221,14 @@ def _render_menu(response: Dict[str, Any]) -> str:
     
     actions_text = "\n".join(actions) if actions else "  No actions available"
     
-    # Build description section
+    # Build description section: description + docstring + signature
     desc_section = f"Description: {description}"
+    docstring = response.get("docstring", "")
+    if docstring and docstring != description:
+        desc_section += f"\n\n{docstring}"
     if signature and signature != "No signature available":
         desc_section += f"\n\nArgs: {signature}"
-        
+
         # Add warning if system prefill is present
         if "SYSTEM_WILL_PREFILL" in signature:
             desc_section += f"\n\n⚠️ If param=SYSTEM_WILL_PREFILL, it can be ignored because the system will prefill it.\nIf signature shows (x, y=SYSTEM_WILL_PREFILL), call it with args={{\"x\": ...}}"

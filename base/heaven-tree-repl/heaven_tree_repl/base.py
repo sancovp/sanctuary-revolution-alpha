@@ -1380,6 +1380,7 @@ class TreeShellBase:
         from .renderer import resolve_description
         description = resolve_description(raw_description)
         signature = "No signature available"
+        docstring = ""
         
         # For callable nodes, extract function documentation
         if node.get("type") == "Callable":
@@ -1387,6 +1388,7 @@ class TreeShellBase:
             if function_name:
                 func_signature, func_docstring = self._get_function_docs(function_name, node)
                 signature = func_signature
+                docstring = func_docstring or ""
                 # Don't override description - preserve original HEAVEN resolution protocol
                 # The renderer will handle description resolution properly
             
@@ -1432,6 +1434,7 @@ class TreeShellBase:
             "menu_options": menu_options,
             "universal_commands": universal_commands,
             "node_type": node.get("type"),
+            "docstring": docstring,
             "position": node_coord
         }
     

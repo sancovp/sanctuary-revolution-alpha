@@ -935,7 +935,15 @@ class UserTreeShell(TreeShell, UserTreeReplMixin):
         families_list = final_config.get('families', [])
         families = base_config_loader.load_families(user_config_path)
         final_config['_loaded_families'] = families
-        
+
+        # Collect config validation warnings for surfacing
+        self.config_warnings = []
+        self.config_warnings.extend(base_config_loader.get_validation_warnings())
+        self.config_warnings.extend(self.system_config_loader.get_validation_warnings())
+        if self.config_warnings:
+            for w in self.config_warnings:
+                logger.warning(f"CONFIG: {w}")
+
         # Initialize with merged config
         TreeShell.__init__(self, final_config)
         self.__init_user_features__(parent_approval_callback)

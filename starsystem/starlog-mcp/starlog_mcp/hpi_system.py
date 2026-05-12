@@ -1,4 +1,5 @@
 """HPI system mixin for context rendering and injection."""
+from __future__ import annotations
 
 import os
 import json

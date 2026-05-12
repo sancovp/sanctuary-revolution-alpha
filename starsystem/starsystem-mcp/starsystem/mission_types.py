@@ -13,12 +13,19 @@ from typing import Dict, List, Optional, Any
 logger = logging.getLogger(__name__)
 
 # PARALLEL: uses heaven_base.registry — should migrate to CartON/YOUKNOW
-try:
-    from heaven_base.tools.registry_tool import registry_util_func
-except ImportError:
-    logger.warning("heaven_base not available - mission types will not persist", exc_info=True)
-    def registry_util_func(*args, **kwargs):
-        return "Registry not available"
+# LAZY IMPORT: heaven_base pulls langchain_core -> transformers -> torch (~800MB)
+_registry_func = None
+
+def registry_util_func(*args, **kwargs):
+    global _registry_func
+    if _registry_func is None:
+        try:
+            from heaven_base.tools.registry_tool import registry_util_func as _real
+            _registry_func = _real
+        except ImportError:
+            logger.warning("heaven_base not available - mission types will not persist")
+            _registry_func = lambda *a, **kw: "Registry not available"
+    return _registry_func(*args, **kwargs)
 
 
 def create_mission_type(

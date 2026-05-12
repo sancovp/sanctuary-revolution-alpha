@@ -189,11 +189,12 @@ Add output format templates to `templates/` if the action produces structured ou
     return f"Created '{skill.name}' in {path} [{category}]\nPath: {result['path']}{describes_info}{starsystem_info}"
 
 
-def create_understand(name: str, domain: str, content: str,
-                      what: str, when: str,
+def create_understand(name: str, domain: str, content: str = "",
+                      what: str = "", when: str = "",
                       subdomain: str = "",
                       describes_component: str = "",
                       starsystem: str = "",
+                      legacy_path: str = "",
                       **kwargs) -> str:
     """Create an UNDERSTAND skill — pure context for discussion/recall.
 
@@ -211,7 +212,30 @@ def create_understand(name: str, domain: str, content: str,
         subdomain: Optional subdomain
         describes_component: GIINT component path
         starsystem: Project path
+        legacy_path: Path to existing SKILL.md — reads content from file, extracts what/when from frontmatter if not provided
     """
+    if legacy_path:
+        import os, yaml
+        skill_file = os.path.join(legacy_path, "SKILL.md") if os.path.isdir(legacy_path) else legacy_path
+        with open(skill_file) as f:
+            raw = f.read()
+        parts = raw.split("---", 2)
+        if len(parts) >= 3:
+            fm = yaml.safe_load(parts[1]) or {}
+            body = parts[2].strip()
+            if not content:
+                content = body
+            if not what:
+                what = fm.get("description", fm.get("what", f"Understanding {name}"))[:200]
+            if not when:
+                when = fm.get("when", f"When applying {name.replace('-', ' ')} knowledge")
+        else:
+            if not content:
+                content = raw
+            if not what:
+                what = f"Understanding {name}"
+            if not when:
+                when = f"When applying {name.replace('-', ' ')} knowledge"
     return _create_skill_typed(name, domain, content, what, when, "understand",
                                subdomain, describes_component, starsystem, **kwargs)
 

@@ -27,6 +27,7 @@ CACHE_FILE = os.path.join(
 INTERVAL = 600  # 10 minutes
 
 
+
 def _print(msg: str):
     """Print with flush for real-time output in startup scripts."""
     print(msg, flush=True)
@@ -71,9 +72,9 @@ def compile_scores(verbose: bool = False) -> dict:
     if verbose:
         _print("   Compiling Seed Ship stats from Neo4j...")
     try:
-        from carton_mcp.add_concept_tool import _get_module_connection
         from carton_mcp.ontology_graphs import get_seed_ship_stats
-        conn = _get_module_connection()
+        from carton_mcp.observation_worker_daemon import _create_shared_neo4j
+        conn = _create_shared_neo4j()
         if conn:
             result["seed_ship"] = get_seed_ship_stats(conn)
     except Exception as e:

@@ -211,18 +211,20 @@ async def serve() -> None:
 
 Navigation:
 - 'nav' — Full tree with coordinates
-- 'jump <node_name>' — Go to node by full name or numeric coordinate
+- 'jump <node_name>' — Go to node by semantic name (e.g., 'jump create_understand')
 - 'back' — Go up one level
 - 'menu' — Show current position menu
+- '<number>' — Select from current menu (ONLY when already AT a menu position)
 
 Execution:
 - '<node>.exec {"arg": "val"}' — Jump + execute (e.g., 'equip.exec {"name": "my-skill"}')
 - 'exec {"args"}' — Execute at current position
 
 Addressing (valid inputs only):
-- Full node name: 'agent_management_equipment'
-- Numeric coordinate: '0.2.1'
+- Semantic node name: 'create_understand', 'equip', 'list_skills'
+- Numeric coordinate: '0.2.1' (absolute only — these can shift if tree changes)
 - Registered shortcut: 'nav', 'lang', 'brain', etc.
+- Numeric selection: just a number when AT a menu (local only, not in jump/chain)
 - Bare words that aren't any of the above are INVALID
 
 Chains (sequential execution with data flow):

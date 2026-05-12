@@ -328,6 +328,7 @@ def _sync_kardashev_to_carton(kmap: dict) -> list[str]:
     # Check via starlog registry
     try:
         # LAZY: heaven_base imported on demand to avoid torch
+        pass
     except ImportError:
         errors.append("HEAVEN registry not available - can't validate STARSYSTEMs")
         return errors

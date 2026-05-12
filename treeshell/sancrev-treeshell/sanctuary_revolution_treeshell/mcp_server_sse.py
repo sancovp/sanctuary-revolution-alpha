@@ -128,6 +128,15 @@ async def run_conversation_shell(command: str) -> str:
         result = await shell.handle_command(command)
         rendered_output = render_response(result)
 
+        # Surface config warnings persistently on every response
+        config_warnings = getattr(shell, 'config_warnings', [])
+        if config_warnings:
+            warning_block = f"⚠️ TREESHELL CONFIG ERRORS ({len(config_warnings)}):\n"
+            for w in config_warnings:
+                warning_block += f"  • {w}\n"
+            warning_block += "Fix these files and restart TreeShell.\n\n"
+            rendered_output = warning_block + rendered_output
+
         # Auto-connect retry
         if "not connected" in rendered_output and "manage_servers" in rendered_output:
             match = re.search(r"'(\w[\w-]*)' not connected", rendered_output)

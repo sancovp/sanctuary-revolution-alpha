@@ -543,16 +543,231 @@ class CAVEAgent(
         status_file.write_text("\n".join(lines))
 
     def fire_due_automations(self):
-        """Fire all CronAutomations that are due. Called by Heart tick."""
+        """Fire all CronAutomations that are due. Called by Heart tick.
+
+        Completion handler:
+        1. Poll running processes — check if async subprocesses finished
+        2. Capture result from auto.fire()
+        3. Check expected_deliverables
+        4. SUCCESS + deliverables present → trigger dependent automations
+        5. ERROR/BLOCKED → write block report
+        6. One-shot → auto-unregister after firing
+        7. Parallel → fire parallel automations simultaneously
+        """
+        import os
+        from pathlib import Path
+        from datetime import datetime
+
         registry = getattr(self, 'automation_registry', None)
         if not registry:
             return
-        for auto in registry.get_due():
+
+        if not hasattr(self, '_automation_results'):
+            self._automation_results = {}
+        if not hasattr(self, '_running_processes'):
+            self._running_processes = {}  # name → {pid, automation_name, started_at}
+
+        # --- Phase 1: Poll running processes ---
+        completed_pids = []
+        for name, proc_info in list(self._running_processes.items()):
+            pid = proc_info["pid"]
+            original_start = proc_info.get("start_time_ticks", 0)
             try:
-                auto.fire()
-                logger.info(f"Fired automation: {auto.name}")
+                os.kill(pid, 0)  # check alive
+                # PID exists — but is it OUR process or a reused PID?
+                if original_start:
+                    current_start = self._get_pid_start_time(pid)
+                    if current_start and current_start != original_start:
+                        # PID reused — our process is gone
+                        logger.warning("PID %d reused (start %d != %d), treating %s as dead",
+                                      pid, current_start, original_start, name)
+                    else:
+                        continue  # same process, still running
+                else:
+                    continue  # no start_time recorded, assume still running
+            except ProcessLookupError:
+                pass  # finished
+            except PermissionError:
+                continue  # still running, different user
+
+            # Process finished — reap zombie
+            try:
+                os.waitpid(pid, os.WNOHANG)
+            except ChildProcessError:
+                pass  # already reaped
+
+            # Check deliverables
+            auto = registry.get(name)
+            deliverables_ok = True
+            missing = []
+            if auto and auto.schema.expected_deliverables:
+                missing = [p for p in auto.schema.expected_deliverables if not Path(p).exists()]
+                deliverables_ok = not missing
+
+            status = "success" if deliverables_ok else "deliverables_missing"
+            self._automation_results[name] = {
+                "status": status,
+                "result": {"pid": pid, "missing_deliverables": missing},
+                "timestamp": datetime.now().isoformat(),
+            }
+
+            if not deliverables_ok:
+                self._write_automation_failure(name, {
+                    "status": "deliverables_missing",
+                    "pid": pid,
+                    "missing": missing,
+                })
+            else:
+                logger.info("Process %d for %s completed, deliverables OK", pid, name)
+
+            # One-shot cleanup for async processes
+            if auto and auto.schema.one_shot:
+                registry.unregister(name)
+                schema_path = registry._dir / f"{name}.json"
+                if schema_path.exists():
+                    schema_path.unlink()
+                logger.info("One-shot async automation %s removed after process completion", name)
+
+            completed_pids.append(name)
+
+        for name in completed_pids:
+            del self._running_processes[name]
+
+        # --- Phase 2: Fire due automations ---
+        to_unregister = []
+
+        for auto in registry.get_due():
+            # Check depends_on — skip if any dependency hasn't succeeded
+            deps = auto.schema.depends_on
+            if deps:
+                deps_met = all(
+                    self._automation_results.get(d, {}).get("status") == "success"
+                    for d in deps
+                )
+                if not deps_met:
+                    logger.info("Automation %s skipped: dependencies not met (%s)", auto.name, deps)
+                    continue
+
+            # Fire
+            try:
+                result = auto.fire()
+                status = result.get("status", "unknown") if isinstance(result, dict) else "unknown"
+                logger.info("Fired automation: %s → %s", auto.name, status)
             except Exception as e:
-                logger.error(f"Automation {auto.name} failed: {e}")
+                result = {"status": "error", "error": str(e)}
+                status = "error"
+                logger.error("Automation %s failed: %s", auto.name, e)
+
+            # If result contains a PID, track it — process is async, skip deliverable check
+            result_pid = result.get("pid") if isinstance(result, dict) else None
+            if result_pid:
+                import uuid
+                self._running_processes[auto.name] = {
+                    "pid": result_pid,
+                    "started_at": datetime.now().isoformat(),
+                    "start_time_ticks": self._get_pid_start_time(result_pid),
+                    "run_id": str(uuid.uuid4())[:8],
+                }
+                logger.info("Tracking async process %d (run=%s) for %s",
+                           result_pid, self._running_processes[auto.name]["run_id"], auto.name)
+                # Don't check deliverables yet — process still running
+                self._automation_results[auto.name] = {
+                    "status": "running",
+                    "result": result,
+                    "timestamp": datetime.now().isoformat(),
+                }
+                continue  # skip to next automation
+
+            # Sync result — check expected_deliverables immediately
+            deliverables_ok = True
+            if auto.schema.expected_deliverables:
+                missing = [p for p in auto.schema.expected_deliverables if not Path(p).exists()]
+                if missing:
+                    deliverables_ok = False
+                    result["missing_deliverables"] = missing
+                    status = "deliverables_missing"
+                    logger.warning("Automation %s: missing deliverables %s", auto.name, missing)
+
+            # Determine final status
+            final_status = "success" if status in ("success", "unknown") and deliverables_ok else "failed"
+
+            # Store result for dependency tracking
+            self._automation_results[auto.name] = {
+                "status": final_status,
+                "result": result,
+                "timestamp": datetime.now().isoformat(),
+            }
+
+            # On success — resolve any previous blockages for this automation
+            if final_status == "success":
+                from cave.core.blockage_store import BlockageStore
+                BlockageStore().mark_resolved(auto.name)
+
+            # On failure — check for SDNA block report in agent history, store blockage
+            if status in ("error", "blocked", "deliverables_missing"):
+                self._write_automation_failure(auto.name, result)
+                from cave.core.blockage_store import BlockageStore
+                store = BlockageStore()
+                # Try to read block report from agent history
+                agent_name = result.get("agent_name", auto.name)
+                br = store.read_block_report_from_history(agent_name)
+                block_data = br["block_report"] if br else result
+                store.add(auto.name, block_data)
+
+            # One-shot cleanup
+            if auto.schema.one_shot:
+                to_unregister.append(auto.name)
+
+            # Parallel — fire listed automations now
+            for par_name in auto.schema.parallel:
+                par_auto = registry.get(par_name)
+                if par_auto:
+                    try:
+                        par_result = par_auto.fire()
+                        logger.info("Parallel fired: %s → %s", par_name, par_result.get("status", "?"))
+                        self._automation_results[par_name] = {
+                            "status": "success",
+                            "result": par_result,
+                            "timestamp": __import__("datetime").datetime.now().isoformat(),
+                        }
+                    except Exception as e:
+                        logger.error("Parallel automation %s failed: %s", par_name, e)
+                        self._write_automation_failure(par_name, {"status": "error", "error": str(e)})
+
+        # Clean up one-shots
+        for name in to_unregister:
+            registry.unregister(name)
+            schema_path = registry._dir / f"{name}.json"
+            if schema_path.exists():
+                schema_path.unlink()
+            logger.info("One-shot automation %s removed after firing", name)
+
+    @staticmethod
+    def _get_pid_start_time(pid: int) -> int:
+        """Get process start time in clock ticks from /proc. Returns 0 if unavailable."""
+        try:
+            from pathlib import Path as _P
+            stat = _P(f"/proc/{pid}/stat").read_text()
+            # Field 22 (0-indexed: 21) is starttime in clock ticks
+            return int(stat.split(")")[1].split()[19])
+        except (FileNotFoundError, IndexError, ValueError, PermissionError):
+            return 0
+
+    def _write_automation_failure(self, name: str, result: dict):
+        """Write a block report for a failed automation."""
+        import json
+        from pathlib import Path
+        from datetime import datetime
+        failures_dir = Path(self.config.data_dir) / "automation_failures"
+        failures_dir.mkdir(parents=True, exist_ok=True)
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        report = {
+            "automation": name,
+            "timestamp": datetime.now().isoformat(),
+            "result": result,
+        }
+        (failures_dir / f"{name}_{ts}.json").write_text(json.dumps(report, indent=2, default=str))
+        logger.warning("Block report written for automation %s", name)
 
     def assemble_morning_briefing(self) -> str:
         """Assemble morning briefing from dynamic files.
