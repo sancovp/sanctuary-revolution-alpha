@@ -61,6 +61,9 @@ if [ -f "$SKILL_WATCHER_PID_FILE" ]; then
 fi
 pkill -f "skill_watcher_daemon.py" 2>/dev/null || true
 
+# Kill observation worker daemon (carton relaunches it on MCP connect)
+pkill -f "observation_worker_daemon" 2>/dev/null || true
+
 # Kill score compiler daemon
 SCORE_COMPILER_PID_FILE="${HEAVEN_DATA}/score_compiler.pid"
 if [ -f "$SCORE_COMPILER_PID_FILE" ]; then

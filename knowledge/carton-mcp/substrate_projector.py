@@ -369,7 +369,7 @@ def _project_giint_hierarchy_rule(utils, ss_path: str, rules_dir) -> None:
     logger.info("Projected GIINT hierarchy rule to %s", rules_dir / "giint-hierarchy.md")
 
 
-def project_to_skill(substrate: SkillSubstrate, concept_name: str) -> str:
+def project_to_skill(substrate: SkillSubstrate, concept_name: str, shared_connection=None) -> str:
     """Project CartON concept to skill package + optional ChromaDB skillgraph entry.
 
     Fetches structured concept data (description + relationships) from Neo4j,
@@ -381,7 +381,7 @@ def project_to_skill(substrate: SkillSubstrate, concept_name: str) -> str:
     """
     from carton_mcp.carton_utils import CartOnUtils
 
-    utils = CartOnUtils()
+    utils = CartOnUtils(shared_connection=shared_connection)
 
     # Fetch structured concept data
     cypher = """
@@ -904,7 +904,7 @@ def _render_rule_file_content(has_content: str, has_paths: list | None) -> str:
     return "\n".join(fm_lines) + "\n" + body
 
 
-def project_to_rule(substrate: RuleSubstrate, concept_name: str) -> str:
+def project_to_rule(substrate: RuleSubstrate, concept_name: str, shared_connection=None) -> str:
     """Project a CartON Rule_ concept to a Claude Code .md rule file.
 
     Fetches the concept's description, has_content, has_scope, has_starsystem,
@@ -918,7 +918,7 @@ def project_to_rule(substrate: RuleSubstrate, concept_name: str) -> str:
     """
     from carton_mcp.carton_utils import CartOnUtils
 
-    utils = CartOnUtils()
+    utils = CartOnUtils(shared_connection=shared_connection)
 
     # Fetch concept + relationships
     cypher = """
@@ -969,6 +969,10 @@ def project_to_rule(substrate: RuleSubstrate, concept_name: str) -> str:
 
     if not has_content.strip():
         return f"skipped: {concept_name} has no body content"
+
+    # Never project stub descriptions as rule files
+    if has_content.strip().startswith("AUTO CREATED:"):
+        return f"skipped: {concept_name} has stub description, not projecting"
 
     # Resolve scope
     scope_target = first_rel("HAS_SCOPE")
