@@ -45,6 +45,10 @@ knowledge/context-alignment/neo4j_codebase_mcp/parsers/repos/
 # Node modules
 node_modules/
 
+# Large binary files
+*.db
+chroma.log
+
 # Distribution
 *.tar.gz
 *.whl
