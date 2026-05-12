@@ -27,6 +27,30 @@ AGENT_CMD="${CAVE_AGENT_CMD:-claude --debug}"
 PORT="${CAVE_PORT:-8080}"
 HEAVEN_DATA="${HEAVEN_DATA_DIR:-/tmp/heaven_data}"
 
+# ============================================================================
+# WAIT FOR restart-cave-server SKILL TO FINISH IF ONE IS IN PROGRESS
+# ============================================================================
+# When the restart-cave-server skill is running, it kills this script's bash
+# parent (and Isaac's docker exec attachment) before finishing its pip install
+# + cache clear steps. Without this wait, Isaac re-runs start_sancrev.sh too
+# early and picks up stale code. The skill writes /tmp/cave_restart_in_progress
+# at its Step 0 and removes it at Step 5b. We block here until removed (60s cap).
+WAIT_SECONDS=0
+while [ -f /tmp/cave_restart_in_progress ] && [ $WAIT_SECONDS -lt 60 ]; do
+    if [ $WAIT_SECONDS -eq 0 ]; then
+        echo "  ⏳ restart-cave-server skill in progress, waiting for it to finish..."
+    fi
+    sleep 1
+    WAIT_SECONDS=$((WAIT_SECONDS + 1))
+done
+if [ -f /tmp/cave_restart_in_progress ]; then
+    echo "  ⚠ Marker still present after 60s — proceeding anyway (skill may have died mid-run)"
+    rm -f /tmp/cave_restart_in_progress
+elif [ $WAIT_SECONDS -gt 0 ]; then
+    echo "  ✓ restart-cave-server skill finished after ${WAIT_SECONDS}s — proceeding"
+fi
+rm -f /tmp/cave_restart_ready
+
 echo ""
 echo "  ============================================================"
 echo "    WAKING DREAMER — Compound Intelligence Boot Sequence"
