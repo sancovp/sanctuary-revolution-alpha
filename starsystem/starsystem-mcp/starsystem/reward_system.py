@@ -301,7 +301,14 @@ def _heal_emanation_gaps(gaps: list, repo_path: Path) -> int:
     return healed
 
 
-def _get_emanation_score(path: Path) -> float:
+_EMPTY_EMANATION: Dict[str, Any] = {
+    "score": 0.0, "total": 0, "code": 0,
+    "skills": "0/0", "rules": "0/0", "hooks": "0/0", "agents": "0/0",
+    "gaps": [], "soup": [],
+}
+
+
+def _get_emanation_score(path: Path) -> Dict[str, Any]:
     """Emanation score via YOUKNOW validation.
 
     1. Scan .claude/skills/ and .claude/rules/ on disk — ground truth for what exists
@@ -318,10 +325,10 @@ def _get_emanation_score(path: Path) -> float:
             # TRIGGERS: YOUKNOW daemon:8102/health via HTTP GET
             with _urllib_req.urlopen("http://localhost:8102/health", timeout=2) as r:
                 if r.status != 200:
-                    return 0.0
+                    return dict(_EMPTY_EMANATION)
         except Exception:
             logger.warning("YOUKNOW daemon not running — emanation score unavailable")
-            return 0.0
+            return dict(_EMPTY_EMANATION)
 
         disk_items = []
 
@@ -355,7 +362,7 @@ def _get_emanation_score(path: Path) -> float:
                 disk_items.append((f"Agent_{slug}", "agent", str(f)))
 
         if not disk_items:
-            return 0.0
+            return dict(_EMPTY_EMANATION)
 
         names = [item[0] for item in disk_items]
         rel_query = (
