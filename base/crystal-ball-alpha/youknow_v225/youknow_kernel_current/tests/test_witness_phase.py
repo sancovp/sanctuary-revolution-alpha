@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from unittest.mock import patch
 
-from youknow_kernel.cat_of_cat import get_cat, reset_cat
+from youknow_kernel.owl_types import get_cat, reset_cat
 from youknow_kernel.compiler import youknow
 
 
@@ -61,6 +61,6 @@ def test_soup_path_does_not_create_witness(tmp_path):
     with patch.dict(os.environ, {"HEAVEN_DATA_DIR": str(tmp_path)}):
         result = youknow("Dog is_a Pet")
 
-    assert result.startswith("SOUP:")
+    assert result.startswith("That's SOUP")
     witness_dir = Path(tmp_path) / "witness"
     assert not witness_dir.exists() or list(witness_dir.iterdir()) == []

@@ -3,7 +3,7 @@
 
 import pytest
 
-from youknow_kernel.cat_of_cat import get_cat, reset_cat
+from youknow_kernel.owl_types import get_cat, reset_cat
 from youknow_kernel.core import reset_youknow
 from youknow_kernel.compiler import parse_statement, validate_statement, youknow
 

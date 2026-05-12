@@ -76,7 +76,7 @@ sys.path.insert(0, '/tmp/youknow_owl')
 # ── Bootstrap UARL v4: register CB structural types into Cat_of_Cat ──
 # This gives youknow() derivation chains for CB concepts at runtime.
 # Cat_of_Cat source stays clean — these are loaded from v4 foundation.
-from youknow_kernel.cat_of_cat import get_cat
+from youknow_kernel.owl_types import get_cat
 cat = get_cat()
 
 # Only add if not already present (idempotent)

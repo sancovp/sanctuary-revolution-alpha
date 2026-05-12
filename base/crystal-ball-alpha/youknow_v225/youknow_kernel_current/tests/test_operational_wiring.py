@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Milestone D tests: YMesh telemetry + llm_suggest operational wiring."""
 
-from youknow_kernel.cat_of_cat import get_cat, reset_cat
+from youknow_kernel.owl_types import get_cat, reset_cat
 from youknow_kernel.compiler import validate_statement
 from youknow_kernel.utils import build_missingness_payload
 

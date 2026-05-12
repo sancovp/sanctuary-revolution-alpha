@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Milestone B tests: SES typed-depth from constructor arg drill-down."""
 
-from youknow_kernel.cat_of_cat import reset_cat
+from youknow_kernel.owl_types import reset_cat
 from youknow_kernel.compiler import validate_statement
 from youknow_kernel.universal_pattern import compute_ses_typed_depth
 

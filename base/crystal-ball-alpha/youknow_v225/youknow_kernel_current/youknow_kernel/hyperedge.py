@@ -322,8 +322,10 @@ class HyperedgeValidator:
     
     def _get_expected_layers(self, category: str) -> List[str]:
         """Get expected Y-layers for a category."""
+        # Y-layer moved to SOMA (soma_y_mesh.pl 2026-04-06) — this map is stale-paradigm.
+        # Method kept for caller compatibility but returns potentially-deprecated values.
         layer_map = {
-            "Cat_of_Cat": ["Y1"],
+            # "Cat_of_Cat": ["Y1"],  # Y-layer migrated to SOMA
             "Entity": ["Y1", "Y2", "Y3", "Y4"],
             "Category": ["Y1", "Y2", "Y3"],
             "Relationship": ["Y1"],

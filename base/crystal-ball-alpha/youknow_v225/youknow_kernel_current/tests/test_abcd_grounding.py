@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Milestone C tests: deterministic ABCD grounding in compile packet."""
 
-from youknow_kernel.cat_of_cat import reset_cat
+from youknow_kernel.owl_types import reset_cat
 from youknow_kernel.compiler import validate_statement, youknow
 
 
@@ -28,5 +28,5 @@ def test_known_foundation_claim_has_complete_abcd():
 def test_soup_response_surfaces_abcd_missingness():
     reset_cat()
     result = youknow("Dog is_a Pet")
-    assert result.startswith("SOUP:")
+    assert result.startswith("That's SOUP")
     assert "ABCD missing slots:" in result

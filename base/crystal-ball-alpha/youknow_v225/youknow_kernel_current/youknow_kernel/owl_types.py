@@ -160,6 +160,13 @@ class OWLTypeRegistry:
             "declared_bounded": len(self._classes),
         }
 
+    def declare_bounded(self, name: str) -> None:
+        """No-op: all OWL classes are bounded by definition (they're code things).
+        Kept for cat_of_cat interface compatibility (tests + crystal_ball_mcp call this).
+        Raises ValueError if the entity is unknown to surface bad references early."""
+        if name not in self._classes:
+            raise ValueError(f"Entity '{name}' not in ontology.")
+
 
 class _EntitiesProxy:
     """Dict-like proxy so `name in registry.entities` works."""

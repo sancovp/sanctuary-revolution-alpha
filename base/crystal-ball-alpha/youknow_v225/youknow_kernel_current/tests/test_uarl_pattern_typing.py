@@ -8,7 +8,7 @@ from unittest.mock import patch
 import rdflib
 from rdflib.namespace import OWL
 
-from youknow_kernel.cat_of_cat import get_cat, reset_cat
+from youknow_kernel.owl_types import get_cat, reset_cat
 from youknow_kernel.compiler import youknow
 
 
@@ -36,7 +36,7 @@ def _add_admissible_entity(name: str) -> None:
 def test_uarl_foundation_contains_compression_and_boundedness_terms():
     g = rdflib.Graph()
     g.parse(
-        Path("/Users/isaacwr/Documents/New project/youknow_kernel_current/youknow_kernel/uarl_v3.owl"),
+        Path("/home/GOD/gnosys-plugin-v2/base/crystal-ball-alpha/youknow_v225/youknow_kernel_current/youknow_kernel/uarl_v3.owl"),
         format="xml",
     )
 
@@ -65,7 +65,7 @@ def test_uarl_foundation_contains_compression_and_boundedness_terms():
 
 
 def test_shacl_promotion_shape_targets_pattern_of_isa_gate_terms():
-    shapes = Path("/Users/isaacwr/Documents/New project/youknow_kernel_current/youknow_kernel/uarl_shapes.ttl").read_text()
+    shapes = Path("/home/GOD/gnosys-plugin-v2/base/crystal-ball-alpha/youknow_v225/youknow_kernel_current/youknow_kernel/uarl_shapes.ttl").read_text()
 
     assert "uarl:PIOEntityShape" in shapes
     assert "sh:targetClass uarl:PIOEntity" in shapes
@@ -118,7 +118,7 @@ def test_soup_path_does_not_persist_pattern_of_isa_domain_entry(tmp_path):
 
     with patch.dict(os.environ, {"HEAVEN_DATA_DIR": str(tmp_path)}):
         result = youknow("Dog is_a Pet")
-    assert result.startswith("SOUP:")
+    assert result.startswith("That's SOUP")
 
     domain_owl = tmp_path / "ontology" / "domain.owl"
     if not domain_owl.exists():

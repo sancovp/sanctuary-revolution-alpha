@@ -31,7 +31,7 @@ class TestSoupWiring:
         result = youknow("Dog is_a Pet")
 
         # Should start with SOUP:, not Wrong
-        assert result.startswith("SOUP:"), f"Expected SOUP prefix, got: {result}"
+        assert result.startswith("That's SOUP"), f"Expected SOUP prefix, got: {result}"
         assert "Pet" in result, "Should mention the unknown target"
 
     def test_soup_contains_unknown_marker(self):
@@ -40,7 +40,7 @@ class TestSoupWiring:
 
         result = youknow("Foo is_a Bar")
 
-        assert "SOUP:" in result
+        assert "SOUP" in result
         assert "Unknown:" in result
         assert "Missing:" in result
 
@@ -50,7 +50,7 @@ class TestSoupWiring:
 
         result = youknow("Dog is_a Pet, part_of Habitat")
 
-        assert "SOUP:" in result
+        assert "SOUP" in result
         assert "Unknown:" in result
         assert "Pet is_a ? (unknown)" in result
         assert "Habitat is_a ? (unknown)" in result
@@ -124,7 +124,7 @@ class TestSoupWiring:
         with patch.dict(os.environ, {"HEAVEN_DATA_DIR": str(tmp_path)}):
             result = youknow("SoupConcept is_a MissingType")
 
-        assert result.startswith("SOUP:")
+        assert result.startswith("That's SOUP")
 
         domain_owl = tmp_path / "ontology" / "domain.owl"
         assert domain_owl.exists(), "SOUP should create/update domain ontology"
@@ -166,8 +166,8 @@ class TestSoupWiring:
             first = youknow("LoopConcept is_a UnknownType")
             second = youknow("LoopConcept is_a UnknownType")
 
-        assert first.startswith("SOUP:")
-        assert second.startswith("SOUP:")
+        assert first.startswith("That's SOUP")
+        assert second.startswith("That's SOUP")
 
         domain_owl = tmp_path / "ontology" / "domain.owl"
         g = rdflib.Graph()
@@ -186,8 +186,8 @@ class TestSoupWiring:
         result = youknow("this is not a valid statement")
 
         # Should be an error, not SOUP
-        assert "Wrong" in result or "could not parse" in result.lower()
-        assert not result.startswith("SOUP:")
+        assert ("SOUP" in result) or ("could not parse" in result.lower())
+        assert not result.startswith("That's SOUP")
 
 
 class TestCartonIntegration:
@@ -196,11 +196,11 @@ class TestCartonIntegration:
     def test_soup_prefix_not_treated_as_error(self):
         """SOUP: prefix should be treated as success, not error."""
         # Simulate what add_concept_tool does
-        result = "SOUP: Dog is_a Pet. Unknown: Pet is_a ?"
+        result = "That's SOUP (BAD/WIP): I cant know if Dog is a Pet because [Missing {for Pet: [is_a (unknown type)]}]"
 
         # Check the logic
         is_ok = result == "OK"
-        is_soup = result.startswith("SOUP:")
+        is_soup = result.startswith("That's SOUP")
         is_error = not is_ok and not is_soup
 
         assert is_soup == True
@@ -211,7 +211,7 @@ class TestCartonIntegration:
         result = "OK"
 
         is_ok = result == "OK"
-        is_soup = result.startswith("SOUP:")
+        is_soup = result.startswith("That's SOUP")
 
         assert is_ok == True
         assert is_soup == False

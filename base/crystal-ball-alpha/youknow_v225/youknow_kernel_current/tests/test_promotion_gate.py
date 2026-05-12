@@ -4,7 +4,7 @@
 import pytest
 from unittest.mock import patch
 
-from youknow_kernel.cat_of_cat import get_cat, reset_cat
+from youknow_kernel.owl_types import get_cat, reset_cat
 from youknow_kernel.core import get_youknow, reset_youknow
 from youknow_kernel.compiler import validate_statement, youknow
 
@@ -79,7 +79,7 @@ def test_missing_justifies_stays_in_soup():
     result = youknow("NoJustify is_a Entity")
     details = validate_statement("NoJustify is_a Entity")
 
-    assert result.startswith("SOUP:")
+    assert result.startswith("That's SOUP")
     assert "justifies coverage incomplete" in result
     assert details["decision"]["admit_to_ont"] is False
 
@@ -96,7 +96,7 @@ def test_missing_msc_stays_in_soup():
     result = youknow("NoMSC is_a Entity")
     details = validate_statement("NoMSC is_a Entity")
 
-    assert result.startswith("SOUP:")
+    assert result.startswith("That's SOUP")
     assert "MSC missing for target entity" in result
     assert details["decision"]["admit_to_ont"] is False
 
@@ -113,7 +113,7 @@ def test_programs_false_stays_in_soup():
     result = youknow("NoPrograms is_a Entity")
     details = validate_statement("NoPrograms is_a Entity")
 
-    assert result.startswith("SOUP:")
+    assert result.startswith("That's SOUP")
     assert "programs threshold not reached" in result
     assert details["emr_state"] != "programs"
     assert details["decision"]["is_programs"] is False
@@ -132,7 +132,7 @@ def test_unbounded_chain_stays_in_soup():
     result = youknow("UnboundedGate is_a Entity")
     details = validate_statement("UnboundedGate is_a Entity")
 
-    assert result.startswith("SOUP:")
+    assert result.startswith("That's SOUP")
     assert "CatOfCat chain is not declared bounded" in result
     assert details["decision"]["is_catofcat_bounded"] is False
     assert details["decision"]["admit_to_ont"] is False
@@ -173,5 +173,5 @@ def test_soup_path_does_not_call_youknow_add_boundary():
         with patch("youknow_kernel.core.get_youknow", return_value=yk):
             result = youknow("BoundarySoup is_a Entity")
 
-    assert result.startswith("SOUP:")
+    assert result.startswith("That's SOUP")
     add_spy.assert_not_called()

@@ -679,7 +679,7 @@ os.environ["HEAVEN_DATA_DIR"] = _HEAVEN_DATA_DIR
 # Pre-load Cat_of_Cat so it stays persistent across calls
 _youknow_ready = False
 try:
-    from youknow_kernel.cat_of_cat import get_cat
+    from youknow_kernel.owl_types import get_cat
     from youknow_kernel.compiler import youknow as _youknow_compile
     _cat = get_cat()
     _youknow_ready = True
