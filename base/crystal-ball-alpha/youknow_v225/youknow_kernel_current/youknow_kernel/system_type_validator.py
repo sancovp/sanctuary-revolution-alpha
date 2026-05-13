@@ -472,6 +472,53 @@ def _infer_from_context(
     """
     inferred = {}
 
+    # ── Generic d-chain dispatcher (Step 1) ─────────────────────────────────
+    # Looks up DeductionChain individuals attached to (system_type, argument_name)
+    # via the dchains registry. Each chain body fires on the arg value + context
+    # and returns one of:
+    #   {"compose_arg": {arg_name: value_list}} -> fill another arg in this entry
+    #   {"error": "<reason>"}                   -> reject with reason
+    #   {"unnamed": "<for_arg>"}                -> place _Unnamed placeholder
+    #   {}                                      -> chain contributes nothing
+    # The existing hardcoded branches below remain in place until each branch
+    # is migrated to a real DeductionChain instance. Both paths coexist; the
+    # hardcoded path runs only if a key is NOT already set by the d-chain path.
+    try:
+        import importlib
+        importlib.import_module("youknow_kernel.dchains")  # trigger registration
+        from .dchains.registry import get_chains
+
+        # Fire chains attached to every arg the entry has, plus type-level chains.
+        for arg_name in list(relationship_dict.keys()) + ["__type_level__"]:
+            chains = get_chains(system_type, arg_name)
+            for chain_def, body in chains:
+                arg_value = relationship_dict.get(arg_name)
+                try:
+                    result = body(arg_value, relationship_dict)
+                except Exception as e:
+                    logger.warning(
+                        f"D-chain {system_type}.{arg_name} body raised: {e}"
+                    )
+                    continue
+                if not isinstance(result, dict):
+                    continue
+                if "error" in result:
+                    inferred.setdefault("__chain_rejections__", []).append(
+                        f"d-chain FAIL [{system_type}.{arg_name}]: {result['error']}"
+                    )
+                elif "compose_arg" in result:
+                    for k, v in result["compose_arg"].items():
+                        if k not in relationship_dict and k not in inferred:
+                            inferred[k] = v
+                elif "unnamed" in result:
+                    target = result["unnamed"]
+                    if target not in relationship_dict and target not in inferred:
+                        inferred[target] = ["_Unnamed"]
+    except Exception as e:
+        logger.warning(f"D-chain dispatcher failure (non-fatal): {e}")
+
+    # ── Existing hardcoded inference (untouched in Step 1) ──────────────────
+
     # Read starsystem context from OMNISANC course state
     try:
         import json
