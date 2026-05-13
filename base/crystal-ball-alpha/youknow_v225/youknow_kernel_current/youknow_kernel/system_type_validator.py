@@ -472,26 +472,34 @@ def _infer_from_context(
     """
     inferred = {}
 
-    # ── OWL-driven d-chain dispatcher ───────────────────────────────────────
-    # Reads Deduction_Chain individuals from domain.owl (via dchains.registry)
-    # matching (system_type, argument_name). Each chain's body is dispatched
-    # through YOUKNOW's Python sub-engine for its body_type (python_function,
-    # prolog_rule, shacl_constraint, callable_class). Results have shape:
+    # ── Generic d-chain dispatcher (Step 1) ─────────────────────────────────
+    # Looks up DeductionChain individuals attached to (system_type, argument_name)
+    # via the dchains registry. Each chain body fires on the arg value + context
+    # and returns one of:
     #   {"compose_arg": {arg_name: value_list}} -> fill another arg in this entry
     #   {"error": "<reason>"}                   -> reject with reason
     #   {"unnamed": "<for_arg>"}                -> place _Unnamed placeholder
     #   {}                                      -> chain contributes nothing
-    # OWL is the source of truth for chain bindings. No register() side-effects.
-    # The hardcoded branches below remain until each is migrated to an OWL
-    # Deduction_Chain individual. Hardcoded path runs only if the d-chain path
-    # didn't already set a key.
+    # The existing hardcoded branches below remain in place until each branch
+    # is migrated to a real DeductionChain instance. Both paths coexist; the
+    # hardcoded path runs only if a key is NOT already set by the d-chain path.
     try:
-        from .dchains.registry import get_chains_for, execute_chain
+        import importlib
+        importlib.import_module("youknow_kernel.dchains")  # trigger registration
+        from .dchains.registry import get_chains
 
+        # Fire chains attached to every arg the entry has, plus type-level chains.
         for arg_name in list(relationship_dict.keys()) + ["__type_level__"]:
-            for chain in get_chains_for(system_type, arg_name):
+            chains = get_chains(system_type, arg_name)
+            for chain_def, body in chains:
                 arg_value = relationship_dict.get(arg_name)
-                result = execute_chain(chain, arg_value, relationship_dict)
+                try:
+                    result = body(arg_value, relationship_dict)
+                except Exception as e:
+                    logger.warning(
+                        f"D-chain {system_type}.{arg_name} body raised: {e}"
+                    )
+                    continue
                 if not isinstance(result, dict):
                     continue
                 if "error" in result:
@@ -506,10 +514,10 @@ def _infer_from_context(
                     target = result["unnamed"]
                     if target not in relationship_dict and target not in inferred:
                         inferred[target] = ["_Unnamed"]
-    except Exception:
-        logger.exception("D-chain dispatcher failure (non-fatal)")
+    except Exception as e:
+        logger.warning(f"D-chain dispatcher failure (non-fatal): {e}")
 
-    # ── Existing hardcoded inference (kept until each branch is migrated) ───
+    # ── Existing hardcoded inference (untouched in Step 1) ──────────────────
 
     # Read starsystem context from OMNISANC course state
     try:
