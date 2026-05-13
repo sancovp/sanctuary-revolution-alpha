@@ -1,9 +1,6 @@
-"""D-chains package.
+"""D-chains package — Python function bodies for Deduction_Chain individuals.
 
-Importing this package triggers registration of all chains in submodules.
-Each submodule that defines DeductionChain instances must call
-`register(chain, body)` at module top level. Importing it from here is
-what makes those registrations happen.
+Importing this package has NO side effects. The OWL holds the bindings; the
+dispatcher in `registry.py` reads OWL on demand and imports body callables
+via their dotted paths at fire time.
 """
-
-from . import skill_chains  # noqa: F401 — import side effect registers chains
