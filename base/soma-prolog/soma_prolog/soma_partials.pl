@@ -465,6 +465,15 @@ seed_triple(input_spec, is_a, artifact).
 seed_triple(output_spec, is_a, artifact).
 seed_triple(production_output, is_a, artifact).
 
+% System types mapped into DOLCE — rules and chains are artifacts
+seed_triple(prolog_rule, is_a, artifact).
+seed_triple(deduction_chain, is_a, artifact).
+seed_triple(core_requirement, is_a, artifact).
+seed_triple(codified_process, is_a, artifact).
+seed_triple(programmed_process, is_a, artifact).
+seed_triple(business_process, is_a, artifact).
+seed_triple(process_step, is_a, artifact).
+
 % DOLCE classifications are AUTOMATIC — not requirements.
 % Every entry is a perdurant (observation in time by an agent).
 % CODE promotion = universal (class/configuration).
@@ -685,6 +694,89 @@ check_convention(try_compile) :-
         )
     ).
 
+% ======================================================================
+% SES DEPTH — progressive typing metric
+%
+% For every observed concept, count how many of its relationship values
+% are still at string_value (depth 0) vs properly typed (depth 1+).
+% A value is depth-0 if its ONLY is_a is string_value.
+% A value is depth-1+ if it has is_a pointing to a non-primitive type.
+%
+% This feeds the state machine:
+%   SHORT loop: pick one concept, type its depth-0 values
+%   MEDIUM loop: the new types need their OWN depth-0 values typed
+%   LONG loop: endeavors — which concept to close first
+% ======================================================================
+
+:- dynamic ses_report/3.  % ses_report(Concept, StrCount, TypedCount)
+
+% The transitive chain from string_value through DOLCE.
+% If a value's ONLY is_a types are in this set, it's depth-0 (untyped string).
+string_value_chain(string_value).
+string_value_chain(typed_value).
+string_value_chain(abstract).
+string_value_chain(particular).
+string_value_chain(int_value).
+string_value_chain(float_value).
+string_value_chain(bool_value).
+string_value_chain(list_value).
+string_value_chain(dict_value).
+
+% Check if a value is at depth 0 (all its is_a types are just the string_value chain)
+is_depth_zero(V) :-
+    triple(V, is_a, string_value),
+    \+ (triple(V, is_a, T), \+ string_value_chain(T)).
+
+% Count depth-0 values for a concept's relationships
+ses_string_count(C, StrCount) :-
+    findall(V,
+        (   triple(C, Prop, V),
+            Prop \= is_a, Prop \= part_of, Prop \= instantiates,
+            Prop \= produces, Prop \= has_observation_source,
+            Prop \= has_description, Prop \= dolce_category,
+            Prop \= promoted_to_owl,
+            V \= C,
+            is_depth_zero(V)
+        ),
+        StrValues),
+    length(StrValues, StrCount).
+
+ses_typed_count(C, TypedCount) :-
+    findall(V,
+        (   triple(C, Prop, V),
+            Prop \= is_a, Prop \= part_of, Prop \= instantiates,
+            Prop \= produces, Prop \= has_observation_source,
+            Prop \= has_description, Prop \= dolce_category,
+            Prop \= promoted_to_owl,
+            V \= C,
+            \+ is_depth_zero(V),
+            triple(V, is_a, _)
+        ),
+        TypedValues),
+    length(TypedValues, TypedCount).
+
+check_convention(ses_depth) :-
+    retractall(ses_report(_, _, _)),
+    forall(
+        (   triple(C, has_observation_source, _),
+            ses_string_count(C, SC),
+            ses_typed_count(C, TC),
+            SC > 0
+        ),
+        (   assertz(ses_report(C, SC, TC)),
+            format(user_error,
+                '[SOMA SES] ~w: ~w str-depth-0, ~w typed. Needs progressive typing.~n',
+                [C, SC, TC])
+        )
+    ).
+
+% Compose SES gap sentence for the response
+compose_ses_sentence(C, SC, TC, Sentence) :-
+    Total is SC + TC,
+    format(atom(Sentence),
+        '~w has ~w/~w values still at string depth 0. Type them to close this view.',
+        [C, SC, Total]).
+
 % Boot: assert all seed triples into the live graph on consult
 :- forall(seed_triple(S, P, O), assert_triple_once(S, P, O)).
 
@@ -778,8 +870,13 @@ compose_gap_sentence(C, Prop, ExpectedType, Sentence) :-
 compose_all_gap_sentences(Sentences) :-
     findall(S,
         (unnamed_slot(C, P, T), compose_gap_sentence(C, P, T, S)),
-        Sentences
-    ).
+        GapSentences
+    ),
+    findall(S,
+        (ses_report(C, SC, TC), compose_ses_sentence(C, SC, TC, S)),
+        SESSentences
+    ),
+    append(GapSentences, SESSentences, Sentences).
 
 % ======================================================================
 % TESTS — universal mechanism
