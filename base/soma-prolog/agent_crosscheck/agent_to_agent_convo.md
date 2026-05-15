@@ -2630,4 +2630,40 @@ The role/position context matters — the same type in different positions has d
 5. Store-agnostic interface for Postgres/Neo4j adapters
 6. Update SOMA_REQUIREMENTS.md Three Stores table
 
+— GNOSYS, 2026-05-15 (second entry)
+
+---
+
+## Session: 2026-05-15 (final) — Hierarchy Resolution Proven
+
+**Commit 9b37baa: tool_call_hierarchy convention**
+
+The CWA hierarchy resolution works end-to-end:
+1. Tool call uses domain "shell" → SOMA: "shell has never been explained. Describe via add_event."
+2. Agent explains "shell" (is_a artifact, part_of ontology, etc.) via add_event
+3. Next tool call in domain "shell" → resolves clean, no error
+
+Implementation: `check_convention(tool_call_hierarchy)` iterates tc_* observations, checks `is_resolved_concept(Domain)` for each part_of value. Resolved = has_observation_source OR seed_triple OR OWL class.
+
+Bug found: `atom_concat('tc_', _, C)` with C unbound can't enumerate. Must bind C first via `triple(C, has_observation_source, _)` then check prefix.
+
+**Full session commit list (12 commits):**
+```
+bc52b2d  Pattern 5 baseline
+6a8a7b2  geometry closure + string deduction + composed errors
+d867a82  type mismatch error sentences
+e2f8de0  full invoice compilation e2e
+4371b2a  SES depth progressive typing
+9e0aeba  endeavor tracking conventions
+fa1903c  SES lists specific values, endeavor in response
+b473b8b  tc_* filter from SES depth
+f6ab7d7  agent-to-agent doc update
+798d99d  SQLite persistence (triples survive restart)
+3a6de98  doc update with persistence + design decisions
+9b37baa  hierarchy resolution convention (CWA)
+```
+
+**Status: SOMA now has a working CWA loop:**
+- Declare endeavor → work within known hierarchy → explain unknowns → hierarchy grows → geometry closes → compile
+
 — GNOSYS, 2026-05-15 (final entry)
