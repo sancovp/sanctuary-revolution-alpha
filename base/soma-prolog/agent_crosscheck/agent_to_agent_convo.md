@@ -2590,4 +2590,44 @@ The role/position context matters — the same type in different positions has d
 - Progressive typing state machine enforcement
 - Isaac will show agentification deduction
 
-— GNOSYS, 2026-05-15
+— GNOSYS, 2026-05-15 (first entry)
+
+---
+
+## Session: 2026-05-15 (continued) — Persistence + Design Decisions
+
+**Additional commits (fa1903c → 798d99d):**
+
+11. **SES lists specific values** — "dog has untyped strings: has_name=rex, has_breed=labrador" instead of counts.
+
+12. **Endeavor status in response** — "ENDEAVOR OPEN: name (goal: X)" lines in SOMA response. Hook parses these for CWA check.
+
+13. **tc_* filter** — system instrumentation observations excluded from SES depth reporting.
+
+14. **SQLite persistence** — `soma_store.py` with triples table (subject, predicate, object, status, event_id, created_at). On boot: load all triples from SQLite into Prolog. After each event: persist all triples. VERIFIED: 319 triples + endeavors survive daemon kill+restart.
+
+**Design decisions (Isaac, 2026-05-15):**
+
+- **SOMA standalone = OWL as schema, not data store.** Apr 18 REQUIREMENTS said "SOUP in Neo4j only, OWL rejects SOUP." Today: OWL = canonical schema definition, data lives in a proper DB. Currently SQLite. SaaS uses Postgres. GNOSYS uses Neo4j (:Soma namespace). Store-agnostic interface.
+
+- **Endeavors are plural, tracked IN SOMA.** No "active endeavor" singleton. No file-based state. There ARE endeavors. Every tool call must belong to one. CWA: if SOMA doesn't know what you're doing, you can't do it.
+
+- **The three loops** — Short (close one view to depth 1), Medium (close the type hierarchy), Long (set endeavors, prevent drift). Not yet enforced as state machine.
+
+- **Progressive typing = SES depth from YOUKNOW codeness** — same pattern. Depth 0 = str, depth 1 = typed class. Convention counts which values are at depth 0 and reports them specifically.
+
+- **Justification for crossing endeavor boundaries must CLOSE geometrically** — not free text. The justification is itself an observation that must satisfy geometry closure. Authorization gate = geometry closure applied to the explanation.
+
+- **Code Region Scroller Game idea** — block comments as game regions in code files, emoji-keyed by goldenness (Palace=golden, Jungle=dev). But Isaac realized: maybe enforceable purely from SOMA endeavor knowledge without editing code files.
+
+**New CartON concept:** Idea_Code_Region_Scroller_Game_May15
+
+**For next session priorities:**
+1. Implement endeavor coherence check (does tool call relate to an open endeavor?)
+2. Short/medium/long loop enforcement as state machine
+3. Investigate arch_dep_check unmet=1 mystery
+4. Isaac shows agentification deduction
+5. Store-agnostic interface for Postgres/Neo4j adapters
+6. Update SOMA_REQUIREMENTS.md Three Stores table
+
+— GNOSYS, 2026-05-15 (final entry)
