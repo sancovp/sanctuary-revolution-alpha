@@ -677,16 +677,32 @@ get_graph_str(Str) :-
 % The sentence is DERIVED from the logic: what you claimed + what the
 % universal requires + what's missing.
 compose_gap_sentence(C, Prop, ExpectedType, Sentence) :-
-    (   triple(C, is_a, ClaimedType),
-        ClaimedType \= string_value, ClaimedType \= int_value,
-        ClaimedType \= float_value, ClaimedType \= bool_value,
-        ClaimedType \= list_value, ClaimedType \= dict_value
-    ->  format(atom(Sentence),
-            '~w claims to be ~w. ~w requires ~w (~w). ~w does not have ~w. Provide it.',
-            [C, ClaimedType, ClaimedType, Prop, ExpectedType, C, Prop])
-    ;   format(atom(Sentence),
-            '~w needs ~w (~w). Provide it.',
-            [C, Prop, ExpectedType])
+    (   sub_atom(Prop, Before, _, _, '_should_be_')
+    ->  sub_atom(Prop, 0, Before, _, RealProp),
+        (   triple(C, RealProp, WrongValue)
+        ->  (   triple(WrongValue, is_a, WrongType)
+            ->  format(atom(Sentence),
+                    '~w has ~w=~w but that is ~w, not ~w. Create a ~w concept instead.',
+                    [C, RealProp, WrongValue, WrongType, ExpectedType, ExpectedType])
+            ;   format(atom(Sentence),
+                    '~w has ~w=~w but it should be a ~w. Create a ~w concept instead.',
+                    [C, RealProp, WrongValue, ExpectedType, ExpectedType])
+            )
+        ;   format(atom(Sentence),
+                '~w needs ~w as ~w (wrong type given). Provide it.',
+                [C, RealProp, ExpectedType])
+        )
+    ;   (   triple(C, is_a, ClaimedType),
+            ClaimedType \= string_value, ClaimedType \= int_value,
+            ClaimedType \= float_value, ClaimedType \= bool_value,
+            ClaimedType \= list_value, ClaimedType \= dict_value
+        ->  format(atom(Sentence),
+                '~w claims to be ~w. ~w requires ~w (~w). ~w does not have ~w. Provide it.',
+                [C, ClaimedType, ClaimedType, Prop, ExpectedType, C, Prop])
+        ;   format(atom(Sentence),
+                '~w needs ~w (~w). Provide it.',
+                [C, Prop, ExpectedType])
+        )
     ).
 
 % Build all gap sentences for current unnamed_slots.
