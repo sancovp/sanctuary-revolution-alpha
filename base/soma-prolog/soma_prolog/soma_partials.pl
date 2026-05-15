@@ -777,6 +777,65 @@ compose_ses_sentence(C, SC, TC, Sentence) :-
         '~w has ~w/~w values still at string depth 0. Type them to close this view.',
         [C, SC, Total]).
 
+% ======================================================================
+% ENDEAVOR TRACKING — state machine for progressive work
+%
+% An endeavor is a named unit of work with a goal (close a view, type
+% a concept, fill gaps). The state machine:
+%   open_endeavor(Name, Goal, StartTime) — currently active
+%   closed_endeavor(Name, Goal, StartTime, EndTime) — completed
+%   dropped_endeavor(Name, Goal, StartTime, DropTime) — abandoned
+%
+% Every tool call observation should relate to an open endeavor.
+% If it doesn't, SOMA flags potential drift.
+% When an endeavor's goal is met (e.g., unnamed_slots=0 for its target),
+% it auto-closes.
+% ======================================================================
+
+:- dynamic open_endeavor/3.     % open_endeavor(Name, Goal, StartTime)
+:- dynamic closed_endeavor/4.   % closed_endeavor(Name, Goal, StartTime, EndTime)
+:- dynamic dropped_endeavor/4.  % dropped_endeavor(Name, Goal, StartTime, DropTime)
+
+% Start a new endeavor (from observation with has_endeavor relationship)
+check_convention(detect_endeavor_start) :-
+    forall(
+        (   triple(Obs, has_endeavor, EndName),
+            triple(Obs, has_observation_source, _),
+            \+ open_endeavor(EndName, _, _),
+            \+ closed_endeavor(EndName, _, _, _)
+        ),
+        (   (   triple(Obs, has_endeavor_goal, Goal)
+            ->  true
+            ;   Goal = unspecified
+            ),
+            get_time(T),
+            assertz(open_endeavor(EndName, Goal, T))
+        )
+    ).
+
+% Auto-close endeavors whose target concept has no remaining gaps
+check_convention(auto_close_endeavors) :-
+    forall(
+        (   open_endeavor(EndName, Goal, StartT),
+            Goal \= unspecified,
+            triple(Goal, has_observation_source, _),
+            \+ unnamed_slot(Goal, _, _),
+            \+ ses_report(Goal, _, _)
+        ),
+        (   get_time(EndT),
+            retract(open_endeavor(EndName, Goal, StartT)),
+            assertz(closed_endeavor(EndName, Goal, StartT, EndT))
+        )
+    ).
+
+% Report open endeavors in the response
+compose_endeavor_status(Sentences) :-
+    findall(S,
+        (   open_endeavor(Name, Goal, _),
+            format(atom(S), 'ENDEAVOR OPEN: ~w (goal: ~w)', [Name, Goal])
+        ),
+        Sentences).
+
 % Boot: assert all seed triples into the live graph on consult
 :- forall(seed_triple(S, P, O), assert_triple_once(S, P, O)).
 
