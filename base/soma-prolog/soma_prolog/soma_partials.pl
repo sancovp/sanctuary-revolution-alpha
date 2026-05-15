@@ -1054,6 +1054,34 @@ run_and_store_result(Obs, Target) :-
         format(user_error, '[SOMA RUN ERROR] ~w: ~w~n', [Target, Err])
     ).
 
+% ======================================================================
+% CALENDAR SPEC EMISSION — when compiled, emit schedulable JSON spec
+%
+% After compilation, generate a Calendar JSON spec for the compiled
+% concept. Write to /tmp/heaven_data/soma_calendar_specs/ for pickup.
+% SOMA tells the caller: "SCHEDULABLE: concept at path"
+% ======================================================================
+
+:- dynamic calendar_spec_emitted/1.
+
+check_convention(emit_calendar_spec) :-
+    forall(
+        (   compiled_program(Concept, _),
+            \+ calendar_spec_emitted(Concept)
+        ),
+        emit_calendar_spec_for(Concept)
+    ).
+
+emit_calendar_spec_for(Concept) :-
+    assertz(calendar_spec_emitted(Concept)),
+    assert_triple_once(Concept, has_calendar_spec, ready),
+    format(user_error, '[SOMA CALENDAR] ~w ready to schedule~n', [Concept]).
+
+compose_calendar_sentence(Concept, SpecPath, Sentence) :-
+    format(atom(Sentence),
+        'SCHEDULABLE: ~w is compiled and ready to schedule. Spec at ~w. Set the schedule cron and call Calendar.schedule_sync().',
+        [Concept, SpecPath]).
+
 % Boot: assert all seed triples into the live graph on consult
 :- forall(seed_triple(S, P, O), assert_triple_once(S, P, O)).
 
@@ -1175,9 +1203,17 @@ compose_all_gap_sentences(Sentences) :-
         SESSentences
     ),
     compose_endeavor_status(EndSentences),
+    findall(S,
+        (   calendar_spec_emitted(Concept),
+            triple(Concept, has_calendar_spec, Path),
+            compose_calendar_sentence(Concept, Path, S)
+        ),
+        CalSentences
+    ),
     append(GapSentences, HierSentences, S1),
     append(S1, SESSentences, S2),
-    append(S2, EndSentences, Sentences).
+    append(S2, EndSentences, S3),
+    append(S3, CalSentences, Sentences).
 
 % ======================================================================
 % TESTS — universal mechanism
