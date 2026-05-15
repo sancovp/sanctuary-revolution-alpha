@@ -899,6 +899,48 @@ check_convention(domain_composition) :-
         assert_unnamed_slot_once(C, domain_not_in_project, Domain)
     ).
 
+% Subdomain composition: every tc_* subdomain must be part_of its domain
+check_convention(subdomain_composition) :-
+    forall(
+        (   triple(C, has_observation_source, _),
+            atom_concat('tc_', _, C),
+            triple(C, has_subdomain, Sub),
+            triple(C, part_of, Domain),
+            Sub \= C, Sub \= Domain,
+            is_resolved_concept(Sub),
+            is_resolved_concept(Domain),
+            \+ triple(Sub, part_of, Domain)
+        ),
+        assert_unnamed_slot_once(C, subdomain_not_in_domain, Sub)
+    ).
+
+% Drift detection: if there are open SES depth-0 values, flag ONCE per
+% open concept (not per tool call — avoids N×M explosion)
+check_convention(drift_detection) :-
+    forall(
+        (   ses_report(OpenConcept, _, _),
+            \+ atom_concat('tc_', _, OpenConcept)
+        ),
+        assert_unnamed_slot_once(drift_warning, drift_from_open_work, OpenConcept)
+    ).
+
+compose_hierarchy_sentence(C, subdomain_not_in_domain, Value, Sentence) :-
+    !,
+    (   triple(C, part_of, Domain)
+    ->  format(atom(Sentence),
+            'Tool call ~w uses subdomain ~w but ~w is not part_of domain ~w. Register it.',
+            [C, Value, Value, Domain])
+    ;   format(atom(Sentence),
+            'Tool call ~w uses subdomain ~w but ~w is not registered under its domain.',
+            [C, Value, Value])
+    ).
+
+compose_hierarchy_sentence(C, drift_from_open_work, Value, Sentence) :-
+    !,
+    format(atom(Sentence),
+        'DRIFT: ~w has unfinished typing work. Close ~w depth-0 values before working on other things.',
+        [Value, Value]).
+
 compose_hierarchy_sentence(C, domain_not_in_project, Value, Sentence) :-
     !,
     format(atom(Sentence),
@@ -1013,13 +1055,14 @@ compose_all_gap_sentences(Sentences) :-
     findall(S,
         (   unnamed_slot(C, P, T),
             P \= unknown_domain, P \= unknown_subdomain, P \= domain_not_in_project,
+            P \= subdomain_not_in_domain, P \= drift_from_open_work,
             compose_gap_sentence(C, P, T, S)
         ),
         GapSentences
     ),
     findall(S,
         (   unnamed_slot(C, P, T),
-            (P = unknown_domain ; P = unknown_subdomain ; P = domain_not_in_project),
+            (P = unknown_domain ; P = unknown_subdomain ; P = domain_not_in_project ; P = subdomain_not_in_domain ; P = drift_from_open_work),
             compose_hierarchy_sentence(C, P, T, S)
         ),
         HierSentences
