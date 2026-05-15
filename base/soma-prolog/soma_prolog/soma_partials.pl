@@ -963,6 +963,54 @@ compose_hierarchy_sentence(C, Type, Value, Sentence) :-
     ).
 
 % ======================================================================
+% AUTHORIZATION DISPATCH — who can fill what, and why
+%
+% authorized_source(SlotType, Source, Reason)
+% Maps the TYPE of missing info to WHO can provide it and WHY.
+% compose_gap_sentence uses this to say "ask X for Y because Z"
+% ======================================================================
+
+:- discontiguous authorized_source/3.
+
+% Process step logic can only come from domain experts (humans who do the work)
+authorized_source(has_method_body, human_domain_expert,
+    'process step logic only comes from humans who do the actual work').
+authorized_source(has_method_parameters, human_domain_expert,
+    'method parameters describe real-world inputs that only the worker knows').
+authorized_source(has_role, human_domain_expert,
+    'roles are assigned by the organization, only humans know the structure').
+authorized_source(has_field, human_domain_expert,
+    'document fields describe real-world artifacts only the user knows').
+
+% Process-level structure comes from whoever is describing the process
+authorized_source(has_steps, human_domain_expert,
+    'the step sequence of a process can only come from someone who does or observes the work').
+authorized_source(has_roles, human_domain_expert,
+    'roles in a process are organizational facts only the worker or manager knows').
+authorized_source(has_inputs, human_domain_expert,
+    'process inputs describe real-world requirements only the worker knows').
+authorized_source(has_outputs, human_domain_expert,
+    'process outputs describe real-world deliverables only the worker knows').
+
+% DOLCE classification can be deduced by the system itself
+authorized_source(dolce_category, system_deduction,
+    'DOLCE classification is deduced from the is_a chain automatically').
+
+% Domain/subdomain structure comes from the project architect
+authorized_source(unknown_domain, human_architect,
+    'domain structure is a project decision requiring human judgment').
+authorized_source(unknown_subdomain, human_architect,
+    'subdomain organization requires human architectural decision').
+
+% Geometry closure fields default to the observing agent
+authorized_source(instantiates, observing_agent,
+    'what pattern this instantiates should be stated by whoever is observing').
+authorized_source(part_of, observing_agent,
+    'containment relationships should be stated by whoever is observing').
+authorized_source(produces, observing_agent,
+    'what something produces should be stated by whoever is observing').
+
+% ======================================================================
 % RUN COMPILED — invoke registered runtime objects through observations
 %
 % When an observation has has_run_target relationship, invoke the compiled
@@ -1086,12 +1134,22 @@ compose_gap_sentence(C, Prop, ExpectedType, Sentence) :-
             ClaimedType \= string_value, ClaimedType \= int_value,
             ClaimedType \= float_value, ClaimedType \= bool_value,
             ClaimedType \= list_value, ClaimedType \= dict_value
-        ->  format(atom(Sentence),
-                '~w claims to be ~w. ~w requires ~w (~w). ~w does not have ~w. Provide it.',
-                [C, ClaimedType, ClaimedType, Prop, ExpectedType, C, Prop])
-        ;   format(atom(Sentence),
-                '~w needs ~w (~w). Provide it.',
-                [C, Prop, ExpectedType])
+        ->  (   authorized_source(Prop, Source, Reason)
+            ->  format(atom(Sentence),
+                    '~w claims to be ~w. ~w requires ~w (~w). Ask ~w for ~w because ~w.',
+                    [C, ClaimedType, ClaimedType, Prop, ExpectedType, Source, Prop, Reason])
+            ;   format(atom(Sentence),
+                    '~w claims to be ~w. ~w requires ~w (~w). ~w does not have ~w. Provide it.',
+                    [C, ClaimedType, ClaimedType, Prop, ExpectedType, C, Prop])
+            )
+        ;   (   authorized_source(Prop, Source, Reason)
+            ->  format(atom(Sentence),
+                    '~w needs ~w (~w). Ask ~w because ~w.',
+                    [C, Prop, ExpectedType, Source, Reason])
+            ;   format(atom(Sentence),
+                    '~w needs ~w (~w). Provide it.',
+                    [C, Prop, ExpectedType])
+            )
         )
     ).
 
