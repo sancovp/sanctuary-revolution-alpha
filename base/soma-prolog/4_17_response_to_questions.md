@@ -128,3 +128,9 @@ Honest self-assessment: I wrote the soma_partials.pl code in this very conversat
 4. **The SOUP/CODE distinction is broken.** I designed `tv(Value, Type)` to carry the type info. I asserted `triple(Value, is_a, Type)` from it. But I never wired `deduce_validation_status` to USE that type info. So the type is in the graph but the validation ignores it. The whole "string_value = SOUP" insight is correct architecturally but NOT IMPLEMENTED in the validation logic.
 
 The gap between what I SAID the system does and what it ACTUALLY does is large. The questions file exposed this gap.
+
+File: /home/GOD/gnosys-plugin-v2/base/soma-prolog/4_17_response_to_questions.md
+
+## Relationships
+- IS_A: File
+- INSTANTIATES: File_Template

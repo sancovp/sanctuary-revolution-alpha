@@ -36,3 +36,13 @@ Can you POST to localhost:8090/event and get a response? If not, what's needed t
 
 ### Q8: Are you overthinking this?
 Seriously. We have Python code that validates GIINT types. We have SOMA that runs CoreRequirements on every event. The gap is: SOMA doesn't have GIINT CoreRequirements. Adding them is: write OWL individuals + write PrologRule individuals + done. Is there something I'm missing that makes this harder than it sounds, or are you just overthinking it?
+
+File: /home/GOD/gnosys-plugin-v2/base/soma-prolog/4_17_questions_3.md
+
+---
+
+File: /home/GOD/gnosys-plugin-v2/base/soma-prolog/4_17_questions_3.md
+
+## Relationships
+- IS_A: File
+- INSTANTIATES: File_Template

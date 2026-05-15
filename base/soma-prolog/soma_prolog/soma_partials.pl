@@ -136,6 +136,38 @@ check_convention(missing_required_restriction) :-
         assert_unnamed_slot_once(C, Prop, TargetType)
     ).
 
+% Mereological convention: if property EXISTS but value has WRONG type.
+% "X has_foo V, but V is not is_a ExpectedType" = structural violation.
+check_convention(structural_type_mismatch) :-
+    forall(
+        (   triple(C, is_a, T),
+            required_restriction(T, Prop, ExpectedType),
+            triple(C, Prop, V),
+            V \= C,
+            ExpectedType \= string_value,
+            \+ triple(V, is_a, ExpectedType),
+            atomic_list_concat([Prop, '_should_be_', ExpectedType], MismatchTag)
+        ),
+        assert_unnamed_slot_once(C, MismatchTag, ExpectedType)
+    ).
+
+% Recursive instantiation: for each part V that C claims via required
+% property Prop, V must itself satisfy all required_restrictions of
+% ExpectedType. This walks depth — parts of parts of parts.
+check_convention(recursive_instantiation) :-
+    forall(
+        (   triple(C, is_a, T),
+            triple(C, has_observation_source, _),
+            required_restriction(T, Prop, ExpectedType),
+            triple(C, Prop, V),
+            V \= C,
+            triple(V, is_a, ExpectedType),
+            required_restriction(ExpectedType, SubProp, SubExpected),
+            \+ triple(V, SubProp, _)
+        ),
+        assert_unnamed_slot_once(V, SubProp, SubExpected)
+    ).
+
 % Universal convention: if something is an instance of a subclass of T,
 % it's also an instance of T (transitive is_a closure).
 check_convention(transitive_is_a) :-
@@ -183,40 +215,109 @@ assert_unnamed_slot_once(S, P, T) :-
 % If no strategy works, leave the unnamed_slot in place.
 % ======================================================================
 
-heal_unnamed :-
-    findall(slot(C, P, T), unnamed_slot(C, P, T), Slots),
-    forall(member(slot(C, P, T), Slots), heal_one(C, P, T)).
+% heal_unnamed — DISABLED: auto-fill cross-contaminates when multiple
+% slots require the same type (e.g. deduction_chain needs two string_value
+% slots). Healing should REPORT gaps with neighborhood options, not auto-fill.
+% The agent reads the report and submits add_event to repair.
+% Re-enable once LLM-based traceback interaction healing is stable.
+%
+% heal_unnamed :-
+%     findall(slot(C, P, T), unnamed_slot(C, P, T), Slots),
+%     forall(member(slot(C, P, T), Slots), heal_one(C, P, T)).
+%
+% heal_one(C, P, T) :-
+%     (   triple(C, _OtherPred, V),
+%         triple(V, is_a, T),
+%         V \= C
+%     ->  assert_triple_once(C, P, V),
+%         retract(unnamed_slot(C, P, T)),
+%         assertz(heal_log(C, P, T, healed_from_neighbor(V)))
+%     ;   true
+%     ).
 
-heal_one(C, P, T) :-
-    (   % Strategy 1: a neighbor of C that is of the right type
-        triple(C, _OtherPred, V),
-        triple(V, is_a, T),
-        V \= C
-    ->  assert_triple_once(C, P, V),
-        retract(unnamed_slot(C, P, T)),
-        assertz(heal_log(C, P, T, healed_from_neighbor(V)))
-    ;   true  % leave as unnamed
-    ).
+heal_unnamed :- true.
 
 % ======================================================================
 % STATUS
 % ======================================================================
 
-% SOUP = any value on this concept is typed string_value (arbitrary, unverified).
-% CODE = all values are typed as real types (non-string, progressively typed).
-% This IS the core of SOMA. Everything else is plumbing around this.
-concept_has_soup_value(C) :-
-    triple(C, _Prop, V),
+% ======================================================================
+% SOUP/CODE — recursive subgraph reference resolution
+%
+% SOUP = the concept's subgraph contains a reference at ANY depth to an
+% entity whose type is not found (not primitive, not seed, not OWL class).
+% The COMPLEX itself is SOUP qua itself — its parts may be fine, but the
+% composition references something undefined so it cannot cohere.
+%
+% CODE = all references at all depths resolve to known types + no unnamed slots.
+% ======================================================================
+
+is_known_type(T) :-
+    member(T, [string_value, int_value, float_value, bool_value,
+               list_value, dict_value, typed_value]), !.
+is_known_type(T) :-
+    seed_triple(T, is_a, _), !.
+is_known_type(T) :-
+    seed_triple(_, is_a, T), !.
+is_known_type(T) :-
+    atom_string(T, TStr),
+    py_call('soma_prolog.utils':is_class(TStr), @(true)), !.
+
+has_undefined_reference(C) :-
+    has_undefined_reference(C, []).
+
+has_undefined_reference(C, Visited) :-
+    member(C, Visited), !, fail.
+has_undefined_reference(C, _Visited) :-
+    triple(C, is_a, Type),
+    \+ is_known_type(Type), !.
+has_undefined_reference(C, Visited) :-
+    triple(C, Pred, V),
+    Pred \= is_a, Pred \= dolce_category, Pred \= promoted_to_owl,
+    Pred \= has_observation_source, Pred \= has_description,
     V \= C,
-    triple(V, is_a, string_value).
+    \+ member(V, Visited),
+    triple(V, is_a, VType),
+    \+ is_known_type(VType), !.
+has_undefined_reference(C, Visited) :-
+    triple(C, Pred, V),
+    Pred \= is_a, Pred \= dolce_category, Pred \= promoted_to_owl,
+    Pred \= has_observation_source, Pred \= has_description,
+    V \= C,
+    \+ member(V, Visited),
+    triple(V, is_a, _),
+    has_undefined_reference(V, [C|Visited]).
+
+find_undefined_reference(C, Pred, Value, Type) :-
+    find_undefined_reference(C, Pred, Value, Type, []).
+
+find_undefined_reference(C, is_a, C, Type, _Visited) :-
+    triple(C, is_a, Type),
+    \+ is_known_type(Type), !.
+find_undefined_reference(C, Pred, V, VType, Visited) :-
+    triple(C, Pred, V),
+    Pred \= is_a, Pred \= dolce_category, Pred \= promoted_to_owl,
+    Pred \= has_observation_source, Pred \= has_description,
+    V \= C,
+    \+ member(V, Visited),
+    triple(V, is_a, VType),
+    \+ is_known_type(VType), !.
+find_undefined_reference(C, Pred, Value, Type, Visited) :-
+    triple(C, _P, V),
+    _P \= is_a, _P \= dolce_category, _P \= promoted_to_owl,
+    _P \= has_observation_source, _P \= has_description,
+    V \= C,
+    \+ member(V, Visited),
+    triple(V, is_a, _),
+    find_undefined_reference(V, Pred, Value, Type, [C|Visited]).
 
 deduce_validation_status(C, code) :-
     triple(C, is_a, _),
-    \+ concept_has_soup_value(C),
+    \+ has_undefined_reference(C),
     \+ unnamed_slot(C, _, _), !.
 deduce_validation_status(C, soup) :-
     triple(C, is_a, _),
-    (concept_has_soup_value(C) ; unnamed_slot(C, _, _)), !.
+    (has_undefined_reference(C) ; unnamed_slot(C, _, _)), !.
 deduce_validation_status(_, unvalidated).
 
 concept_complete(C) :-
@@ -386,6 +487,85 @@ check_convention(dolce_quality_dispatch) :-
         assert_triple_once(C, dolce_category, quality)
     ).
 
+% ======================================================================
+% PATTERN 5: PROMOTE TO OWL — bridge Prolog triples to OWL individuals
+%
+% When a concept in the triple graph has is_a pointing to a known OWL
+% class AND reaches CODE status (no unnamed slots), create an OWL
+% individual of that class. This closes the Prolog→OWL loop.
+% ======================================================================
+
+% Mark SOUP concepts — runs BEFORE promote_to_owl so concept_complete blocks them
+check_convention(soup_undefined_refs) :-
+    forall(
+        (   triple(Name, is_a, Class),
+            Class \= string_value, Class \= int_value, Class \= float_value,
+            Class \= bool_value, Class \= list_value, Class \= dict_value,
+            Class \= typed_value,
+            \+ seed_triple(Class, is_a, _),
+            \+ seed_triple(_, is_a, Class),
+            triple(Name, has_observation_source, _),
+            find_undefined_reference(Name, _Pred, _Value, UndefType)
+        ),
+        assert_unnamed_slot_once(Name, undefined_type_ref, UndefType)
+    ).
+
+:- dynamic promoted_to_owl/1.
+
+check_convention(promote_to_owl) :-
+    findall(Name-Class,
+        (   triple(Name, is_a, Class),
+            Class \= string_value, Class \= int_value, Class \= float_value,
+            Class \= bool_value, Class \= list_value, Class \= dict_value,
+            Class \= typed_value,
+            \+ seed_triple(Class, is_a, _),
+            \+ seed_triple(_, is_a, Class),
+            \+ promoted_to_owl(Name),
+            triple(Name, has_observation_source, _),
+            concept_complete(Name)
+        ),
+        Candidates),
+    forall(
+        member(Name-Class, Candidates),
+        (   atom_string(Class, ClassStr),
+            (   py_call('soma_prolog.utils':is_class(ClassStr), @(true))
+            ->  promote_one_to_owl(Name, Class)
+            ;   true
+            )
+        )
+    ).
+
+promote_one_to_owl(Name, Class) :-
+    findall(RelStr,
+        (   triple(Name, Pred, Value),
+            Pred \= is_a,
+            Pred \= has_observation_source,
+            Pred \= has_description,
+            Pred \= dolce_category,
+            atom_concat(Pred, '|', T1),
+            atom_concat(T1, Value, RelStr)
+        ),
+        Rels),
+    atom_string(Name, NameStr),
+    atom_string(Class, ClassStr),
+    catch(
+        (   py_call('soma_prolog.utils':create_typed_individual(NameStr, ClassStr, Rels), Status),
+            assertz(promoted_to_owl(Name)),
+            format(user_error, '[SOMA] Promoted ~w to OWL class ~w: ~w~n', [Name, Class, Status])
+        ),
+        Err,
+        format(user_error, '[SOMA] promote_to_owl failed for ~w: ~w~n', [Name, Err])
+    ),
+    maybe_reload_if_rule(Name).
+
+maybe_reload_if_rule(Name) :-
+    (   triple(Name, is_a, prolog_rule)
+    ->  (   load_prolog_rules_from_owl,
+            format(user_error, '[SOMA] Reloaded PrologRules after promoting ~w~n', [Name])
+        )
+    ;   true
+    ).
+
 % Boot: assert all seed triples into the live graph on consult
 :- forall(seed_triple(S, P, O), assert_triple_once(S, P, O)).
 
@@ -415,6 +595,14 @@ required_restriction(template_sequence, has_step, template_method).
 required_restriction(codified_process, has_sop, string_value).
 required_restriction(programmed_process, has_executable_code, string_value).
 required_restriction(programmed_process, authorized_by, authorized_personnel).
+
+% A deduction chain: premise (Prolog goal) + conclusion (what fires if premise fails).
+required_restriction(deduction_chain, has_deduction_premise, string_value).
+required_restriction(deduction_chain, has_deduction_conclusion, string_value).
+
+% A Prolog rule: head + body as Prolog source strings.
+required_restriction(prolog_rule, has_rule_head, string_value).
+required_restriction(prolog_rule, has_rule_body, string_value).
 
 % ======================================================================
 % JANUS-FRIENDLY REPORT WRAPPERS
@@ -472,3 +660,41 @@ test_healing_from_neighbor :-
     retractall(triple(_, _, _)),
     retractall(unnamed_slot(_, _, _)),
     retractall(heal_log(_, _, _, _)).
+
+File: /home/GOD//Home/gnosys-plugin-v2-V2//Home/Gnosys-Plugin-V2-V2//Home/God//Home/Gnosys-Plugin-V2-V2//Home/Gnosys-Plugin-V2-V2///Home/Gnosys-Plugin-V2-V2///Home/God//Home/Gnosys-Plugin-V2-V2/Home/God//Home/Gnosys-Plugin-V2-V2//Home/Gnosys-Plugin-V2-V2//Home/God//Home/Gnosys-Plugin-V2-V2/base/soma-prolog/soma_prolog/soma_partials.pl
+
+---
+
+File: /home/GOD//Home/gnosys-plugin-v2-V2//Home/Gnosys-Plugin-V2-V2//Home/God//Home/Gnosys-Plugin-V2-V2//Home/Gnosys-Plugin-V2-V2///Home/Gnosys-Plugin-V2-V2///Home/God//Home/Gnosys-Plugin-V2-V2/Home/God//Home/Gnosys-Plugin-V2-V2//Home/Gnosys-Plugin-V2-V2//Home/God//Home/Gnosys-Plugin-V2-V2/base/soma-prolog/soma_prolog/soma_partials.pl
+
+---
+
+File: /home/GOD//Home/gnosys-plugin-v2-V2//Home/Gnosys-Plugin-V2-V2//Home/God//Home/Gnosys-Plugin-V2-V2//Home/Gnosys-Plugin-V2-V2///Home/Gnosys-Plugin-V2-V2///Home/God//Home/Gnosys-Plugin-V2-V2/Home/God//Home/Gnosys-Plugin-V2-V2//Home/Gnosys-Plugin-V2-V2//Home/God//Home/Gnosys-Plugin-V2-V2/base/soma-prolog/soma_prolog/soma_partials.pl
+
+---
+
+File: /home/GOD//Home/gnosys-plugin-v2-V2//Home/Gnosys-Plugin-V2-V2//Home/God//Home/Gnosys-Plugin-V2-V2//Home/Gnosys-Plugin-V2-V2///Home/Gnosys-Plugin-V2-V2///Home/God//Home/Gnosys-Plugin-V2-V2/Home/God//Home/Gnosys-Plugin-V2-V2//Home/Gnosys-Plugin-V2-V2//Home/God//Home/Gnosys-Plugin-V2-V2/base/soma-prolog/soma_prolog/soma_partials.pl
+
+---
+
+File: /home/GOD//Home/gnosys-plugin-v2-V2//Home/Gnosys-Plugin-V2-V2//Home/God//Home/Gnosys-Plugin-V2-V2//Home/Gnosys-Plugin-V2-V2///Home/Gnosys-Plugin-V2-V2///Home/God//Home/Gnosys-Plugin-V2-V2/Home/God//Home/Gnosys-Plugin-V2-V2//Home/Gnosys-Plugin-V2-V2//Home/God//Home/Gnosys-Plugin-V2-V2/base/soma-prolog/soma_prolog/soma_partials.pl
+
+---
+
+File: /home/GOD//Home/gnosys-plugin-v2-V2//Home/Gnosys-Plugin-V2-V2//Home/God//Home/Gnosys-Plugin-V2-V2/base/soma-prolog/soma_prolog/soma_partials.pl
+
+---
+
+File: /home/GOD//Home/gnosys-plugin-v2-V2/base/soma-prolog/soma_prolog/soma_partials.pl
+
+---
+
+File: /home/GOD/gnosys-plugin-v2/base/soma-prolog/soma_prolog/soma_partials.pl
+
+---
+
+File: /home/GOD/gnosys-plugin-v2/base/soma-prolog/soma_prolog/soma_partials.pl
+
+## Relationships
+- IS_A: File
+- INSTANTIATES: File_Template

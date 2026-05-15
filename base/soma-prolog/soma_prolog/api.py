@@ -24,12 +24,25 @@ class SOMAHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = self.path.rstrip("/")
+        if path == "/rule":
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length).decode("utf-8") if content_length else "{}"
+            try:
+                data = json.loads(body) if body else {}
+                rule_body = data.get("rule_body", "")
+                if not rule_body:
+                    self._respond(400, {"error": "rule_body required"})
+                    return
+                result = core.add_rule(rule_body)
+                self._respond(200, {"result": result})
+            except Exception as e:
+                logger.error(f"add_rule error: {e}", exc_info=True)
+                self._respond(500, {"error": str(e)})
+            return
+
         if path != "/event":
-            # Not /event = does not exist. SOMA has only add_event.
             self._respond(404, {
-                "error": "SOMA exposes ONE entrypoint: POST /event. "
-                         "Every operation is an event. Submit an event "
-                         "whose observations describe what you want."
+                "error": "SOMA entrypoints: POST /event, POST /rule."
             })
             return
 

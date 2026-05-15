@@ -727,6 +727,65 @@ def add_observation_individual(event_id: str, key: str, value: str, type_snake: 
     return f"observation_individual={obs_id} typed_as={type_snake} literal={value}"
 
 
+def create_typed_individual(name: str, class_snake: str, relationships: list) -> str:
+    """Create an OWL individual of a specific class from observation data.
+
+    This is Pattern 5 (INSTANCE_DECLARATION) from UNIVERSAL_PATTERNS.md.
+    When an observation's is_a points to a known OWL class, this function
+    creates an individual of THAT class (not a generic Observation wrapper).
+
+    Args:
+        name: Individual name (e.g. 'my_dep_check')
+        class_snake: Snake_case OWL class name (e.g. 'deduction_chain')
+        relationships: List of 'pred_snake|value_str' pipe-separated strings
+
+    Returns:
+        Status string describing what was created
+    """
+    _ensure_loaded()
+    cls = _find_class(class_snake)
+    if cls is None:
+        return f"ERROR: class {class_snake} not found in ontology"
+
+    with _onto:
+        existing = _onto[name]
+        if existing is not None:
+            ind = existing
+            if cls not in ind.is_a:
+                ind.is_a.append(cls)
+            status = "updated"
+        else:
+            ind = cls(name)
+            status = "created"
+
+        props_set = []
+        props_label = []
+        for rel_str in relationships:
+            if not isinstance(rel_str, str) or '|' not in rel_str:
+                continue
+            pred_snake, value_str = rel_str.split('|', 1)
+            prop = _find_property(pred_snake)
+            if prop is not None:
+                attr = prop.python_name or prop.name
+                try:
+                    current = getattr(ind, attr, [])
+                    if isinstance(current, list):
+                        current.append(value_str)
+                    else:
+                        setattr(ind, attr, [value_str])
+                    props_set.append(pred_snake)
+                except Exception:
+                    ind.label.append(f"{pred_snake}:{value_str}")
+                    props_label.append(pred_snake)
+            else:
+                ind.label.append(f"{pred_snake}:{value_str}")
+                props_label.append(pred_snake)
+
+    set_msg = f"props_set=[{','.join(props_set)}]" if props_set else "props_set=[]"
+    label_msg = f"props_as_label=[{','.join(props_label)}]" if props_label else ""
+    return f"{status}:{name} class={class_snake} {set_msg} {label_msg}".strip()
+
+
 def _scrub_pipe(s) -> str:
     """Replace any literal '|' so it doesn't break our string-list encoding."""
     if s is None:

@@ -113,3 +113,9 @@ Is this the right shape? What's wrong with it? What would actually work?
 ### Q7: The OWL has 186 restriction axioms (Cat requires objects+morphisms+identity+composition, Skill requires 22+ properties, etc.). These ARE the "what parts are required" definitions. Can SOMA load these restrictions and use them in the recursive check?
 
 The 4_17 answers said `class_restrictions_snake()` exists in utils.py but nobody calls it to assert required_restriction facts. Is this still the case? If SOMA could load all OWL restrictions as Prolog facts, would that give it enough information to perform the recursive core sentence check?
+
+File: /home/GOD/gnosys-plugin-v2/base/soma-prolog/4_18_questions_youknow_core_sentence.md
+
+## Relationships
+- IS_A: File
+- INSTANTIATES: File_Template

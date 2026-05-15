@@ -89,3 +89,34 @@ def add_event(source: str, observations: str, domain: str = "default") -> str:
     except json.JSONDecodeError as e:
         return f"observations must be valid JSON: {e}"
     return _post_event({"source": source, "observations": obs_list, "domain": domain})
+
+
+@mcp.tool()
+def add_rule(rule_body: str) -> str:
+    """Add a Prolog rule to the live SOMA runtime. Immediately executable.
+
+    The rule is asserted as both a native Prolog clause (for call/1 in
+    deduction chains) and as a rule/2 fact (for the meta-interpreter solve/3).
+
+    Args:
+        rule_body: Prolog clause string.
+            Example: "my_check(X) :- triple(X, is_a, agent), triple(X, has_name, _)"
+
+    Returns:
+        Confirmation or error message.
+    """
+    try:
+        body = json.dumps({"rule_body": rule_body}).encode("utf-8")
+        req = urllib.request.Request(
+            f"{SOMA_URL}/rule",
+            data=body,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+            return result.get("result", json.dumps(result))
+    except urllib.error.URLError as e:
+        return f"SOMA daemon not running at {SOMA_URL}. Error: {e}"
+    except Exception as e:
+        return f"Error: {e}"
