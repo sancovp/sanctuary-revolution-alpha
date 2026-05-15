@@ -770,12 +770,23 @@ check_convention(ses_depth) :-
         )
     ).
 
-% Compose SES gap sentence for the response
-compose_ses_sentence(C, SC, TC, Sentence) :-
-    Total is SC + TC,
+% Compose SES gap sentence listing WHICH values are at depth 0
+compose_ses_sentence(C, _SC, _TC, Sentence) :-
+    findall(PV,
+        (   triple(C, Prop, V),
+            Prop \= is_a, Prop \= part_of, Prop \= instantiates,
+            Prop \= produces, Prop \= has_observation_source,
+            Prop \= has_description, Prop \= dolce_category,
+            Prop \= promoted_to_owl,
+            V \= C,
+            is_depth_zero(V),
+            format(atom(PV), '~w=~w', [Prop, V])
+        ),
+        PVList),
+    atomic_list_concat(PVList, ', ', PVStr),
     format(atom(Sentence),
-        '~w has ~w/~w values still at string depth 0. Type them to close this view.',
-        [C, SC, Total]).
+        '~w has untyped strings: ~w. Type them to close this view.',
+        [C, PVStr]).
 
 % ======================================================================
 % ENDEAVOR TRACKING — state machine for progressive work
@@ -935,7 +946,9 @@ compose_all_gap_sentences(Sentences) :-
         (ses_report(C, SC, TC), compose_ses_sentence(C, SC, TC, S)),
         SESSentences
     ),
-    append(GapSentences, SESSentences, Sentences).
+    compose_endeavor_status(EndSentences),
+    append(GapSentences, SESSentences, S1),
+    append(S1, EndSentences, Sentences).
 
 % ======================================================================
 % TESTS — universal mechanism
