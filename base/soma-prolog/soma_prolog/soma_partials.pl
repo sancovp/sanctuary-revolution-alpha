@@ -962,6 +962,50 @@ compose_hierarchy_sentence(C, Type, Value, Sentence) :-
             [C, Type, Value])
     ).
 
+% ======================================================================
+% RUN COMPILED — invoke registered runtime objects through observations
+%
+% When an observation has has_run_target relationship, invoke the compiled
+% runtime with all other relationship values as kwargs. Result stored as
+% triple(RunObs, has_runtime_result, ResultJson).
+% ======================================================================
+
+:- dynamic runtime_result/2.  % runtime_result(ObsName, ResultJson)
+
+check_convention(run_compiled_on_request) :-
+    forall(
+        (   triple(Obs, has_run_target, Target),
+            triple(Obs, has_observation_source, _),
+            \+ runtime_result(Obs, _)
+        ),
+        run_and_store_result(Obs, Target)
+    ).
+
+run_and_store_result(Obs, Target) :-
+    findall(KV,
+        (   triple(Obs, Prop, Value),
+            Prop \= is_a, Prop \= part_of, Prop \= instantiates,
+            Prop \= produces, Prop \= has_observation_source,
+            Prop \= has_description, Prop \= dolce_category,
+            Prop \= has_run_target, Prop \= has_endeavor,
+            Prop \= has_endeavor_goal, Prop \= promoted_to_owl,
+            format(atom(KV), '"~w":"~w"', [Prop, Value])
+        ),
+        KVList),
+    atomic_list_concat(KVList, ',', KVStr),
+    format(atom(KwargsJson), '{~w}', [KVStr]),
+    atom_string(Target, TargetStr),
+    atom_string(KwargsJson, KwargsStr),
+    catch(
+        (   py_call('soma_prolog.utils':call_soma_runtime(TargetStr, KwargsStr), ResultJson),
+            assertz(runtime_result(Obs, ResultJson)),
+            assert_triple_once(Obs, has_runtime_result, ResultJson),
+            format(user_error, '[SOMA RUN] ~w(~w) = ~w~n', [Target, KwargsStr, ResultJson])
+        ),
+        Err,
+        format(user_error, '[SOMA RUN ERROR] ~w: ~w~n', [Target, Err])
+    ).
+
 % Boot: assert all seed triples into the live graph on consult
 :- forall(seed_triple(S, P, O), assert_triple_once(S, P, O)).
 
