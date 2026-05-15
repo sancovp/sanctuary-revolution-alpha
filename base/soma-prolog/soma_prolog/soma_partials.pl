@@ -848,6 +848,58 @@ compose_endeavor_status(Sentences) :-
         ),
         Sentences).
 
+% ======================================================================
+% HIERARCHY RESOLUTION — CWA check on tool call metadata
+%
+% Every tool call states domain/subdomain/target. Each must resolve to
+% a previously-observed concept or a seed type. Unknown = "I don't know
+% what that is. Explain it via add_event."
+% ======================================================================
+
+is_resolved_concept(X) :-
+    triple(X, has_observation_source, _), !.
+is_resolved_concept(X) :-
+    seed_triple(X, is_a, _), !.
+is_resolved_concept(X) :-
+    seed_triple(_, is_a, X), !.
+is_resolved_concept(X) :-
+    atom_string(X, XStr),
+    py_call('soma_prolog.utils':is_class(XStr), @(true)), !.
+
+check_convention(tool_call_hierarchy) :-
+    forall(
+        (   triple(C, has_observation_source, _),
+            atom_concat('tc_', _, C),
+            triple(C, part_of, Domain),
+            Domain \= C,
+            \+ is_resolved_concept(Domain)
+        ),
+        assert_unnamed_slot_once(C, unknown_domain, Domain)
+    ),
+    forall(
+        (   triple(C, has_observation_source, _),
+            atom_concat('tc_', _, C),
+            triple(C, has_subdomain, Sub),
+            Sub \= C,
+            \+ is_resolved_concept(Sub)
+        ),
+        assert_unnamed_slot_once(C, unknown_subdomain, Sub)
+    ).
+
+compose_hierarchy_sentence(C, Type, Value, Sentence) :-
+    (   Type == unknown_domain
+    ->  format(atom(Sentence),
+            'Tool call ~w uses domain ~w but ~w has never been explained. Describe this domain via add_event.',
+            [C, Value, Value])
+    ;   Type == unknown_subdomain
+    ->  format(atom(Sentence),
+            'Tool call ~w uses subdomain ~w but ~w has never been explained. Describe this subdomain via add_event.',
+            [C, Value, Value])
+    ;   format(atom(Sentence),
+            'Tool call ~w references unknown ~w: ~w. Explain it.',
+            [C, Type, Value])
+    ).
+
 % Boot: assert all seed triples into the live graph on consult
 :- forall(seed_triple(S, P, O), assert_triple_once(S, P, O)).
 
@@ -940,16 +992,27 @@ compose_gap_sentence(C, Prop, ExpectedType, Sentence) :-
 % Build all gap sentences for current unnamed_slots.
 compose_all_gap_sentences(Sentences) :-
     findall(S,
-        (unnamed_slot(C, P, T), compose_gap_sentence(C, P, T, S)),
+        (   unnamed_slot(C, P, T),
+            P \= unknown_domain, P \= unknown_subdomain,
+            compose_gap_sentence(C, P, T, S)
+        ),
         GapSentences
+    ),
+    findall(S,
+        (   unnamed_slot(C, P, T),
+            (P = unknown_domain ; P = unknown_subdomain),
+            compose_hierarchy_sentence(C, P, T, S)
+        ),
+        HierSentences
     ),
     findall(S,
         (ses_report(C, SC, TC), compose_ses_sentence(C, SC, TC, S)),
         SESSentences
     ),
     compose_endeavor_status(EndSentences),
-    append(GapSentences, SESSentences, S1),
-    append(S1, EndSentences, Sentences).
+    append(GapSentences, HierSentences, S1),
+    append(S1, SESSentences, S2),
+    append(S2, EndSentences, Sentences).
 
 % ======================================================================
 % TESTS — universal mechanism
