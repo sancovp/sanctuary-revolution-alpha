@@ -453,6 +453,18 @@ seed_triple(agent, is_a, agentive_social_object).
 seed_triple(role, is_a, social_object).
 seed_triple(artifact, is_a, non_agentive_social_object).
 
+% Compilable shapes mapped into DOLCE — these are artifacts (non-physical,
+% non-agentive things that exist because someone made them)
+seed_triple(template_method, is_a, artifact).
+seed_triple(template_sequence, is_a, artifact).
+seed_triple(template_attribute, is_a, artifact).
+seed_triple(renderable_piece, is_a, artifact).
+seed_triple(meta_stack, is_a, artifact).
+seed_triple(role_list, is_a, artifact).
+seed_triple(input_spec, is_a, artifact).
+seed_triple(output_spec, is_a, artifact).
+seed_triple(production_output, is_a, artifact).
+
 % DOLCE classifications are AUTOMATIC — not requirements.
 % Every entry is a perdurant (observation in time by an agent).
 % CODE promotion = universal (class/configuration).
@@ -616,6 +628,63 @@ check_convention(geometry_closure) :-
         assert_unnamed_slot_once(C, produces, production_output)
     ).
 
+% ======================================================================
+% AUTHORIZATION — detect authorization observations and trigger compilation
+%
+% When an observation has `authorizes` relationship pointing to a concept,
+% and that concept has no unnamed_slots, authorize it for compilation.
+% This bridges the observation graph to the compilation gate.
+% ======================================================================
+
+check_convention(detect_authorization) :-
+    forall(
+        (   triple(AuthObs, authorizes, Target),
+            triple(AuthObs, has_observation_source, _),
+            concept_complete(Target),
+            \+ authorized_compilation(Target, _)
+        ),
+        (   assert(authorized_compilation(Target, observed_authorization)),
+            format(user_error, '[SOMA] Authorized ~w for compilation~n', [Target])
+        )
+    ).
+
+% ======================================================================
+% AUTO-COMPILE — after authorization, try to compile ready concepts
+% ======================================================================
+
+check_convention(try_compile) :-
+    forall(
+        (   authorized_compilation(Concept, _),
+            \+ compiled_program(Concept, _)
+        ),
+        (   deduce_validation_status(Concept, Status),
+            format(user_error, '[SOMA] ~w validation=~w~n', [Concept, Status]),
+            (   Status == code
+            ->  (   should_compile(Concept)
+                ->  format(user_error, '[SOMA] should_compile=true for ~w~n', [Concept]),
+                    (   assemble_program(Concept, Program)
+                    ->  format(user_error, '[SOMA] assembled: ~w~n', [Program]),
+                        catch(
+                            (   compile_to_python(Concept, Code)
+                            ->  format(user_error, '[SOMA] COMPILED ~w: ~w chars~n', [Concept, Code])
+                            ;   format(user_error, '[SOMA] compile_to_python FAILED for ~w~n', [Concept])
+                            ),
+                            Err,
+                            format(user_error, '[SOMA] Compile threw ~w: ~w~n', [Concept, Err])
+                        )
+                    ;   format(user_error, '[SOMA] assemble_program FAILED for ~w~n', [Concept])
+                    )
+                ;   format(user_error, '[SOMA] should_compile=false for ~w~n', [Concept])
+                )
+            ;   (   find_undefined_reference(Concept, Pred, Value, UType)
+                ->  format(user_error, '[SOMA] ~w blocked: ~w->~w is_a ~w (unknown)~n',
+                        [Concept, Pred, Value, UType])
+                ;   format(user_error, '[SOMA] ~w blocked, no undef ref found~n', [Concept])
+                )
+            )
+        )
+    ).
+
 % Boot: assert all seed triples into the live graph on consult
 :- forall(seed_triple(S, P, O), assert_triple_once(S, P, O)).
 
@@ -750,40 +819,3 @@ test_healing_from_neighbor :-
     retractall(unnamed_slot(_, _, _)),
     retractall(heal_log(_, _, _, _)).
 
-File: /home/GOD//Home/gnosys-plugin-v2-V2//Home/Gnosys-Plugin-V2-V2//Home/God//Home/Gnosys-Plugin-V2-V2//Home/Gnosys-Plugin-V2-V2///Home/Gnosys-Plugin-V2-V2///Home/God//Home/Gnosys-Plugin-V2-V2/Home/God//Home/Gnosys-Plugin-V2-V2//Home/Gnosys-Plugin-V2-V2//Home/God//Home/Gnosys-Plugin-V2-V2/base/soma-prolog/soma_prolog/soma_partials.pl
-
----
-
-File: /home/GOD//Home/gnosys-plugin-v2-V2//Home/Gnosys-Plugin-V2-V2//Home/God//Home/Gnosys-Plugin-V2-V2//Home/Gnosys-Plugin-V2-V2///Home/Gnosys-Plugin-V2-V2///Home/God//Home/Gnosys-Plugin-V2-V2/Home/God//Home/Gnosys-Plugin-V2-V2//Home/Gnosys-Plugin-V2-V2//Home/God//Home/Gnosys-Plugin-V2-V2/base/soma-prolog/soma_prolog/soma_partials.pl
-
----
-
-File: /home/GOD//Home/gnosys-plugin-v2-V2//Home/Gnosys-Plugin-V2-V2//Home/God//Home/Gnosys-Plugin-V2-V2//Home/Gnosys-Plugin-V2-V2///Home/Gnosys-Plugin-V2-V2///Home/God//Home/Gnosys-Plugin-V2-V2/Home/God//Home/Gnosys-Plugin-V2-V2//Home/Gnosys-Plugin-V2-V2//Home/God//Home/Gnosys-Plugin-V2-V2/base/soma-prolog/soma_prolog/soma_partials.pl
-
----
-
-File: /home/GOD//Home/gnosys-plugin-v2-V2//Home/Gnosys-Plugin-V2-V2//Home/God//Home/Gnosys-Plugin-V2-V2//Home/Gnosys-Plugin-V2-V2///Home/Gnosys-Plugin-V2-V2///Home/God//Home/Gnosys-Plugin-V2-V2/Home/God//Home/Gnosys-Plugin-V2-V2//Home/Gnosys-Plugin-V2-V2//Home/God//Home/Gnosys-Plugin-V2-V2/base/soma-prolog/soma_prolog/soma_partials.pl
-
----
-
-File: /home/GOD//Home/gnosys-plugin-v2-V2//Home/Gnosys-Plugin-V2-V2//Home/God//Home/Gnosys-Plugin-V2-V2//Home/Gnosys-Plugin-V2-V2///Home/Gnosys-Plugin-V2-V2///Home/God//Home/Gnosys-Plugin-V2-V2/Home/God//Home/Gnosys-Plugin-V2-V2//Home/Gnosys-Plugin-V2-V2//Home/God//Home/Gnosys-Plugin-V2-V2/base/soma-prolog/soma_prolog/soma_partials.pl
-
----
-
-File: /home/GOD//Home/gnosys-plugin-v2-V2//Home/Gnosys-Plugin-V2-V2//Home/God//Home/Gnosys-Plugin-V2-V2/base/soma-prolog/soma_prolog/soma_partials.pl
-
----
-
-File: /home/GOD//Home/gnosys-plugin-v2-V2/base/soma-prolog/soma_prolog/soma_partials.pl
-
----
-
-File: /home/GOD/gnosys-plugin-v2/base/soma-prolog/soma_prolog/soma_partials.pl
-
----
-
-File: /home/GOD/gnosys-plugin-v2/base/soma-prolog/soma_prolog/soma_partials.pl
-
-## Relationships
-- IS_A: File
-- INSTANTIATES: File_Template
