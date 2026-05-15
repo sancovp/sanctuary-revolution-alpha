@@ -31,6 +31,7 @@
 
 % The accumulated triple graph (SOMA's knowledge web)
 :- dynamic triple/3.              % triple(Subject, Predicate, Object)
+:- dynamic dep_violation/2.       % dep_violation(Module, Dependency) — arch dep check
 
 % Gaps detected by convention rules
 :- dynamic unnamed_slot/3.        % unnamed_slot(Subject, MissingProperty, ExpectedType)
