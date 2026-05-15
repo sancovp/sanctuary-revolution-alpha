@@ -886,6 +886,25 @@ check_convention(tool_call_hierarchy) :-
         assert_unnamed_slot_once(C, unknown_subdomain, Sub)
     ).
 
+% Domain composition: every tc_* domain must be part_of soma_projects
+check_convention(domain_composition) :-
+    forall(
+        (   triple(C, has_observation_source, _),
+            atom_concat('tc_', _, C),
+            triple(C, part_of, Domain),
+            Domain \= C,
+            is_resolved_concept(Domain),
+            \+ triple(Domain, part_of, soma_projects)
+        ),
+        assert_unnamed_slot_once(C, domain_not_in_project, Domain)
+    ).
+
+compose_hierarchy_sentence(C, domain_not_in_project, Value, Sentence) :-
+    !,
+    format(atom(Sentence),
+        'Tool call ~w uses domain ~w but ~w is not part_of soma_projects. Register it as a project first.',
+        [C, Value, Value]).
+
 compose_hierarchy_sentence(C, Type, Value, Sentence) :-
     (   Type == unknown_domain
     ->  format(atom(Sentence),
@@ -993,14 +1012,14 @@ compose_gap_sentence(C, Prop, ExpectedType, Sentence) :-
 compose_all_gap_sentences(Sentences) :-
     findall(S,
         (   unnamed_slot(C, P, T),
-            P \= unknown_domain, P \= unknown_subdomain,
+            P \= unknown_domain, P \= unknown_subdomain, P \= domain_not_in_project,
             compose_gap_sentence(C, P, T, S)
         ),
         GapSentences
     ),
     findall(S,
         (   unnamed_slot(C, P, T),
-            (P = unknown_domain ; P = unknown_subdomain),
+            (P = unknown_domain ; P = unknown_subdomain ; P = domain_not_in_project),
             compose_hierarchy_sentence(C, P, T, S)
         ),
         HierSentences
