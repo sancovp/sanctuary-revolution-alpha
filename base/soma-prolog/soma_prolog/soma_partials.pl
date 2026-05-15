@@ -85,10 +85,18 @@ assert_triples_from_carton(Target, Rels) :-
         )
     ).
 
-% tv(Value, Type) — assert the relationship AND the value's type
+% tv(Value, Type) — assert the relationship AND deduce the value's type.
+% If Value is already a known type (seed triple, OWL class, primitive),
+% do NOT assert the programming type — the real type already exists.
+% Only assert the programming type for genuinely unknown values.
+% This prevents "process is_a string_value" contamination when "process"
+% is actually a DOLCE stative.
 assert_typed_value(Target, Pred, tv(Value, Type)) :- !,
     assert_triple_once(Target, Pred, Value),
-    assert_triple_once(Value, is_a, Type).
+    (   is_known_type(Value)
+    ->  true
+    ;   assert_triple_once(Value, is_a, Type)
+    ).
 
 % Plain atom fallback (backward compat if tv wrapper missing)
 assert_typed_value(Target, Pred, Value) :-
@@ -566,6 +574,48 @@ maybe_reload_if_rule(Name) :-
     ;   true
     ).
 
+% ======================================================================
+% GEOMETRY CLOSURE — every observed concept must be classifiable
+%
+% Three things must be known about every observed concept:
+%   1. dolce_category — WHERE it sits in the foundational ontology
+%   2. instantiates — WHAT universal pattern it realizes
+%   3. part_of — WHAT contains it
+%
+% DOLCE dispatch conventions automatically stamp dolce_category IF the
+% is_a chain connects to a DOLCE branch. If it doesn't, the concept
+% stays unclassified and this convention flags it.
+%
+% The LLM must provide is_a + part_of + instantiates on every observation.
+% SOMA deduces dolce_category from is_a. All four = geometry closed.
+% ======================================================================
+
+check_convention(geometry_closure) :-
+    forall(
+        (   triple(C, has_observation_source, _),
+            \+ triple(C, dolce_category, _)
+        ),
+        assert_unnamed_slot_once(C, dolce_category, dolce_branch)
+    ),
+    forall(
+        (   triple(C, has_observation_source, _),
+            \+ triple(C, instantiates, _)
+        ),
+        assert_unnamed_slot_once(C, instantiates, universal_pattern)
+    ),
+    forall(
+        (   triple(C, has_observation_source, _),
+            \+ triple(C, part_of, _)
+        ),
+        assert_unnamed_slot_once(C, part_of, containing_context)
+    ),
+    forall(
+        (   triple(C, has_observation_source, _),
+            \+ triple(C, produces, _)
+        ),
+        assert_unnamed_slot_once(C, produces, production_output)
+    ).
+
 % Boot: assert all seed triples into the live graph on consult
 :- forall(seed_triple(S, P, O), assert_triple_once(S, P, O)).
 
@@ -622,6 +672,29 @@ get_graph_str(Str) :-
                 format('  UNNAMED: ~w needs ~w (expected ~w)~n', [C, P, T])
             )
         )).
+
+% Compose a natural language error sentence from an unnamed_slot.
+% The sentence is DERIVED from the logic: what you claimed + what the
+% universal requires + what's missing.
+compose_gap_sentence(C, Prop, ExpectedType, Sentence) :-
+    (   triple(C, is_a, ClaimedType),
+        ClaimedType \= string_value, ClaimedType \= int_value,
+        ClaimedType \= float_value, ClaimedType \= bool_value,
+        ClaimedType \= list_value, ClaimedType \= dict_value
+    ->  format(atom(Sentence),
+            '~w claims to be ~w. ~w requires ~w (~w). ~w does not have ~w. Provide it.',
+            [C, ClaimedType, ClaimedType, Prop, ExpectedType, C, Prop])
+    ;   format(atom(Sentence),
+            '~w needs ~w (~w). Provide it.',
+            [C, Prop, ExpectedType])
+    ).
+
+% Build all gap sentences for current unnamed_slots.
+compose_all_gap_sentences(Sentences) :-
+    findall(S,
+        (unnamed_slot(C, P, T), compose_gap_sentence(C, P, T, S)),
+        Sentences
+    ).
 
 % ======================================================================
 % TESTS — universal mechanism

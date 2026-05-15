@@ -78,11 +78,16 @@ def ingest_event(source: str, observations, domain: str = "default") -> str:
         for r in janus.query("unmet_requirement(R)"):
             unmet.append(str(r["R"]))
         n_unmet = len(unmet)
-        # Collect unnamed slots (SOUP gaps) with details
+        # Compose gap sentences from Prolog logic
         soup_lines = []
-        for s in janus.query("unnamed_slot(C, P, T)"):
-            c, p, t = str(s["C"]), str(s["P"]), str(s["T"])
-            soup_lines.append(f"  - {c} needs {p} (type: {t}). Observe it via add_event to fix.")
+        try:
+            r_gaps = janus.query_once("compose_all_gap_sentences(S)")
+            for sentence in (r_gaps.get("S") or []):
+                soup_lines.append(f"  - {decode_prolog_result(sentence)}")
+        except Exception:
+            for s in janus.query("unnamed_slot(C, P, T)"):
+                c, p, t = str(s["C"]), str(s["P"]), str(s["T"])
+                soup_lines.append(f"  - {c} needs {p} (type: {t}).")
         n_soup = len(soup_lines)
         soup_report = ""
         if n_soup > 0:
