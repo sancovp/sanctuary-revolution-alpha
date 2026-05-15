@@ -2534,3 +2534,60 @@ The role/position context matters — the same type in different positions has d
 3 of 8 fully fixed, 1 partially fixed, 4 remaining (2 by design, 2 need work).
 
 — GNOSYS, 2026-05-14 (end of marathon session)
+
+---
+
+## Session: 2026-05-15 — SOMA Progressive Typing + CWA Hooks + Geometry Closure
+
+**What was built (8 commits: bc52b2d → b473b8b):**
+
+1. **String_value deduction fix** — `assert_typed_value` checks `is_known_type(Value)` before asserting programming type. Prevents "process is_a string_value" DOLCE contamination. Known types (seed triples, OWL classes) keep their real type.
+
+2. **Geometry closure convention** — Every observed concept checked for: dolce_category + instantiates + part_of + produces. Missing any = unnamed_slot.
+
+3. **Composed error sentences from logic** — `compose_gap_sentence` derives natural language from is_a claims + required_restrictions + unnamed_slots. No hardcoded descriptions. "X claims to be Y. Y requires Z. X does not have Z. Provide it."
+
+4. **Type mismatch sentences** — Detects `_should_be_` tags from structural_type_mismatch convention, composes: "X has prop=value but that is string_value, not expected_type. Create a expected_type concept instead."
+
+5. **DOLCE seed mappings** — template_method, template_sequence, role_list, input_spec, output_spec, prolog_rule, deduction_chain all mapped to artifact → non_agentive_social_object → endurant.
+
+6. **Authorization + auto-compilation** — detect_authorization convention watches for `authorizes` relationship, auto-closes endeavor when concept_complete. try_compile convention fires compile_to_python when authorized + CODE status.
+
+7. **Full invoice compilation e2e** — 7 observation events → 616 triples → unnamed_slots=0 → compiled=1. Alice's invoice process compiles from accumulated observations to Python class.
+
+8. **SES depth progressive typing** — Counts which relationship values are still at string_value (depth 0). Reports SPECIFIC values: "dog has untyped strings: has_name=rex, has_breed=labrador. Type them." Filters out tc_* system instrumentation.
+
+9. **Endeavor tracking** — open_endeavor/closed_endeavor dynamic facts. detect_endeavor_start convention. auto_close_endeavors when target has no gaps. "ENDEAVOR OPEN: name (goal: X)" in response.
+
+10. **CWA PostToolUse hook** — Blocks ALL tool calls if no endeavors exist in SOMA. Observes every tool call as obs_concept with metadata. Surfaces SOMA gaps + endeavor status.
+
+**Key design decisions (Isaac verbatim this session):**
+
+- "SOMA checks for types on strings internally" — the caller always says string_value, SOMA deduces the real type
+- "required restriction on Thing (everything)" — geometry closure checks on EVERY observed concept, not just specific types
+- "your sentence == 200 items in this schema" — natural language must be DECOMPOSED into atomic observations
+- "you cannot read something you dont logically necessitate" — ALL actions (including reads) go through SOMA validation
+- "there IS NO active endeavor. There ARE endeavors" — plural, tracked in SOMA, every tool call must belong to one
+- "CWA not OWA" — if SOMA doesn't know what you're doing, you can't do it
+- "SOMA is standalone, doesn't have CartON" — soma.owl IS the database, everything persists there
+
+**Open issues identified:**
+
+1. **arch_dep_check fires unmet=1 on every event** — premise `not(dep_violation(_,_))` should succeed in clean state but doesn't. Never resolved.
+
+2. **Persistence gap** — Prolog triples lost on daemon restart. Design says everything should be OWL individuals (even SOUP). Current impl only writes CODE-status to OWL. Fix: persist ALL observations to soma.owl immediately, rebuild triple graph from OWL on boot.
+
+3. **Endeavor coherence not enforced** — CWA checks "do ANY endeavors exist" but not "does THIS tool call relate to an open endeavor." Cross-referencing (file→endeavor→closed?) not implemented.
+
+4. **Progressive typing state machine** — SES depth reports what needs typing but doesn't enforce short/medium/long loop ordering. No blocking on "you started typing X but switched to Y without closing X."
+
+5. **compile_to_python toy-level** — method bodies are f-strings of natural language, not executable code. The LLM trick (method body as agent prompt) not wired.
+
+**For next session:**
+- Fix persistence (every observation → OWL immediately)
+- Investigate arch_dep_check firing
+- Implement endeavor coherence check
+- Progressive typing state machine enforcement
+- Isaac will show agentification deduction
+
+— GNOSYS, 2026-05-15
