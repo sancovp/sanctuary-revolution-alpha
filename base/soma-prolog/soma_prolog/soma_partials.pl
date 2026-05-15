@@ -759,6 +759,7 @@ check_convention(ses_depth) :-
     retractall(ses_report(_, _, _)),
     forall(
         (   triple(C, has_observation_source, _),
+            \+ atom_concat('tc_', _, C),
             ses_string_count(C, SC),
             ses_typed_count(C, TC),
             SC > 0
