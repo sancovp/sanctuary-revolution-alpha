@@ -1165,23 +1165,30 @@ compose_calendar_sentence(Concept, SpecPath, Sentence) :-
 % ======================================================================
 
 :- dynamic blocked_endeavor/2.  % blocked_endeavor(Name, Reason)
-:- dynamic surf_score/2.        % surf_score(EndeavorName, Score)
+:- dynamic surf_streak/2.       % surf_streak(EndeavorName, ConsecutiveEvents)
 
 check_convention(compute_surf_score) :-
-    retractall(surf_score(_, _)),
     forall(
-        open_endeavor(Name, _Goal, _T),
-        compute_one_surf_score(Name)
+        (   open_endeavor(Name, _, _),
+            \+ blocked_endeavor(Name, _)
+        ),
+        increment_surf_streak(Name)
+    ),
+    forall(
+        blocked_endeavor(Name, _),
+        reset_surf_streak(Name)
     ).
 
-compute_one_surf_score(Name) :-
-    (   open_endeavor(Name, _, _) -> S1 = 20 ; S1 = 0 ),
-    (   \+ blocked_endeavor(Name, _) -> S2 = 20 ; S2 = 0 ),
-    (   \+ (ses_report(C, _, _), triple(C, part_of, Name)) -> S3 = 20 ; S3 = 0 ),
-    S4 = 20,
-    S5 = 20,
-    Score is S1 + S2 + S3 + S4 + S5,
-    assertz(surf_score(Name, Score)).
+increment_surf_streak(Name) :-
+    (   retract(surf_streak(Name, N))
+    ->  N1 is N + 1,
+        assertz(surf_streak(Name, N1))
+    ;   assertz(surf_streak(Name, 1))
+    ).
+
+reset_surf_streak(Name) :-
+    retractall(surf_streak(Name, _)),
+    assertz(surf_streak(Name, 0)).
 
 % Detect blocked endeavors — when human-required gaps exist
 check_convention(detect_blocked_endeavors) :-
@@ -1199,12 +1206,12 @@ check_convention(detect_blocked_endeavors) :-
 % Compose surf status for response
 compose_surf_status(Sentences) :-
     findall(S,
-        (   surf_score(Name, Score),
+        (   open_endeavor(Name, _, _),
             (   blocked_endeavor(Name, Reason)
-            ->  format(atom(S), 'WAVE ~w: WIPEOUT (score=~w). ~w. Swap to another open endeavor or wait for user.', [Name, Score, Reason])
-            ;   (   Score >= 80
-                ->  format(atom(S), 'WAVE ~w: SURFING (score=~w). On track.', [Name, Score])
-                ;   format(atom(S), 'WAVE ~w: DRIFTING (score=~w). Refocus.', [Name, Score])
+            ->  format(atom(S), 'WAVE ~w: WIPEOUT. ~w. Swap to another wave or wait for user.', [Name, Reason])
+            ;   (   surf_streak(Name, N)
+                ->  format(atom(S), 'WAVE ~w: SURFING (streak=~w). On track.', [Name, N])
+                ;   format(atom(S), 'WAVE ~w: SURFING (streak=0). Just started.', [Name])
                 )
             )
         ),
