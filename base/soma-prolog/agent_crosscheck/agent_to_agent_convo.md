@@ -2732,4 +2732,75 @@ c6f1b40  authorization dispatch
 85f02d6  calendar spec emission + full pipeline
 ```
 
-— GNOSYS, 2026-05-15 (final entry, for real this time)
+— GNOSYS, 2026-05-15 (third entry)
+
+---
+
+## Session: 2026-05-16 (early AM) — Dashboard + Visualization + Surf Score
+
+**Built (local artifacts, not in repo):**
+
+19. **SOMA Dashboard** at localhost:8501 — unified single-page app:
+   - Left: graph visualization (canvas, force-directed layout)
+   - Right: surf streak + wave status + auth queue + observation queue + history
+   - Graph has hover (tooltip + highlight network) and click (select, persist across refresh)
+   - Selection shows GLOBAL connections even when filtered
+
+20. **Graph clusters** grouped by `part_of` relationships:
+   - Nodes colored by cluster
+   - Cluster boundaries drawn
+   - Inter-cluster repulsion keeps groups separated
+   - Intra-cluster edges highlighted, inter dimmed
+
+21. **Semantic filter dropdown**:
+   - Endeavors (🌊) grouped in optgroup
+   - Domains (📁) grouped in optgroup
+   - Unlinked (⚪) catch-all
+   - DOLCE type filter (Endurant/Perdurant/Abstract)
+   - Keyword search
+   - Selection punches through filters (global network visible)
+
+22. **Surf score = streak counter** — consecutive events without wipeout. Climbs forever. Wipeout resets to 0. Displayed in dashboard + graph HUD.
+
+23. **Surf state bridge** — PostToolUse hook writes surf state to `/tmp/soma_data/surf_state.json`. Dashboard reads from file (no event submission). Fixed: polling was inflating streak by submitting events.
+
+24. **Verification dispatch + integration discovery** conventions:
+   - `verification_needed`: flags compiled+run concepts without human verification
+   - `integration_discovery`: flags compiled concepts without delivery method
+   - `known_bridge/3`: seed registry (Plaid, Stripe, Twilio, Gmail, Google Calendar, Drive, Zapier)
+
+25. **Authorization dispatch** — `authorized_source/3` maps slot types to sources:
+   - Process steps/roles/inputs/outputs → human_domain_expert
+   - DOLCE classification → system_deduction
+   - Domain structure → human_architect
+   - Geometry fields → observing_agent
+
+26. **Calendar spec emission** — `emit_calendar_spec` convention marks compiled concepts as SCHEDULABLE. Response includes "SCHEDULABLE: X is compiled and ready to schedule."
+
+27. **Run compiled on request** — `has_run_target` observation invokes compiled runtime. Verified: invoice_processing called, returns payload.
+
+**Dashboard files (local, not in repo):**
+```
+/tmp/heaven_data/skills/launch-soma-frontend/
+  SKILL.md, reference.md
+  scripts/server.py (HTTP server with /api/queue, /api/answer, /api/graph, /api/surf)
+  resources/index.html (unified layout: graph + right panel)
+  resources/graph.html (canvas visualization with clusters, filters, hover/click)
+```
+
+**Key design decisions:**
+- Dashboard reads surf state from FILE (hook writes it), never submits events to poll
+- Selection persists across data refreshes by storing selected ID, not node reference
+- Connected network shown globally even when filters active (selection punches through)
+- Surf score = pure streak (no weighted components — just "how long since wipeout")
+- The visualization IS the machine — clusters are functional groups, motion is organization
+
+**For next session:**
+- Semantic views in filter (surf chain as a view, not just cluster grouping)
+- Agentification deduction (Isaac will show)
+- Drift scoped to current endeavor
+- Integration discovery cases (Excel, existing MCPs)
+- Context compression / hidden messages for surfing
+- Rollback mechanism on wipeout
+
+— GNOSYS, 2026-05-16 (final entry)
