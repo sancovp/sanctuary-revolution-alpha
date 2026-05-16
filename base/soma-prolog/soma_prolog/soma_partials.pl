@@ -880,28 +880,89 @@ check_convention(tag_focus_context) :-
     ;   true
     ).
 
-% Auto-close endeavors whose target concept has no remaining gaps
-check_convention(auto_close_endeavors) :-
+% ======================================================================
+% ENDEAVOR LIFECYCLE — declare → type → do → prove → close
+%
+% An endeavor progresses through stages. Each stage has entry conditions.
+% The agent cannot skip stages. Surfing = staying in the correct stage
+% and doing stage-appropriate work.
+% ======================================================================
+
+:- dynamic endeavor_stage/2.  % endeavor_stage(Name, Stage)
+% Stages: declare, type, do, prove, closed
+
+% Initialize stage when endeavor opens (if not already staged)
+check_convention(endeavor_stage_init) :-
     forall(
-        (   open_endeavor(EndName, Goal, StartT),
+        (   open_endeavor(Name, _, _),
+            \+ endeavor_stage(Name, _)
+        ),
+        assertz(endeavor_stage(Name, declare))
+    ).
+
+% DECLARE → TYPE: goal concept has been observed (exists in graph)
+check_convention(endeavor_stage_advance) :-
+    forall(
+        (   open_endeavor(Name, Goal, _),
+            endeavor_stage(Name, declare),
             Goal \= unspecified,
+            triple(Goal, has_observation_source, _)
+        ),
+        (   retract(endeavor_stage(Name, declare)),
+            assertz(endeavor_stage(Name, type))
+        )
+    ),
+    % TYPE → DO: goal concept fully typed (no unnamed_slots, no depth-0 strings)
+    forall(
+        (   open_endeavor(Name, Goal, _),
+            endeavor_stage(Name, type),
             triple(Goal, has_observation_source, _),
             \+ unnamed_slot(Goal, _, _),
             \+ ses_report(Goal, _, _)
         ),
+        (   retract(endeavor_stage(Name, type)),
+            assertz(endeavor_stage(Name, do))
+        )
+    ),
+    % DO → PROVE: agent has observed has_done_signal on the goal
+    forall(
+        (   open_endeavor(Name, Goal, _),
+            endeavor_stage(Name, do),
+            triple(Goal, has_done_signal, _)
+        ),
+        (   retract(endeavor_stage(Name, do)),
+            assertz(endeavor_stage(Name, prove))
+        )
+    ),
+    % PROVE → CLOSED: agent has observed has_verification on the goal
+    forall(
+        (   open_endeavor(Name, Goal, StartT),
+            endeavor_stage(Name, prove),
+            triple(Goal, has_verification, _)
+        ),
         (   get_time(EndT),
-            retract(open_endeavor(EndName, Goal, StartT)),
-            assertz(closed_endeavor(EndName, Goal, StartT, EndT))
+            retract(open_endeavor(Name, Goal, StartT)),
+            retract(endeavor_stage(Name, prove)),
+            assertz(endeavor_stage(Name, closed)),
+            assertz(closed_endeavor(Name, Goal, StartT, EndT))
         )
     ).
 
-% Report open endeavors — mark which one is FOCUSED
+% Compose stage status in gap sentences
+compose_hierarchy_sentence(_C, endeavor_stage_mismatch, Value, Sentence) :-
+    !,
+    format(atom(Sentence),
+        'STAGE: Endeavor ~w action does not match current stage. Stay in stage.',
+        [Value]).
+
+% Report open endeavors — mark which one is FOCUSED + show stage
 compose_endeavor_status(Sentences) :-
     findall(S,
         (   open_endeavor(Name, Goal, _),
+            (   endeavor_stage(Name, Stage) -> true ; Stage = unknown ),
             (   current_focus(Name)
-            ->  format(atom(S), 'FOCUS: ~w (goal: ~w)', [Name, Goal])
-            ;   format(atom(S), 'ENDEAVOR OPEN: ~w (goal: ~w)', [Name, Goal])
+            ->  format(atom(S), 'FOCUS: ~w (goal: ~w) [stage: ~w]', [Name, Goal, Stage])
+            ;   format(atom(S), 'ENDEAVOR OPEN: ~w (goal: ~w) [stage: ~w]', [Name, Goal, Stage])
             )
         ),
         Sentences).
