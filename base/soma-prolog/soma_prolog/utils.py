@@ -111,11 +111,27 @@ def build_obs_list_string(observations) -> str:
             rel_terms.append(f"rel({pred},[{','.join(tv_terms)}])")
         return "[" + ",".join(rel_terms) + "]"
 
+    def _normalize_name(s: str) -> str:
+        """Normalize concept names to lowercase_with_underscores.
+        Handles: CamelCase, Title_Case, spaces, hyphens, mixed.
+        """
+        import re
+        if not s:
+            return s
+        # Insert underscore before uppercase letters preceded by lowercase
+        s = re.sub(r'([a-z])([A-Z])', r'\1_\2', s)
+        # Replace spaces and hyphens with underscores
+        s = re.sub(r'[\s\-]+', '_', s)
+        # Collapse multiple underscores
+        s = re.sub(r'_+', '_', s)
+        return s.lower().strip('_')
+
     def _emit_obs_concept(source, concept_dict):
-        name = _quote(concept_dict.get("name", concept_dict.get("target", "")))
+        raw_name = concept_dict.get("name", concept_dict.get("target", ""))
+        name = _quote(_normalize_name(raw_name))
         desc = _quote(concept_dict.get("description", ""))
         rels = _relationships_prolog(concept_dict.get("relationships", []))
-        src = _quote(source)
+        src = _quote(_normalize_name(source))
         return f"obs_concept({src},{name},{desc},{rels})"
 
     obs_terms = []

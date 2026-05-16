@@ -315,6 +315,9 @@ find_undefined_reference(C, Pred, Value, Type, Visited) :-
     triple(C, _P, V),
     _P \= is_a, _P \= dolce_category, _P \= promoted_to_owl,
     _P \= has_observation_source, _P \= has_description,
+    _P \= has_deduction_premise, _P \= has_deduction_conclusion,
+    _P \= has_rule_head, _P \= has_rule_body,
+    _P \= has_cor_template,
     V \= C,
     \+ member(V, Visited),
     triple(V, is_a, _),
@@ -543,13 +546,21 @@ check_convention(soup_undefined_refs) :-
 
 :- dynamic promoted_to_owl/1.
 
+% Seed types that ARE promotable (users create instances of these)
+promotable_seed_type(deduction_chain).
+promotable_seed_type(prolog_rule).
+promotable_seed_type(core_requirement).
+promotable_seed_type(codified_process).
+promotable_seed_type(programmed_process).
+promotable_seed_type(business_process).
+
 check_convention(promote_to_owl) :-
     findall(Name-Class,
         (   triple(Name, is_a, Class),
             Class \= string_value, Class \= int_value, Class \= float_value,
             Class \= bool_value, Class \= list_value, Class \= dict_value,
             Class \= typed_value,
-            \+ seed_triple(Class, is_a, _),
+            (\+ seed_triple(Class, is_a, _) ; promotable_seed_type(Class)),
             \+ seed_triple(_, is_a, Class),
             \+ promoted_to_owl(Name),
             triple(Name, has_observation_source, _),
