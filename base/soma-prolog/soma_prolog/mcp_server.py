@@ -13,7 +13,14 @@ import json
 import logging
 import urllib.request
 import urllib.error
+from typing import List
+from pydantic import BaseModel, Field
 from mcp.server.fastmcp import FastMCP
+
+
+class ConceptRelationship(BaseModel):
+    relationship: str = Field(..., description="Predicate name (e.g. has_deduction_premise, has_steps, has_agent)")
+    related: List[str] = Field(..., description="List of target concept names or values. Each is a string atom — programming type is declared via is_a on the target concept (e.g. observe the target as is_a: int_value if it represents an integer)")
 
 logger = logging.getLogger(__name__)
 mcp = FastMCP("soma-prolog")
@@ -45,7 +52,17 @@ def _post_event(data: dict) -> str:
 
 
 @mcp.tool()
-def add_event(source: str, observations: str, domain: str = "default") -> str:
+def add_event(
+    source: str,
+    concept_name: str,
+    is_a: List[str],
+    part_of: List[str],
+    instantiates: List[str],
+    produces: List[str],
+    concept: str,
+    domain: str,
+    relationships: List[ConceptRelationship] = None,
+) -> str:
     """Submit an event to SOMA. The ONLY operation SOMA supports.
 
     Every operation in SOMA is an event made of typed observations.
@@ -55,13 +72,16 @@ def add_event(source: str, observations: str, domain: str = "default") -> str:
 
     Args:
         source: who/what produced this event (e.g. 'isaac', 'employee_alice')
-        observations: JSON string of observation list. Each observation is
-            {"key": str, "value": <primitive>, "type": str} where type is one of:
-            string_value, int_value, float_value, bool_value, list_value, dict_value
-            Example: '[{"key":"task","value":"invoice_processing","type":"string_value"},
-                       {"key":"duration_minutes","value":90,"type":"int_value"}]'
-        domain: domain namespace (default 'default'). Foundation is protected;
-            user domains are isolated.
+        concept_name: Name of the concept (lowercase_with_underscores)
+        is_a: REQUIRED. What category/type is this? e.g. ["deduction_chain"], ["domain"]
+        part_of: REQUIRED. What contains this? e.g. ["weather_house"], ["soma_projects"]
+        instantiates: REQUIRED. What pattern does this realize? e.g. ["cor_validation_pattern"]
+        produces: REQUIRED. What does this produce? e.g. ["unmet_requirement"], ["compiled_code"]
+        concept: Full conceptual content explaining what this is
+        domain: Domain namespace for isolation (e.g. 'weather_api', 'soma_development')
+        relationships: OPTIONAL. Additional custom relationships beyond the required four.
+            Each object must have format: {"relationship": "pred_name", "related": ["target1", "target2"]}.
+            Use for has_deduction_premise, has_deduction_conclusion, has_endeavor, has_steps, etc.
 
     Returns:
         Whatever the SOMA Prolog runtime decided about the event:
@@ -69,25 +89,25 @@ def add_event(source: str, observations: str, domain: str = "default") -> str:
         what dispatches the system queued, what goal violations blocked
         ingestion, etc. The return value IS the next instruction —
         the LLM reads it and acts on it.
-
-    Goal-control observation keys (configure goals in the same event):
-        set_goal           value="goal_id|description"
-        deactivate_goal    value="goal_id"
-        forbid_value       value="goal_id|key|value"
-        forbid_key         value="goal_id|key"
-        require_key        value="goal_id|key"
-        require_value      value="goal_id|key|value"
-
-    Metaprogramming observation keys (assert into Prolog runtime):
-        prolog_rule        value="<rule_body_string>"
-        prolog_fact        value="<fact_string>"
-        add_goal           value="<goal_description>"
-        capability         value="<capability_name>"
     """
-    try:
-        obs_list = json.loads(observations)
-    except json.JSONDecodeError as e:
-        return f"observations must be valid JSON: {e}"
+    obs_rels = [
+        {"relationship": "is_a", "related": is_a},
+        {"relationship": "part_of", "related": part_of},
+        {"relationship": "instantiates", "related": instantiates},
+        {"relationship": "produces", "related": produces},
+    ]
+    if relationships:
+        for r in relationships:
+            if isinstance(r, dict):
+                obs_rels.append(r)
+            else:
+                obs_rels.append(r.model_dump())
+
+    obs_list = [{
+        "name": concept_name,
+        "description": concept,
+        "relationships": obs_rels,
+    }]
     return _post_event({"source": source, "observations": obs_list, "domain": domain})
 
 
