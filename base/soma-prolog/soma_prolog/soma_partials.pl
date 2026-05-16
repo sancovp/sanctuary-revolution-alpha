@@ -1011,6 +1011,71 @@ authorized_source(produces, observing_agent,
     'what something produces should be stated by whoever is observing').
 
 % ======================================================================
+% VERIFICATION DISPATCH — detect unverified runs, classify, dispatch
+%
+% After a compiled concept is run, it needs verification. SOMA detects
+% this and dispatches to the right source based on output type.
+% ======================================================================
+
+check_convention(verification_needed) :-
+    forall(
+        (   compiled_program(Concept, _),
+            runtime_result(Concept, _),
+            \+ triple(Concept, verified_by, _)
+        ),
+        assert_unnamed_slot_once(Concept, needs_verification, verification_source)
+    ).
+
+% Verification authorization — who verifies what
+authorized_source(needs_verification, human_end_user,
+    'only the human who requested this knows if the output matches their intent').
+
+% ======================================================================
+% INTEGRATION DISCOVERY — for each "produces", what system delivers it?
+%
+% When a process produces something, SOMA asks: HOW does this get
+% delivered? Is there an API? A bridge service? An existing MCP?
+% The tree: produces → has_delivery_method → (api/bridge/custom/human)
+% ======================================================================
+
+:- dynamic known_bridge/3.  % known_bridge(Domain, ServiceName, MCP)
+
+% Known bridges (seed data — grows from observations)
+known_bridge(banking, plaid, 'plaid-mcp').
+known_bridge(payments, stripe, 'stripe-mcp').
+known_bridge(communications, twilio, 'twilio-mcp').
+known_bridge(email, gmail, 'gmail-mcp').
+known_bridge(calendar, google_calendar, 'google-calendar-mcp').
+known_bridge(file_storage, google_drive, 'google-drive-mcp').
+known_bridge(saas_integration, zapier, 'zapier-mcp').
+
+% When a concept produces output but has no delivery method → flag
+check_convention(integration_discovery) :-
+    forall(
+        (   compiled_program(Concept, _),
+            triple(Concept, produces, Output),
+            Output \= '',
+            \+ triple(Concept, has_delivery_method, _)
+        ),
+        assert_unnamed_slot_once(Concept, has_delivery_method, integration_type)
+    ).
+
+authorized_source(has_delivery_method, human_domain_expert,
+    'only the human knows how this output gets delivered in their business. Ask: is there an API? which service? do you have it connected?').
+
+% Compose integration discovery sentence with known bridges
+compose_integration_sentence(Concept, Sentence) :-
+    triple(Concept, produces, Output),
+    (   known_bridge(_, Service, MCP),
+        format(atom(Sentence),
+            '~w produces ~w. Known bridges: ~w (~w). Ask human: does your system use ~w or similar?',
+            [Concept, Output, Service, MCP, Service])
+    ;   format(atom(Sentence),
+            '~w produces ~w but has no delivery method. Ask human: how does ~w get delivered?',
+            [Concept, Output, Output])
+    ).
+
+% ======================================================================
 % RUN COMPILED — invoke registered runtime objects through observations
 %
 % When an observation has has_run_target relationship, invoke the compiled
