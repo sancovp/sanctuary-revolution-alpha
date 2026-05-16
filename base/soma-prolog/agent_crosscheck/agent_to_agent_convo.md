@@ -2666,4 +2666,70 @@ f6ab7d7  agent-to-agent doc update
 **Status: SOMA now has a working CWA loop:**
 - Declare endeavor → work within known hierarchy → explain unknowns → hierarchy grows → geometry closes → compile
 
-— GNOSYS, 2026-05-15 (final entry)
+— GNOSYS, 2026-05-15 (second entry)
+
+---
+
+## Session: 2026-05-15 (final) — Full Product Pipeline Proven
+
+**Commits c6f1b40 → 85f02d6 (4 more commits, 19 total this session):**
+
+15. **arch_dep_check fixed** — root cause: `:- dynamic dep_violation/2` missing. Undefined non-dynamic predicate threw existence_error. catch turned to fail. One-line fix. `unmet=0, all_core_requirements_met` for the first time.
+
+16. **Authorization dispatch** — `authorized_source/3` facts map slot types to sources and reasons. Error sentences now say "Ask human_domain_expert for has_steps because the step sequence can only come from someone who does the work." Covers: process steps/roles/inputs/outputs → human_domain_expert, DOLCE → system_deduction, domain structure → human_architect, geometry fields → observing_agent.
+
+17. **Run compiled on request** — `check_convention(run_compiled_on_request)` detects `has_run_target` observations, invokes compiled runtime via py_call to `call_soma_runtime`. Verified: invoice_processing called with kwargs, returns `{"invoice_inputs": "...", "invoice_outputs": "extract vendor_name..."}`.
+
+18. **Calendar spec emission** — `check_convention(emit_calendar_spec)` fires after compilation, marks concept SCHEDULABLE. Response includes "SCHEDULABLE: invoice_processing is compiled and ready to schedule." Bridge to CAVE Calendar system (cron scheduling, deliverable checking, blockage tracking).
+
+**Full pipeline proven end-to-end:**
+```
+Alice: "I process invoices"
+  → SOMA asks: "what are the steps?" (authorization: human_domain_expert)
+Alice: "receive, validate, approve, pay"  
+  → SOMA asks: "inputs? outputs? roles?"
+Alice provides all
+  → geometry closes → compiled=1 → SCHEDULABLE
+  → Calendar.schedule_sync() → CronAutomation runs
+  → Agent invokes compiled code → returns payload
+  → Alice is free
+```
+
+**Calendar integration design (Isaac, 2026-05-15):**
+- Calendar(Compiler) in cave.core.calendar takes JSON specs → CronAutomations
+- SOMA's compiled concepts become Calendar-schedulable callables
+- expected_deliverables gate success (file exists = done, missing = blockage)
+- Blockages feed back to SOMA as observations → SOMA asks Alice for clarification
+- Every leaf of any business process is: API (connect it) / LLM (string trick) / Human (keep in loop) / Build one
+- The product is 6 things: interview → classify leaves → connect APIs → schedule → monitor → fix
+
+**Design insight (Isaac verbatim):**
+> "NOTHING ELSE COULD POSSIBLY BE HAPPENING. EITHER THEY USE AN API OR NOT, EITHER YOU MAKE ONE FOR THEM OR CONNECT ONE"
+> The bounded complexity makes it a $1B product — same 6 things for every business.
+
+**Code Region Scroller Game idea** (saved to CartON: Idea_Code_Region_Scroller_Game_May15) — block comments as game regions, emoji-keyed by goldenness. Could enforce purely from SOMA endeavor knowledge.
+
+**19 commit list:**
+```
+bc52b2d  Pattern 5 baseline
+6a8a7b2  geometry closure + string deduction + composed errors
+d867a82  type mismatch error sentences
+e2f8de0  full invoice compilation e2e
+4371b2a  SES depth progressive typing
+9e0aeba  endeavor tracking conventions
+fa1903c  SES lists specific values, endeavor in response
+b473b8b  tc_* filter from SES depth
+f6ab7d7  agent-to-agent doc update
+798d99d  SQLite persistence
+3a6de98  doc update with persistence + design decisions
+9b37baa  hierarchy resolution convention (CWA)
+8a1ff4c  doc update with hierarchy proof
+580debd  subdomain composition + drift detection
+3085b06  arch_dep_check fix (dynamic dep_violation/2)
+e7a704c  domain composition convention
+4f90a21  run_compiled_on_request + arch_dep_check
+c6f1b40  authorization dispatch
+85f02d6  calendar spec emission + full pipeline
+```
+
+— GNOSYS, 2026-05-15 (final entry, for real this time)
