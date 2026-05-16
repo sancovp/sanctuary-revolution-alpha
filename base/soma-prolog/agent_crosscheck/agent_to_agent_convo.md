@@ -2804,3 +2804,46 @@ c6f1b40  authorization dispatch
 - Rollback mechanism on wipeout
 
 — GNOSYS, 2026-05-16 (final entry)
+
+
+---
+
+## Session 2026-05-16: SOMA Implementation Sprint — DONE
+
+### What Was Theorized → Now Implemented
+
+1. **Focus mechanic** (singular attention, surfing = concentration) ✅ VERIFIED
+2. **Persona identity with CoR templates** (per-turn cognitive state reporting) ✅ VERIFIED  
+3. **Deduction chains on CoR values** (dev persona self-detection) ✅ VERIFIED via janus
+4. **Skill-triggered endeavor workflows** (skill activation auto-opens workflow) ✅ VERIFIED
+5. **Domain enforcement** (persona mismatch hard block) ✅ VERIFIED
+6. **Drift scoping** (only focused endeavor's drift shown) ✅ VERIFIED
+7. **Surf analytics** (wipeout log, focus switch log, streak peak) ✅ VERIFIED
+8. **Integration discovery sentence** (known_bridge in compose) ✅ VERIFIED via janus
+9. **Universal domains observed through SOMA** (not hardcoded seeds) ✅ VERIFIED
+10. **Restart daemon tool** ✅ VERIFIED
+11. **Persona MCP tool** (CRUD, search, favorites, assign domains) ✅ VERIFIED
+
+### New Architecture Decision: SOMA + Ralph = Product, Jobworld = Free
+
+- SOMA is the PAID product (intelligence layer)
+- Ralph is the execution arm (included or addon)
+- Jobworld is the FREE hook (dashboard, given away)
+- Community around SOMA specifically (not all of GNOSYS)
+- Docker compose: 3 containers (jobworld + soma + ralph)
+
+### Content Strategy: Hermes Agent + SOMA
+
+- Hermes: 110K+ stars, #1 OpenRouter, 10K/week growth
+- Content gap: nobody doing L5 (logic/validation) content for Hermes
+- Angle: "Made Hermes Actually Smart" — SOMA as validation layer for Hermes skills
+- First video target after avatar recording
+
+### Infrastructure Deployed This Session
+
+- Dograh voice agent (Docker, running, TWI Lead Qualifier workflow created)
+- HeyGen MCP connected (avatar video generation)
+- Nick Ponte transcript synthesized (88 min, competitive intel)
+- aisaac site updated: Vapi→Dograh across 12 files + new blog post
+- Postiz identified for social posting (open source, self-hosted)
+- Dograh found as Vapi replacement (BSD, self-hosted, /bin/bash/mo)

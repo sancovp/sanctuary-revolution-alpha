@@ -92,6 +92,106 @@ def add_event(source: str, observations: str, domain: str = "default") -> str:
 
 
 @mcp.tool()
+def persona(action: str, name: str = "", query: str = "", cor_template: str = "", domain: str = "general") -> str:
+    """SOMA persona selector CLI. Personas define CoR templates for per-turn metadata.
+
+    Actions:
+        list        — show all personas
+        search      — find personas by name/domain/purpose (use query param)
+        activate    — set active persona (use name param)
+        active      — show current active persona
+        create      — create new persona (use name, cor_template, domain params)
+        favorites   — show favorite personas
+        fav_add     — add to favorites (use name param)
+        fav_remove  — remove from favorites (use name param)
+
+    CoR template format uses {{blanks}} the agent fills each turn:
+        "The hypothesis is {{hypothesis}} and evidence is {{evidence}}."
+
+    Example:
+        persona(action="create", name="researcher",
+                cor_template="Investigating {{hypothesis}}. Evidence: {{evidence}}. Confidence: {{confidence}}. Next: {{next_step}}.",
+                domain="research")
+        persona(action="activate", name="researcher")
+    """
+    from soma_prolog.persona_manager import (
+        list_personas, search_personas, activate_persona,
+        get_active, create_persona, get_favorites,
+        add_favorite, remove_favorite, assign_domain, assign_process,
+    )
+    if action == "list":
+        personas = list_personas()
+        if not personas:
+            return "No personas defined. Create one with action='create'."
+        lines = [f"  {p['name']} [{p['domain']}] — {p['cor_template']}" for p in personas]
+        return "Personas:\n" + "\n".join(lines)
+    elif action == "search":
+        results = search_personas(query or name)
+        if not results:
+            return f"No personas matching '{query or name}'."
+        return "\n".join(f"  {r['name']} — {r['cor_template']}" for r in results)
+    elif action == "activate":
+        return activate_persona(name)
+    elif action == "active":
+        return get_active()
+    elif action == "create":
+        if not name or not cor_template:
+            return "Need name and cor_template. Example: persona(action='create', name='researcher', cor_template='Investigating {{hypothesis}}...', domain='research')"
+        return create_persona(name, cor_template, domain)
+    elif action == "favorites":
+        favs = get_favorites()
+        return f"Favorites: {favs}" if favs else "No favorites set."
+    elif action == "fav_add":
+        return add_favorite(name)
+    elif action == "fav_remove":
+        return remove_favorite(name)
+    elif action == "assign_domain":
+        if not name or not domain:
+            return "Need name and domain. Example: persona(action='assign_domain', name='researcher', domain='knowledge_management')"
+        return assign_domain(name, domain)
+    elif action == "assign_process":
+        if not name or not query:
+            return "Need name and process (use query param). Example: persona(action='assign_process', name='developer', query='compile_code')"
+        return assign_process(name, query)
+    else:
+        return f"Unknown action '{action}'. Use: list, search, activate, active, create, favorites, fav_add, fav_remove, assign_domain, assign_process"
+
+
+@mcp.tool()
+def restart_daemon(port: int = 8091) -> str:
+    """Kill and restart the SOMA Prolog daemon.
+
+    Use when the daemon crashes or needs to reload code after pip install.
+    Kills existing process on the port, starts fresh, waits for ready.
+
+    Args:
+        port: Port to run daemon on (default 8091)
+    """
+    import subprocess
+    import time
+    subprocess.run(["pkill", "-9", "-f", "soma_prolog.api"], capture_output=True)
+    time.sleep(2)
+    proc = subprocess.Popen(
+        ["python3", "-m", "soma_prolog.api", "--port", str(port)],
+        stdout=open("/tmp/soma_daemon.log", "w"),
+        stderr=subprocess.STDOUT,
+        start_new_session=True,
+    )
+    time.sleep(4)
+    if proc.poll() is not None:
+        return f"Daemon failed to start (exit code {proc.returncode}). Check /tmp/soma_daemon.log"
+    try:
+        body = json.dumps({"source": "healthcheck", "observations": [{"key": "ping", "value": "1", "type": "string_value"}]}).encode()
+        req = urllib.request.Request(f"http://localhost:{port}/event", data=body, headers={"Content-Type": "application/json"}, method="POST")
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            result = json.loads(resp.read().decode())
+            triples = "triples=" in result.get("result", "")
+            return f"Daemon restarted on port {port}. PID={proc.pid}. Healthy={'yes' if triples else 'no'}."
+    except Exception as e:
+        return f"Daemon started (PID={proc.pid}) but health check failed: {e}"
+
+
+@mcp.tool()
 def add_rule(rule_body: str) -> str:
     """Add a Prolog rule to the live SOMA runtime. Immediately executable.
 

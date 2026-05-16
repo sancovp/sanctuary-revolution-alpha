@@ -342,6 +342,7 @@ def _sync_kardashev_to_carton(kmap: dict) -> list[str]:
 
         # Check if this path has been initialized as a starlog project
         try:
+            from heaven_base.tools.registry_tool import registry_util_func
             project_name = os.path.basename(os.path.abspath(path))
             registry_result = registry_util_func("get_all", registry_name=f"{project_name}_starlog")
             # If registry doesn't exist, project wasn't initialized
@@ -963,6 +964,7 @@ def update_debug_diary(path: str = None, diary_entry: DebugDiaryEntry = None, en
         # Ensure joint starlog registry exists + mirror to CartON
         try:
             # LAZY: heaven_base imported on demand to avoid torch
+            from heaven_base.tools.registry_tool import registry_util_func
             registry_util_func("create_registry", registry_name=f"{joint_name}_debug_diary")
             registry_util_func("create_registry", registry_name=f"{joint_name}_starlog")
         except Exception:
@@ -1041,7 +1043,8 @@ def _update_recent_projects(project_path: str) -> None:
     """Update recent projects list, moving project to front and deduping."""
     try:
         # LAZY: heaven_base imported on demand to avoid torch
-        
+        from heaven_base.tools.registry_tool import registry_util_func
+
         # Get current recent projects
         recent_data = {}
         try:
@@ -1452,8 +1455,10 @@ def internal_add_flight_config(path: str, name: str, config_data: dict, category
 def internal_delete_flight_config(path: str, name: str) -> str:
     """Remove flight config."""
     logger.debug(f"delete_flight_config called with path={path}, name={name}")
-    
+
     try:
+        # LAZY: heaven_base imported on demand to avoid torch
+        from heaven_base.tools.registry_tool import registry_util_func
         # Find the flight config by name and path
         flight_data = starlog._get_flight_configs_registry_data()
         flight_id = None
@@ -1482,8 +1487,10 @@ def internal_delete_flight_config(path: str, name: str) -> str:
 def internal_update_flight_config(path: str, name: str, config_data: dict) -> str:
     """Modify existing flight config."""
     logger.debug(f"update_flight_config called with path={path}, name={name}")
-    
+
     try:
+        # LAZY: heaven_base imported on demand to avoid torch
+        from heaven_base.tools.registry_tool import registry_util_func
         # Find the flight config
         flight_data = starlog._get_flight_configs_registry_data()
         flight_id = None
@@ -1602,10 +1609,11 @@ The subchain executes as part of work_loop, then returns control to STARLOG for 
 def list_most_recent_projects(page: Optional[int] = None) -> str:
     """List most recently used STARLOG projects with pagination."""
     logger.debug(f"list_most_recent_projects called with page={page}")
-    
+
     try:
         # LAZY: heaven_base imported on demand to avoid torch
-        
+        from heaven_base.tools.registry_tool import registry_util_func
+
         # Get recent projects registry
         recent_data = {}
         try:

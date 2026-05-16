@@ -100,6 +100,7 @@ def main():
     # the first POST /event will return the actual error.
     logger.info("SOMA daemon starting (Prolog boots lazily on first event)...")
 
+    HTTPServer.allow_reuse_address = True
     server = HTTPServer((args.host, args.port), SOMAHandler)
     logger.info(f"SOMA listening on {args.host}:{args.port}")
     logger.info("Single endpoint: POST /event {source, observations, domain?}")

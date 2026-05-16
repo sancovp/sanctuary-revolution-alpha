@@ -534,6 +534,7 @@ check_convention(soup_undefined_refs) :-
             Class \= typed_value,
             \+ seed_triple(Class, is_a, _),
             \+ seed_triple(_, is_a, Class),
+            \+ triple(Class, has_observation_source, _),
             triple(Name, has_observation_source, _),
             find_undefined_reference(Name, _Pred, _Value, UndefType)
         ),
@@ -661,6 +662,9 @@ check_convention(detect_authorization) :-
 % ======================================================================
 % AUTO-COMPILE — after authorization, try to compile ready concepts
 % ======================================================================
+
+:- dynamic compiled_program/2.    % compiled_program(Concept, Code)
+:- dynamic authorized_compilation/2.  % authorized_compilation(Concept, Source)
 
 check_convention(try_compile) :-
     forall(
@@ -808,12 +812,13 @@ compose_ses_sentence(C, _SC, _TC, Sentence) :-
 :- dynamic open_endeavor/3.     % open_endeavor(Name, Goal, StartTime)
 :- dynamic closed_endeavor/4.   % closed_endeavor(Name, Goal, StartTime, EndTime)
 :- dynamic dropped_endeavor/4.  % dropped_endeavor(Name, Goal, StartTime, DropTime)
+:- dynamic current_focus/1.     % current_focus(EndeavorName) — singular, only one
 
 % Start a new endeavor (from observation with has_endeavor relationship)
+% New endeavors automatically become the focus
 check_convention(detect_endeavor_start) :-
     forall(
         (   triple(Obs, has_endeavor, EndName),
-            triple(Obs, has_observation_source, _),
             \+ open_endeavor(EndName, _, _),
             \+ closed_endeavor(EndName, _, _, _)
         ),
@@ -822,8 +827,46 @@ check_convention(detect_endeavor_start) :-
             ;   Goal = unspecified
             ),
             get_time(T),
-            assertz(open_endeavor(EndName, Goal, T))
+            assertz(open_endeavor(EndName, Goal, T)),
+            (   current_focus(OldFocus)
+            ->  log_focus_switch(OldFocus, EndName)
+            ;   true
+            ),
+            retractall(current_focus(_)),
+            assertz(current_focus(EndName))
         )
+    ).
+
+% Explicit focus switch: has_focus observation changes the focused endeavor
+check_convention(detect_focus_change) :-
+    forall(
+        (   triple(Obs, has_focus, EndName),
+            open_endeavor(EndName, _, _),
+            (current_focus(Cur) -> Cur \= EndName ; true)
+        ),
+        (   (   current_focus(OldFocus)
+            ->  log_focus_switch(OldFocus, EndName)
+            ;   true
+            ),
+            retractall(current_focus(_)),
+            assertz(current_focus(EndName))
+        )
+    ).
+
+% Tag every new non-internal concept with the current focus
+% Uses is_a as proxy for "real concept" since has_observation_source
+% is only set on tool call observations from the hook
+check_convention(tag_focus_context) :-
+    (   current_focus(Focus)
+    ->  forall(
+            (   triple(C, is_a, _),
+                \+ atom_concat('tc_', _, C),
+                \+ atom_concat('evt_', _, C),
+                \+ triple(C, part_of_endeavor, _)
+            ),
+            assert_triple_once(C, part_of_endeavor, Focus)
+        )
+    ;   true
     ).
 
 % Auto-close endeavors whose target concept has no remaining gaps
@@ -841,11 +884,14 @@ check_convention(auto_close_endeavors) :-
         )
     ).
 
-% Report open endeavors in the response
+% Report open endeavors — mark which one is FOCUSED
 compose_endeavor_status(Sentences) :-
     findall(S,
         (   open_endeavor(Name, Goal, _),
-            format(atom(S), 'ENDEAVOR OPEN: ~w (goal: ~w)', [Name, Goal])
+            (   current_focus(Name)
+            ->  format(atom(S), 'FOCUS: ~w (goal: ~w)', [Name, Goal])
+            ;   format(atom(S), 'ENDEAVOR OPEN: ~w (goal: ~w)', [Name, Goal])
+            )
         ),
         Sentences).
 
@@ -915,14 +961,22 @@ check_convention(subdomain_composition) :-
         assert_unnamed_slot_once(C, subdomain_not_in_domain, Sub)
     ).
 
-% Drift detection: if there are open SES depth-0 values, flag ONCE per
-% open concept (not per tool call — avoids N×M explosion)
+% Drift detection: only flag concepts in the FOCUSED endeavor
+% Skip endeavor declarations, human answers, internal concepts
 check_convention(drift_detection) :-
-    forall(
-        (   ses_report(OpenConcept, _, _),
-            \+ atom_concat('tc_', _, OpenConcept)
-        ),
-        assert_unnamed_slot_once(drift_warning, drift_from_open_work, OpenConcept)
+    (   current_focus(Focus)
+    ->  forall(
+            (   ses_report(OpenConcept, _, _),
+                \+ atom_concat('tc_', _, OpenConcept),
+                \+ atom_concat('evt_', _, OpenConcept),
+                \+ triple(OpenConcept, has_endeavor, _),
+                \+ atom_concat('human_answer_', _, OpenConcept),
+                \+ atom_concat('endeavor_', _, OpenConcept),
+                triple(OpenConcept, part_of_endeavor, Focus)
+            ),
+            assert_unnamed_slot_once(drift_warning, drift_from_open_work, OpenConcept)
+        )
+    ;   true   % no focus set — no drift warnings
     ).
 
 compose_hierarchy_sentence(C, subdomain_not_in_domain, Value, Sentence) :-
@@ -936,7 +990,7 @@ compose_hierarchy_sentence(C, subdomain_not_in_domain, Value, Sentence) :-
             [C, Value, Value])
     ).
 
-compose_hierarchy_sentence(C, drift_from_open_work, Value, Sentence) :-
+compose_hierarchy_sentence(_C, drift_from_open_work, Value, Sentence) :-
     !,
     format(atom(Sentence),
         'DRIFT: ~w has unfinished typing work. Close ~w depth-0 values before working on other things.',
@@ -1167,16 +1221,22 @@ compose_calendar_sentence(Concept, SpecPath, Sentence) :-
 :- dynamic blocked_endeavor/2.  % blocked_endeavor(Name, Reason)
 :- dynamic surf_streak/2.       % surf_streak(EndeavorName, ConsecutiveEvents)
 
+% === SURF ANALYTICS — history for pattern detection ===
+:- dynamic wipeout_log/4.       % wipeout_log(Endeavor, StreakBefore, Cause, Timestamp)
+:- dynamic focus_switch_log/3.  % focus_switch_log(From, To, Timestamp)
+:- dynamic streak_peak_log/3.   % streak_peak_log(Endeavor, PeakValue, Timestamp)
+
+% Surf = concentration on the FOCUSED endeavor only
+% Non-focused endeavors freeze (no increment, no reset)
 check_convention(compute_surf_score) :-
-    forall(
-        (   open_endeavor(Name, _, _),
-            \+ blocked_endeavor(Name, _)
-        ),
-        increment_surf_streak(Name)
-    ),
-    forall(
-        blocked_endeavor(Name, _),
-        reset_surf_streak(Name)
+    (   current_focus(Focus),
+        open_endeavor(Focus, _, _)
+    ->  (   blocked_endeavor(Focus, Reason)
+        ->  log_wipeout(Focus, Reason),
+            reset_surf_streak(Focus)
+        ;   increment_surf_streak(Focus)
+        )
+    ;   true  % no focus — no scoring
     ).
 
 increment_surf_streak(Name) :-
@@ -1189,6 +1249,22 @@ increment_surf_streak(Name) :-
 reset_surf_streak(Name) :-
     retractall(surf_streak(Name, _)),
     assertz(surf_streak(Name, 0)).
+
+log_wipeout(Name, Reason) :-
+    (   surf_streak(Name, N), N > 0
+    ->  get_time(T),
+        assertz(wipeout_log(Name, N, Reason, T)),
+        assertz(streak_peak_log(Name, N, T))
+    ;   true
+    ).
+
+log_focus_switch(From, To) :-
+    get_time(T),
+    assertz(focus_switch_log(From, To, T)),
+    (   surf_streak(From, N), N > 0
+    ->  assertz(streak_peak_log(From, N, T))
+    ;   true
+    ).
 
 % Detect blocked endeavors — when human-required gaps exist
 check_convention(detect_blocked_endeavors) :-
@@ -1203,19 +1279,287 @@ check_convention(detect_blocked_endeavors) :-
         )
     ).
 
-% Compose surf status for response
+% Compose surf status — only focused endeavor is SURFING, others PAUSED
 compose_surf_status(Sentences) :-
     findall(S,
         (   open_endeavor(Name, _, _),
-            (   blocked_endeavor(Name, Reason)
-            ->  format(atom(S), 'WAVE ~w: WIPEOUT. ~w. Swap to another wave or wait for user.', [Name, Reason])
-            ;   (   surf_streak(Name, N)
-                ->  format(atom(S), 'WAVE ~w: SURFING (streak=~w). On track.', [Name, N])
-                ;   format(atom(S), 'WAVE ~w: SURFING (streak=0). Just started.', [Name])
+            (   current_focus(Name)
+            ->  (   blocked_endeavor(Name, Reason)
+                ->  format(atom(S), 'WAVE ~w: WIPEOUT. ~w. Swap focus or wait for user.', [Name, Reason])
+                ;   (   surf_streak(Name, N)
+                    ->  format(atom(S), 'WAVE ~w: SURFING (streak=~w). Concentrated.', [Name, N])
+                    ;   format(atom(S), 'WAVE ~w: SURFING (streak=0). Just focused.', [Name])
+                    )
+                )
+            ;   (   surf_streak(Name, N), N > 0
+                ->  format(atom(S), 'WAVE ~w: PAUSED (streak=~w frozen).', [Name, N])
+                ;   format(atom(S), 'WAVE ~w: PAUSED.', [Name])
                 )
             )
         ),
         Sentences).
+
+% === SURF ANALYTICS COMPOSE — metrics from accumulated history ===
+compose_surf_analytics(Sentences) :-
+    % Wipeout count and mean streak
+    findall(N, wipeout_log(_, N, _, _), Peaks),
+    length(Peaks, WipeoutCount),
+    (   WipeoutCount > 0
+    ->  sumlist(Peaks, Sum),
+        MeanStreak is Sum / WipeoutCount,
+        format(atom(S1), 'ANALYTICS: ~w wipeouts, mean streak before wipeout: ~1f', [WipeoutCount, MeanStreak]),
+        % Most common cause
+        findall(Cause, wipeout_log(_, _, Cause, _), Causes),
+        msort(Causes, SortedCauses),
+        clumped(SortedCauses, CauseCounts),
+        sort(2, @>=, CauseCounts, RankedCauses),
+        (   RankedCauses = [TopCause-TopN|_]
+        ->  format(atom(S2), 'ANALYTICS: top blocker: ~w (~w times)', [TopCause, TopN])
+        ;   S2 = 'ANALYTICS: no dominant blocker'
+        )
+    ;   S1 = 'ANALYTICS: 0 wipeouts',
+        S2 = 'ANALYTICS: clean run'
+    ),
+    % Focus switch count
+    findall(_, focus_switch_log(_, _, _), Switches),
+    length(Switches, SwitchCount),
+    format(atom(S3), 'ANALYTICS: ~w focus switches', [SwitchCount]),
+    % Best streak ever
+    findall(P, streak_peak_log(_, P, _), AllPeaks),
+    (   AllPeaks \= []
+    ->  max_list(AllPeaks, BestPeak),
+        format(atom(S4), 'ANALYTICS: best streak peak: ~w', [BestPeak])
+    ;   (   current_focus(F), surf_streak(F, Cur)
+        ->  format(atom(S4), 'ANALYTICS: current streak is best so far: ~w', [Cur])
+        ;   S4 = 'ANALYTICS: no streak data yet'
+        )
+    ),
+    Sentences = [S1, S2, S3, S4].
+
+% ======================================================================
+% PERSONA DOMAIN ENFORCEMENT — active persona must match tool domain
+%
+% Each persona covers specific domains (has_persona_domain).
+% When a tool call's domain doesn't match the active persona's domain,
+% the system raises a persona mismatch warning.
+% ======================================================================
+
+:- dynamic active_persona/1.        % active_persona(Name)
+:- dynamic persona_domain/2.        % persona_domain(PersonaName, DomainName)
+:- dynamic persona_process/2.       % persona_process(PersonaName, ProcessName)
+:- dynamic persona_cor_value/3.     % persona_cor_value(PersonaName, Key, Value) — latest CoR
+
+% Sync persona state from triples (uses LAST has_active_persona found)
+check_convention(sync_persona_state) :-
+    % Find all active persona triples, take the last (most recent)
+    findall(Name, triple(_, has_active_persona, Name), AllNames),
+    (   AllNames \= []
+    ->  last(AllNames, LatestName),
+        (   active_persona(LatestName)
+        ->  true
+        ;   retractall(active_persona(_)),
+            assertz(active_persona(LatestName))
+        )
+    ;   true
+    ),
+    % Sync persona-domain assignments
+    forall(
+        (   triple(Persona, has_persona_domain, Domain),
+            \+ persona_domain(Persona, Domain)
+        ),
+        assertz(persona_domain(Persona, Domain))
+    ),
+    % Sync persona-process assignments
+    forall(
+        (   triple(Persona, has_persona_process, Process),
+            \+ persona_process(Persona, Process)
+        ),
+        assertz(persona_process(Persona, Process))
+    ).
+
+% Convention: check UNIQUE domains from tool calls against active persona
+% Only flags each mismatched DOMAIN once (not per tool call)
+check_convention(persona_domain_match) :-
+    (   active_persona(Persona),
+        persona_domain(Persona, _)
+    ->  findall(Domain,
+            (   triple(_, part_of, Domain),
+                \+ persona_domain(Persona, Domain),
+                \+ persona_domain(Persona, all),
+                triple(Domain, is_a, domain)
+            ),
+            MismatchedDomains),
+        sort(MismatchedDomains, UniqueMismatches),
+        forall(
+            member(D, UniqueMismatches),
+            assert_unnamed_slot_once(Persona, persona_mismatch, D)
+        )
+    ;   true
+    ).
+
+% Sync CoR values from flat persona_metadata observations into dynamic facts
+check_convention(sync_persona_cor) :-
+    (   active_persona(Persona)
+    ->  retractall(persona_cor_value(_, _, _)),
+        forall(
+            (   triple(Evt, is_a, persona_metadata),
+                triple(Evt, persona, Persona),
+                triple(Evt, Key, Value),
+                Key \= is_a, Key \= persona, Key \= has_observation_source,
+                Key \= dolce_category, Key \= part_of, Key \= instantiates, Key \= produces
+            ),
+            assertz(persona_cor_value(Persona, Key, Value))
+        )
+    ;   true
+    ).
+
+% Convention: validate CoR KV values against persona-specific chains
+check_convention(persona_cor_validation) :-
+    (   active_persona(Persona)
+    ->  forall(
+            (   persona_cor_value(Persona, Key, Value),
+                persona_cor_chain(Persona, Key, Value, GapType, GapValue)
+            ),
+            assert_unnamed_slot_once(Persona, GapType, GapValue)
+        )
+    ;   true
+    ).
+
+% Default chain: if component is given, it should be a known concept
+:- discontiguous persona_cor_chain/5.
+persona_cor_chain(_, component, Value, unknown_component, Value) :-
+    Value \= '',
+    \+ triple(Value, is_a, _),
+    \+ triple(Value, has_observation_source, _).
+
+% === SOMA DEVELOPER PERSONA CHAINS ===
+% These detect when the system needs new skills, rules, or conventions.
+
+% Chain: component worked on has no skill → suggest creating one
+persona_cor_chain(soma_developer, component, Value, needs_skill, Value) :-
+    Value \= '', Value \= idle,
+    triple(Value, has_observation_source, _),
+    \+ triple(Value, has_skill, _),
+    findall(_, (triple(V2, is_a, _), V2 = Value), Obs),
+    length(Obs, N), N > 3.
+
+% Chain: approach mentions a pattern that has no convention → suggest adding one
+persona_cor_chain(soma_developer, approach, Value, needs_convention, Value) :-
+    Value \= '',
+    atom_string(Value, VStr),
+    (   sub_string(VStr, _, _, _, "convention")
+    ;   sub_string(VStr, _, _, _, "validate")
+    ;   sub_string(VStr, _, _, _, "enforce")
+    ),
+    \+ triple(Value, is_a, _).
+
+% Chain: rationale contains "always" or "never" → suggests a rule
+persona_cor_chain(soma_developer, rationale, Value, needs_rule, Value) :-
+    Value \= '',
+    atom_string(Value, VStr),
+    (   sub_string(VStr, _, _, _, "always")
+    ;   sub_string(VStr, _, _, _, "never")
+    ;   sub_string(VStr, _, _, _, "must")
+    ),
+    \+ triple(Value, is_a, _).
+
+% Chain: risk mentions "fragility" or "break" → needs defensive convention
+persona_cor_chain(soma_developer, risk, Value, needs_defensive_chain, Value) :-
+    Value \= '', Value \= none,
+    atom_string(Value, VStr),
+    (   sub_string(VStr, _, _, _, "fragil")
+    ;   sub_string(VStr, _, _, _, "break")
+    ;   sub_string(VStr, _, _, _, "crash")
+    ;   sub_string(VStr, _, _, _, "silent")
+    ).
+
+% Compose sentences for dev persona chain gaps
+compose_hierarchy_sentence(_C, unknown_component, Value, Sentence) :-
+    !,
+    format(atom(Sentence),
+        'DEV: Component ~w is not yet observed in SOMA. Consider observing it via add_event.',
+        [Value]).
+compose_hierarchy_sentence(_C, needs_skill, Value, Sentence) :-
+    !,
+    format(atom(Sentence),
+        'DEV: Component ~w has been observed 3+ times but has no skill. Consider creating understand-soma reference or standalone skill.',
+        [Value]).
+compose_hierarchy_sentence(_C, needs_convention, Value, Sentence) :-
+    !,
+    format(atom(Sentence),
+        'DEV: Approach ~w suggests validation/enforcement but no convention exists. Consider adding a Prolog convention via add_rule.',
+        [Value]).
+compose_hierarchy_sentence(_C, needs_rule, Value, Sentence) :-
+    !,
+    format(atom(Sentence),
+        'DEV: Rationale ~w contains invariant language (always/never/must). Consider writing a Claude Code rule.',
+        [Value]).
+compose_hierarchy_sentence(_C, needs_defensive_chain, Value, Sentence) :-
+    !,
+    format(atom(Sentence),
+        'DEV: Risk ~w mentions fragility/breakage. Consider adding a defensive deduction chain.',
+        [Value]).
+
+% Compose persona mismatch sentence
+compose_hierarchy_sentence(_C, persona_mismatch, Domain, Sentence) :-
+    !,
+    (   active_persona(Persona)
+    ->  format(atom(Sentence),
+            'PERSONA MISMATCH: Active persona ~w does not cover domain ~w. Switch persona or assign domain.',
+            [Persona, Domain])
+    ;   Sentence = 'PERSONA MISMATCH: No active persona but domain check triggered.'
+    ).
+
+% ======================================================================
+% SKILL ENDEAVOR TEMPLATES — skills trigger workflow endeavors
+%
+% Universal: no specific skill names, only structural patterns.
+% When Skill tool fires and that skill has has_endeavor_template,
+% auto-open the endeavor. When skills lack templates, flag them.
+% ======================================================================
+
+% Auto-open endeavor when skill with template is activated
+check_convention(skill_endeavor_activation) :-
+    forall(
+        (   triple(Evt, tool_name, skill),
+            triple(Evt, skill_name, SkillName),
+            triple(SkillName, has_endeavor_template, Template),
+            \+ open_endeavor(Template, _, _)
+        ),
+        (   get_time(T),
+            assertz(open_endeavor(Template, SkillName, T)),
+            retractall(current_focus(_)),
+            assertz(current_focus(Template))
+        )
+    ).
+
+% Flag skills without endeavor templates
+check_convention(skill_completion_request) :-
+    forall(
+        (   triple(Skill, is_a, skill),
+            triple(Skill, has_observation_source, _),
+            \+ triple(Skill, has_endeavor_template, _)
+        ),
+        assert_unnamed_slot_once(Skill, needs_endeavor_template, workflow_spec)
+    ).
+
+% Flag skills without domain assignments
+check_convention(skill_domain_request) :-
+    forall(
+        (   triple(Skill, is_a, skill),
+            triple(Skill, has_observation_source, _),
+            \+ triple(Skill, has_domains, _)
+        ),
+        assert_unnamed_slot_once(Skill, needs_domains, domain_list)
+    ).
+
+% Compose sentences for skill completion gaps
+compose_hierarchy_sentence(_C, needs_endeavor_template, _, Sentence) :-
+    !,
+    Sentence = 'SKILL: No endeavor template. Define workflow via has_endeavor_template.'.
+compose_hierarchy_sentence(_C, needs_domains, _, Sentence) :-
+    !,
+    Sentence = 'SKILL: No domain assignment. Assign via has_domains.'.
 
 % Boot: assert all seed triples into the live graph on consult
 :- forall(seed_triple(S, P, O), assert_triple_once(S, P, O)).
@@ -1274,6 +1618,16 @@ get_graph_str(Str) :-
             )
         )).
 
+% Specialized: integration discovery uses known_bridge info
+compose_gap_sentence(C, has_delivery_method, _, Sentence) :-
+    !,
+    (   compose_integration_sentence(C, Sentence)
+    ->  true
+    ;   format(atom(Sentence),
+            '~w needs has_delivery_method. Ask human: how does the output get delivered?',
+            [C])
+    ).
+
 % Compose a natural language error sentence from an unnamed_slot.
 % The sentence is DERIVED from the logic: what you claimed + what the
 % universal requires + what's missing.
@@ -1321,14 +1675,16 @@ compose_all_gap_sentences(Sentences) :-
     findall(S,
         (   unnamed_slot(C, P, T),
             P \= unknown_domain, P \= unknown_subdomain, P \= domain_not_in_project,
-            P \= subdomain_not_in_domain, P \= drift_from_open_work,
+            P \= subdomain_not_in_domain, P \= drift_from_open_work, P \= persona_mismatch,
+            P \= needs_skill, P \= needs_convention, P \= needs_rule, P \= needs_defensive_chain,
+            P \= unknown_component, P \= needs_endeavor_template, P \= needs_domains,
             compose_gap_sentence(C, P, T, S)
         ),
         GapSentences
     ),
     findall(S,
         (   unnamed_slot(C, P, T),
-            (P = unknown_domain ; P = unknown_subdomain ; P = domain_not_in_project ; P = subdomain_not_in_domain ; P = drift_from_open_work),
+            (P = unknown_domain ; P = unknown_subdomain ; P = domain_not_in_project ; P = subdomain_not_in_domain ; P = drift_from_open_work ; P = persona_mismatch ; P = needs_skill ; P = needs_convention ; P = needs_rule ; P = needs_defensive_chain ; P = unknown_component ; P = needs_endeavor_template ; P = needs_domains),
             compose_hierarchy_sentence(C, P, T, S)
         ),
         HierSentences
@@ -1346,11 +1702,13 @@ compose_all_gap_sentences(Sentences) :-
         CalSentences
     ),
     compose_surf_status(SurfSentences),
+    compose_surf_analytics(AnalyticsSentences),
     append(GapSentences, HierSentences, S1),
     append(S1, SESSentences, S2),
     append(S2, EndSentences, S3),
     append(S3, CalSentences, S4),
-    append(S4, SurfSentences, Sentences).
+    append(S4, SurfSentences, S5),
+    append(S5, AnalyticsSentences, Sentences).
 
 % ======================================================================
 % TESTS — universal mechanism
