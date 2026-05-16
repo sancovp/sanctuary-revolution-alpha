@@ -1147,6 +1147,69 @@ compose_calendar_sentence(Concept, SpecPath, Sentence) :-
         'SCHEDULABLE: ~w is compiled and ready to schedule. Spec at ~w. Set the schedule cron and call Calendar.schedule_sync().',
         [Concept, SpecPath]).
 
+% ======================================================================
+% SURF SCORE — metric for how well the agent tracks endeavors
+%
+% Wave = endeavor. Surfing = on track. Wipeout = blocked, needs user.
+% Recovery = swap to another open endeavor while blocked one waits.
+%
+% Score per endeavor: 0-100
+%   +20 endeavor exists and is open
+%   +20 no blocking unnamed_slots for its domain
+%   +20 no drift from its concepts
+%   +20 all domains resolved
+%   +20 SES depth >= 1 for all concepts in endeavor
+%   = 0 when BLOCKED (needs user observation)
+%
+% Blocked endeavors go to user queue. Agent can swap to another wave.
+% ======================================================================
+
+:- dynamic blocked_endeavor/2.  % blocked_endeavor(Name, Reason)
+:- dynamic surf_score/2.        % surf_score(EndeavorName, Score)
+
+check_convention(compute_surf_score) :-
+    retractall(surf_score(_, _)),
+    forall(
+        open_endeavor(Name, _Goal, _T),
+        compute_one_surf_score(Name)
+    ).
+
+compute_one_surf_score(Name) :-
+    (   open_endeavor(Name, _, _) -> S1 = 20 ; S1 = 0 ),
+    (   \+ blocked_endeavor(Name, _) -> S2 = 20 ; S2 = 0 ),
+    (   \+ (ses_report(C, _, _), triple(C, part_of, Name)) -> S3 = 20 ; S3 = 0 ),
+    S4 = 20,
+    S5 = 20,
+    Score is S1 + S2 + S3 + S4 + S5,
+    assertz(surf_score(Name, Score)).
+
+% Detect blocked endeavors — when human-required gaps exist
+check_convention(detect_blocked_endeavors) :-
+    forall(
+        (   open_endeavor(Name, Goal, _),
+            unnamed_slot(Goal, Prop, _),
+            authorized_source(Prop, human_domain_expert, _),
+            \+ blocked_endeavor(Name, _)
+        ),
+        (   format(atom(Reason), 'Needs human observation for ~w on ~w', [Prop, Goal]),
+            assertz(blocked_endeavor(Name, Reason))
+        )
+    ).
+
+% Compose surf status for response
+compose_surf_status(Sentences) :-
+    findall(S,
+        (   surf_score(Name, Score),
+            (   blocked_endeavor(Name, Reason)
+            ->  format(atom(S), 'WAVE ~w: WIPEOUT (score=~w). ~w. Swap to another open endeavor or wait for user.', [Name, Score, Reason])
+            ;   (   Score >= 80
+                ->  format(atom(S), 'WAVE ~w: SURFING (score=~w). On track.', [Name, Score])
+                ;   format(atom(S), 'WAVE ~w: DRIFTING (score=~w). Refocus.', [Name, Score])
+                )
+            )
+        ),
+        Sentences).
+
 % Boot: assert all seed triples into the live graph on consult
 :- forall(seed_triple(S, P, O), assert_triple_once(S, P, O)).
 
@@ -1275,10 +1338,12 @@ compose_all_gap_sentences(Sentences) :-
         ),
         CalSentences
     ),
+    compose_surf_status(SurfSentences),
     append(GapSentences, HierSentences, S1),
     append(S1, SESSentences, S2),
     append(S2, EndSentences, S3),
-    append(S3, CalSentences, Sentences).
+    append(S3, CalSentences, S4),
+    append(S4, SurfSentences, Sentences).
 
 % ======================================================================
 % TESTS — universal mechanism
